@@ -44,6 +44,7 @@ return [
             'routes/admin.php',
             'routes/api-v1.php',
             'routes/system.php',
+            'routes/webhooks.php',
         ],
         'bootstrap' => 'common/bootstrap.php',
         'bootstrap-web' => '$bootstrap',
