@@ -57,6 +57,7 @@ Usage: scripts/platform.sh <command> [args]
   install         Install composer deps, run ./yii platform:install (interactive)
   yii <args>      Run a console command in the app container
   composer <args> Run composer in the app container
+  demo            Create demo data for every admin section (dev/test only)
   kafka-provision Create Kafka topics from the registry (idempotent)
   metrics-token   Write runtime/metrics-token for the Prometheus scrape (done by "up monitoring")
   test [args]     Run the PHPUnit test suites (uses the test database)
@@ -88,6 +89,7 @@ case "${1:-}" in
     cmd_fix_perms
     $COMPOSE run --rm app php yii platform:install
     ;;
+  demo) $COMPOSE exec app php yii platform:demo ;;
   kafka-provision)
     $COMPOSE exec app php yii kafka:provision ${2:+--replication-factor=$2}
     $COMPOSE exec kafka sh /provision/kafka-topics.sh

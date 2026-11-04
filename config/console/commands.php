@@ -11,6 +11,7 @@ $commands = [
     'platform:install' => Command\InstallCommand::class,
     'rbac:sync' => Command\RbacSyncCommand::class,
     'platform:seed' => Command\SeedCommand::class,
+    'platform:demo' => Command\DemoCommand::class,
     'queue:work' => Command\QueueWorkCommand::class,
     'worker:health' => Command\WorkerHealthCommand::class,
     'scheduler:run' => Command\SchedulerRunCommand::class,
