@@ -1,0 +1,310 @@
+# Yii3 Enterprise Platform — LOCAL DEVELOPMENT stack.
+#
+# This file is for a single developer machine. It is NOT a high-availability deployment.
+# Production HA topology lives in infra/kubernetes (see docs/DEPLOYMENT.md).
+#
+# Profiles:
+#   (default)    nginx, app (php-fpm), worker, scheduler, relay, consumer, postgres, redis, kafka, s3 (SeaweedFS), mailpit
+#   monitoring   prometheus, alertmanager, grafana, otel-collector, jaeger, exporters
+#   pooling      pgbouncer
+#
+name: yep
+
+x-php: &php
+  image: yep-php:dev
+  build:
+    context: .
+    dockerfile: infra/docker/php/Dockerfile
+    target: dev
+    args:
+      USER_ID: ${UID:-1000}
+      GROUP_ID: ${GID:-1000}
+  env_file:
+    - path: .env
+      required: true
+  environment:
+    PHP_OPCACHE_VALIDATE_TIMESTAMPS: "1"
+  volumes:
+    - ./:/app
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  networks: [backend]
+  restart: unless-stopped
+
+x-php-depends: &php-depends
+  postgres:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+    volumes:
+      - ./public:/app/public:ro
+      - ./infra/docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infra/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/nginx-health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [frontend, backend]
+    restart: unless-stopped
+
+  app:
+    <<: *php
+    depends_on: *php-depends
+    healthcheck:
+      test: ["CMD", "php-fpm-healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  worker:
+    <<: *php
+    command: ["php", "yii", "queue:work", "--queue=default,notifications,integrations", "--sleep=1"]
+    depends_on: *php-depends
+    stop_grace_period: 40s
+    healthcheck:
+      test: ["CMD", "php", "yii", "worker:health", "--type=queue"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  scheduler:
+    <<: *php
+    command: ["php", "yii", "scheduler:run", "--daemon"]
+    depends_on: *php-depends
+    stop_grace_period: 30s
+
+  relay:
+    <<: *php
+    command: ["php", "yii", "outbox:relay", "--daemon"]
+    depends_on:
+      <<: *php-depends
+      kafka:
+        condition: service_healthy
+    stop_grace_period: 30s
+
+  consumer:
+    <<: *php
+    command: ["php", "yii", "kafka:consume", "--group=platform-default"]
+    depends_on:
+      <<: *php-depends
+      kafka:
+        condition: service_healthy
+    stop_grace_period: 40s
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-platform}
+      POSTGRES_USER: ${DB_USER:-platform}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./infra/docker/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./infra/docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${PG_PORT:-55432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+    restart: unless-stopped
+
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.24.1-p1
+    profiles: [pooling]
+    environment:
+      DB_HOST: postgres
+      DB_USER: ${DB_USER:-platform}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-platform}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 500
+      DEFAULT_POOL_SIZE: 20
+      AUTH_TYPE: scram-sha-256
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [backend]
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env}"]
+    volumes:
+      - redis_data:/data
+      - ./infra/docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    networks: [backend]
+    restart: unless-stopped
+
+  kafka:
+    image: apache/kafka:3.9.1
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      CLUSTER_ID: ${KAFKA_CLUSTER_ID:-5L6g3nShT-eMCtK--X86sw}
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+      - ./runtime:/provision:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 20s
+    networks: [backend]
+    restart: unless-stopped
+
+  # S3-compatible object storage for development.
+  # MinIO community images are no longer published on Docker Hub/Quay, so SeaweedFS (Apache-2.0)
+  # provides the S3 API locally. The application only speaks S3 (Flysystem AWS adapter), so
+  # MinIO, Ceph RGW or AWS S3 can be used in other environments without code changes.
+  s3:
+    image: chrislusf/seaweedfs:3.97
+    entrypoint: ["/bin/sh", "/s3-entrypoint.sh"]
+    environment:
+      S3_KEY: ${S3_KEY:-platform}
+      S3_SECRET: ${S3_SECRET:?S3_SECRET must be set in .env}
+    volumes:
+      - s3_data:/data
+      - ./infra/docker/s3/entrypoint.sh:/s3-entrypoint.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8333/healthz || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 15
+    networks: [backend]
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    networks: [backend]
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------ monitoring profile
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.130.0
+    profiles: [monitoring]
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./observability/otel/collector.yaml:/etc/otelcol/config.yaml:ro
+    networks: [backend]
+
+  jaeger:
+    image: jaegertracing/jaeger:2.8.0
+    profiles: [monitoring]
+    ports:
+      - "${JAEGER_UI_PORT:-16686}:16686"
+    networks: [backend]
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: [monitoring]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    volumes:
+      - ./observability/prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    networks: [backend]
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    profiles: [monitoring]
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml"]
+    volumes:
+      - ./observability/alertmanager:/etc/alertmanager:ro
+    networks: [backend]
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    profiles: [monitoring]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    networks: [backend]
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.17.1
+    profiles: [monitoring]
+    environment:
+      DATA_SOURCE_NAME: postgresql://${DB_USER:-platform}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-platform}?sslmode=disable
+    networks: [backend]
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.74.0
+    profiles: [monitoring]
+    environment:
+      REDIS_ADDR: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    networks: [backend]
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.9.0
+    profiles: [monitoring]
+    command: ["--kafka.server=kafka:9092"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks: [backend]
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  pg_data:
+  redis_data:
+  kafka_data:
+  s3_data:
+  prometheus_data:
+  grafana_data:
