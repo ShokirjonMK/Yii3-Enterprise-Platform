@@ -30,9 +30,6 @@ return [
     ],
     App\Platform\Notifications\ChannelRegistry::class => static fn(Psr\Container\ContainerInterface $c): App\Platform\Notifications\ChannelRegistry
         => new App\Platform\Notifications\ChannelRegistry($c, require dirname(__DIR__) . '/notification-channels.php'),
-    App\Platform\Notifications\Channel\EmailChannel::class => [
-        '__construct()' => ['from' => $platform['mailer']['from'], 'dsn' => $platform['mailer']['dsn']],
-    ],
     OpenTelemetry\API\Trace\TracerProviderInterface::class => static fn(): OpenTelemetry\API\Trace\TracerProviderInterface
         => App\Platform\Monitoring\Tracing\TracerProviderFactory::create(
             $platform['observability'],

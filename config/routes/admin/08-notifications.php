@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Admin\Action\Notifications\NotificationsController as N;
+use App\Admin\Action\Notifications\ChannelSettingsController;
 use App\Web\Middleware\RequirePermission;
+use App\Web\Middleware\RequireRecentAuth;
 use Yiisoft\Router\Group;
 use Yiisoft\Router\Route;
 
@@ -17,6 +19,10 @@ return [
         Route::post("/channels/$channel/health")->action([N::class, 'health'])->name('admin.notifications.health'),
         Route::post("/channels/$channel/toggle")->middleware($manage)->action([N::class, 'toggle'])->name('admin.notifications.toggle'),
         Route::post("/channels/$channel/test")->middleware($manage)->action([N::class, 'testSend'])->name('admin.notifications.test'),
+        // provider credentials, edited directly in this section
+        Route::get('/channels/{code:(?:email|telegram|sms|webpush)}/settings')->action([ChannelSettingsController::class, 'form'])->name('admin.notifications.settings'),
+        Route::post('/channels/{code:(?:email|telegram|sms|webpush)}/settings')->middleware($manage, RequireRecentAuth::class)->action([ChannelSettingsController::class, 'save'])->name('admin.notifications.settings.save'),
+        Route::post('/channels/webpush/vapid')->middleware($manage, RequireRecentAuth::class)->action([ChannelSettingsController::class, 'vapid'])->name('admin.notifications.settings.vapid'),
 
         Route::get('/templates')->action([N::class, 'templates'])->name('admin.notifications.templates'),
         Route::get('/templates/new')->middleware($manage)->action([N::class, 'createTemplate'])->name('admin.notifications.templates.create'),

@@ -28,6 +28,9 @@ $manage = $can('notifications.manage');
                 <td class="small"><?php foreach ($c['stats'] as $st => $n): ?><span class="tag"><?= $h->e($st) ?>: <?= (int) $n ?></span><?php endforeach ?><?= $c['stats'] === [] ? '—' : '' ?></td>
                 <td class="actions">
                     <div class="btn-group">
+                        <?php if (in_array($c['code'], ['email', 'telegram', 'sms', 'webpush'], true)): ?>
+                            <a class="btn btn--sm btn--primary" href="<?= $h->url('admin.notifications.settings', ['code' => $c['code']]) ?>"><?= $h->icon('settings') ?> <?= $h->t('Settings') ?></a>
+                        <?php endif ?>
                         <button class="btn btn--sm" hx-post="<?= $h->url('admin.notifications.health', ['code' => $c['code']]) ?>" hx-target="#health-<?= $h->e($c['code']) ?>" hx-swap="innerHTML"><?= $h->icon('activity') ?> <?= $h->t('Check') ?></button>
                         <?php if ($manage): ?>
                             <?php if ($c['code'] !== 'inapp'): ?>

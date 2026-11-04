@@ -85,10 +85,14 @@ final class SettingsService
         return array_key_exists($key, $values['global:'] ?? []) ? 'global' : 'default';
     }
 
-    public function set(string $actorId, string $key, mixed $value, string $scope = 'global', ?string $scopeId = null, string $comment = ''): void
+    /**
+     * @param string $permission permission required to change the key (sections that own a settings group,
+     *                           e.g. notifications.manage for channel credentials, pass their own permission)
+     */
+    public function set(string $actorId, string $key, mixed $value, string $scope = 'global', ?string $scopeId = null, string $comment = '', string $permission = 'settings.manage'): void
     {
         $def = $this->definition($key);
-        $this->access->assert($actorId, 'settings.manage');
+        $this->access->assert($actorId, $permission);
         if (($def['critical'] ?? false) && !$this->access->isSuperadmin($actorId)) {
             throw new AccessDeniedException('Only a superadmin can change this critical setting.');
         }
@@ -132,10 +136,10 @@ final class SettingsService
     }
 
     /** Removes an override (falls back to the next scope / default). */
-    public function reset(string $actorId, string $key, string $scope = 'global', ?string $scopeId = null): void
+    public function reset(string $actorId, string $key, string $scope = 'global', ?string $scopeId = null, string $permission = 'settings.manage'): void
     {
         $def = $this->definition($key);
-        $this->access->assert($actorId, 'settings.manage');
+        $this->access->assert($actorId, $permission);
         if (($def['critical'] ?? false) && !$this->access->isSuperadmin($actorId)) {
             throw new AccessDeniedException('Only a superadmin can change this critical setting.');
         }
