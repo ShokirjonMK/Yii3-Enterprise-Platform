@@ -15,7 +15,7 @@ First steps after `./yii platform:install`:
 ## Optional features — switch on only what the project uses
 
 Every optional part is a feature flag (registry: `config/common/features.php`), toggled in **21 System Settings → Feature flags**
-(per tenant/user rollout possible). A disabled section disappears from the menu and its URLs return 404; a disabled subsystem
+(per tenant/user rollout possible). A disabled section disappears from the menu; opening its URL shows "This section is switched off" with an **Enable this section** button (settings.manage), all other requests return 404; a disabled subsystem
 does no work at all (no queries, no network). Changes reach all processes within ~2 s.
 
 | Flag | Default | Effect when OFF |
@@ -51,7 +51,7 @@ an environment variable with the same purpose overrides the field and is marked 
 | 08 | Messaging & Notifications | channels (e-mail, Telegram, SMS, Web Push, in-app), templates uz/ru/en, deliveries, broadcast | notifications.view / .manage / .send |
 | 09 | Workflow & Approvals | workflow definitions (JSON, validated), instances, approvals inbox (four-eyes) | workflow.view / workflow.manage / approvals.decide |
 | 10 | Jobs & Scheduler | queues (pause), jobs (retry/cancel), workers, schedules (cron preview, run now) | jobs.view / jobs.manage |
-| 11 | Kafka Management | brokers, topics vs registry, consumer lag, pause/resume, outbox, dead letters (replay) | kafka.view / kafka.manage |
+| 11 | Kafka Management | brokers, topics vs registry, consumer lag, pause/resume, outbox, dead letters (replay), handlers (#[KafkaChannel]), publish JSON, settings (connection, SASL/SSL, producer, consumer, retry/failure policy) | kafka.view / kafka.manage |
 | 12 | PostgreSQL Management | activity, slow queries, sizes, locks, replication, replicas, ANALYZE/VACUUM, cancel query | db.view / db.manage |
 | 13 | Redis Management | INFO, memory, slowlog, key browser (no values), namespace cache clear | redis.view / redis.manage |
 | 14 | Storage & Search | S3 health, files (validated upload, authorized download), search diagnostics | storage.view / storage.manage |

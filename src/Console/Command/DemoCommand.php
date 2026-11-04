@@ -88,6 +88,25 @@ final class DemoCommand extends Command
         $this->io->title('Demo data · Yii3 Enterprise Platform by ShokirjonMK');
 
         $credentials = [];
+        // demo shows everything: switch on the optional sections (fresh installs keep unused ones off)
+        $this->step('21 Feature flags (all optional sections on)', function () use ($super) {
+            $flags = $this->c->get(\App\Platform\FeatureFlags\FeatureFlagService::class);
+            $n = 0;
+            foreach (\App\Platform\FeatureFlags\FeatureRegistry::all() as $code => $def) {
+                if (str_starts_with($code, 'observability.')) {
+                    continue; // tracing needs a collector (monitoring profile)
+                }
+                if (!$flags->isEnabled($code)) {
+                    try {
+                        $flags->enable($super->id, $code);
+                        $n++;
+                    } catch (Throwable $e) {
+                        $this->io->warning("$code: " . $e->getMessage()); // e.g. a dependency (Kafka) is not available
+                    }
+                }
+            }
+            return "$n enabled";
+        });
         $this->step('05 Tenants', fn() => $this->tenants($super));
         $this->step('02 Organizations', fn() => $this->organizations($super));
         $this->step('02 Users', function () use (&$credentials) {

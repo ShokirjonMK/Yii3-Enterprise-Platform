@@ -68,7 +68,7 @@ final class FeatureRegistry
             if ($flag === null) {
                 $routes = [...$routes, ...$defined];
             } else {
-                $routes[] = Group::create()->middleware(RequireFeature::for($flag))->routes(...$defined);
+                $routes[] = Group::create()->middleware(RequireFeature::for($flag, explain: $kind === 'admin'))->routes(...$defined);
             }
         }
         return $routes;

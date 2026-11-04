@@ -47,16 +47,23 @@ final class FeatureFlagsController
         return $this->renderShow((string) $route->getArgument('code'), [], 200);
     }
 
-    public function enable(CurrentRoute $route): ResponseInterface
+    public function enable(CurrentRoute $route, ServerRequestInterface $request): ResponseInterface
     {
         $code = (string) $route->getArgument('code');
+        $ok = false;
         try {
             $this->flags->enable($this->actor(), $code);
             $this->responder->success('Feature flag enabled.');
+            $ok = true;
         } catch (ValidationException $e) {
             $this->responder->error($e->getMessage());
         } catch (ConflictException $e) {
             $this->responder->error($e->getMessage());
+        }
+        // "Enable" button on a disabled section's page returns to that section (local /admin paths only)
+        $return = (string) (((array) $request->getParsedBody())['return'] ?? '');
+        if ($ok && preg_match('#^/admin(/[A-Za-z0-9/_.-]*)?$#', $return) === 1 && !str_contains($return, '//')) {
+            return $this->responder->redirectToUrl($return);
         }
         return $this->responder->redirect('admin.settings.flags.show', ['code' => $code]);
     }

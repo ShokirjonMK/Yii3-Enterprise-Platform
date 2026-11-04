@@ -24,6 +24,7 @@ final class SearchController
         private readonly ConnectionInterface $db,
         private readonly AccessService $access,
         private readonly CurrentUser $currentUser,
+        private readonly \App\Platform\FeatureFlags\FeatureFlagService $flags,
     ) {}
 
     public function index(ServerRequestInterface $request): ResponseInterface
@@ -33,7 +34,11 @@ final class SearchController
         $results = [];
         if (mb_strlen($q) >= 2) {
             foreach (AdminMenu::flat() as $item) {
-                if (stripos($item['label'], $q) !== false && $this->access->can($uid, $item['permission'])) {
+                $flag = \App\Platform\FeatureFlags\FeatureRegistry::flagForMenu($item['route']);
+                $on = str_starts_with($item['route'], 'admin.devtools')
+                    ? \App\Admin\Action\DevTools\DevToolsController::available($this->flags)
+                    : ($flag === null || $this->flags->isEnabled($flag));
+                if ($on && stripos($item['label'], $q) !== false && $this->access->can($uid, $item['permission'])) {
                     $results['Sections'][] = ['label' => $item['label'], 'route' => $item['route'], 'args' => [], 'meta' => sprintf('%02d', $item['n'])];
                 }
             }

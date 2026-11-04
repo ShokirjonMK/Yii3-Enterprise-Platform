@@ -42,9 +42,19 @@ final class FeaturesActivityLogsTest extends TestCase
         $was = (bool) Fixtures::db()->createCommand("SELECT enabled FROM feature_flags WHERE code = 'feature.incidents'")->queryScalar();
         try {
             $this->setFlag('feature.incidents', false);
-            self::assertSame(404, $web->get('/admin/incidents')->getStatusCode());
+            // admins get an explanation + "Enable" button instead of a bare 404; actions stay 404
+            self::assertSame(200, $web->get('/admin/incidents')->getStatusCode());
+            self::assertStringContainsString('This section is switched off', $web->body());
+            self::assertStringContainsString('/admin/settings/flags/feature.incidents/enable', $web->body());
+            self::assertSame(404, $web->post('/admin/incidents', ['title' => 'x'])->getStatusCode());
             $web->get('/admin');
             self::assertStringNotContainsString('<span>Incident Management</span>', $web->body(), 'menu entry hidden');
+
+            // the "Enable this section" button switches it on and returns to the section
+            $web->get('/admin/incidents');
+            $r = $web->post('/admin/settings/flags/feature.incidents/enable', ['return' => '/admin/incidents']);
+            self::assertSame(200, $r->getStatusCode());
+            self::assertTrue((bool) Fixtures::db()->createCommand("SELECT enabled FROM feature_flags WHERE code = 'feature.incidents'")->queryScalar());
 
             $this->setFlag('feature.incidents', true);
             self::assertSame(200, $web->get('/admin/incidents')->getStatusCode());
