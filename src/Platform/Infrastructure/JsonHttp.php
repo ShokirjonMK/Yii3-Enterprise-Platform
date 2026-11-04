@@ -37,7 +37,7 @@ final class JsonHttp
             'headers' => $headers + ['Accept' => 'application/json', 'User-Agent' => 'yii3-platform-ops/1.0'],
             'verify' => $verify,
             'timeout' => $timeout,
-            'connect_timeout' => min(2.0, $timeout),
+            'connect_timeout' => min(1.0, $timeout),
             'http_errors' => false,
             'allow_redirects' => false,
         ];
@@ -45,7 +45,10 @@ final class JsonHttp
             $options['handler'] = $handler instanceof HandlerStack ? $handler : HandlerStack::create($handler);
         }
         $this->http = new Client($options);
+        $this->downKey = 'yep:down:' . md5($service . '|' . $baseUri);
     }
+
+    private string $downKey;
 
     /**
      * @param array<string,mixed> $options Guzzle request options (query, json, body, headers)
@@ -53,8 +56,18 @@ final class JsonHttp
      */
     public function request(string $method, string $path, array $options = []): array
     {
+        // Fail fast: a service that just failed at the network level is not retried for 30 s by this
+        // PHP worker (admin pages would otherwise wait for a connect timeout on every refresh).
+        if (PHP_SAPI !== 'cli' && function_exists('apcu_fetch') && apcu_fetch($this->downKey) !== false) {
+            throw new ExternalServiceException($this->service, $this->service . ' unreachable (recent connection failure, retry in ≤ 30 s).');
+        }
         try {
             $response = $this->http->request($method, ltrim($path, '/'), $options);
+        } catch (\GuzzleHttp\Exception\ConnectException $e) {
+            if (PHP_SAPI !== 'cli' && function_exists('apcu_store')) {
+                apcu_store($this->downKey, time(), 30);
+            }
+            throw new ExternalServiceException($this->service, $this->service . ' unreachable: ' . Redactor::redactString($e->getMessage()), 0, $e);
         } catch (GuzzleException $e) {
             throw new ExternalServiceException($this->service, $this->service . ' unreachable: ' . Redactor::redactString($e->getMessage()), 0, $e);
         }

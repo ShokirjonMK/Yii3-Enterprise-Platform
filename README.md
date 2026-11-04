@@ -18,7 +18,18 @@ cd Yii3-Enterprise-Platform
 ./scripts/platform.sh up        # nginx, php-fpm, workers, PostgreSQL, Redis, Kafka, S3, Mailpit
 ./scripts/platform.sh install   # migrations, RBAC, reference data, one-time superadmin (password shown once)
 ./scripts/platform.sh kafka-provision
+./scripts/platform.sh demo      # optional: 1-2 demo records in every admin section
+./scripts/platform.sh fast      # FAST mode: production images, ~10-50 ms per page, ~1000 req/s locally
 ```
+
+Two runtime modes share the same data volumes:
+
+| Mode | Command | Use for | Speed (Windows laptop) |
+|---|---|---|---|
+| **fast** | `./scripts/platform.sh fast` | using / demoing the platform | `/login` ≈ 17 ms, admin pages 25-50 ms, k6: ~1000 req/s, p95 57 ms |
+| dev | `./scripts/platform.sh up` | changing code (live reload, Developer Tools, Gii, tests) | ≈ 200-300 ms (host bind mount) |
+
+`fast` must be re-run after code changes (it rebuilds the images).
 
 Open <http://localhost:8090> (port = `HTTP_PORT` in `.env`). Mail: <http://localhost:8025>.
 On first login the superadmin must change the temporary password and enrol MFA.

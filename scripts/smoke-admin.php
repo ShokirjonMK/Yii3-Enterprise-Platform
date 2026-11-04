@@ -36,16 +36,23 @@ $paths = [
 ];
 foreach (AdminMenu::flat() as $item) {
     $path = $paths[$item['n']] ?? null;
+    $t = microtime(true);
     $r = $web->get((string) $path);
+    $ms = (int) round((microtime(true) - $t) * 1000);
     $ok = $r->getStatusCode() === 200 && str_contains($web->body(), 'id="main"');
-    $fail += $ok ? 0 : 1;
-    $rows[] = sprintf('%-4s %-30s %-24s %s', $ok ? 'OK' : 'FAIL', sprintf('%02d %s', $item['n'], $item['label']), $path, $r->getStatusCode());
+    // Developer Tools are intentionally unavailable (404) when the stack runs with APP_ENV=prod (fast mode)
+    $na = !$ok && $r->getStatusCode() === 404 && str_starts_with((string) $path, '/admin/devtools');
+    $fail += ($ok || $na) ? 0 : 1;
+    $rows[] = sprintf('%-4s %-30s %-24s %s %5d ms', $ok ? 'OK' : ($na ? 'N/A' : 'FAIL'), sprintf('%02d %s', $item['n'], $item['label']), $path, $r->getStatusCode(), $ms);
 }
 foreach (['/admin/projects' => 'Projects (module)', '/admin/contracts' => 'Contracts (Gii module)', '/admin/devtools/gii' => 'Enterprise Gii', '/projects' => 'Web: projects', '/account' => 'Web: profile', '/api/docs' => 'API docs'] as $path => $label) {
+    $t = microtime(true);
     $r = $web->get($path);
+    $ms = (int) round((microtime(true) - $t) * 1000);
     $ok = $r->getStatusCode() === 200;
-    $fail += $ok ? 0 : 1;
-    $rows[] = sprintf('%-4s %-30s %-24s %s', $ok ? 'OK' : 'FAIL', $label, $path, $r->getStatusCode());
+    $na = !$ok && $r->getStatusCode() === 404 && str_starts_with($path, '/admin/devtools');
+    $fail += ($ok || $na) ? 0 : 1;
+    $rows[] = sprintf('%-4s %-30s %-24s %s %5d ms', $ok ? 'OK' : ($na ? 'N/A' : 'FAIL'), $label, $path, $r->getStatusCode(), $ms);
 }
 $r = $web->json('GET', '/api/v1/health');
 $rows[] = sprintf('%-4s %-30s %-24s %s', $r->getStatusCode() === 200 ? 'OK' : 'FAIL', 'API v1 health', '/api/v1/health', $r->getStatusCode());

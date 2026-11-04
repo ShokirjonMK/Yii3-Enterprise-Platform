@@ -32,15 +32,35 @@ final class AccessService
         private readonly RbacCatalog $catalog,
     ) {}
 
+    /** @var array<string, array{at: float, perms: array<string, true>}> effective permissions per user (short-lived) */
+    private array $permissionCache = [];
+
     public function can(?string $userId, string $permission): bool
     {
         if ($userId === null) {
             return false;
         }
         try {
-            return $this->rbac->userHasPermission($userId, $permission);
+            // One RBAC lookup per user instead of one per check (the admin menu alone performs ~30 checks).
+            // Rules are not used in the catalog, so the effective permission set is exact. Entries expire after
+            // 5 s so long-running workers observe role changes quickly; role changes here clear the cache.
+            $entry = $this->permissionCache[$userId] ?? null;
+            if ($entry === null || microtime(true) - $entry['at'] > 5) {
+                $entry = ['at' => microtime(true), 'perms' => array_fill_keys(array_keys($this->rbac->getPermissionsByUserId($userId)), true)];
+                $this->permissionCache[$userId] = $entry;
+            }
+            return isset($entry['perms'][$permission]);
         } catch (\Throwable) {
             return false;
+        }
+    }
+
+    public function forget(?string $userId = null): void
+    {
+        if ($userId === null) {
+            $this->permissionCache = [];
+        } else {
+            unset($this->permissionCache[$userId]);
         }
     }
 
@@ -115,6 +135,7 @@ final class AccessService
         foreach ($remove as $role) {
             $this->rbac->revoke($role, $userId);
         }
+        $this->forget($userId);
 
         if ($add !== [] || $remove !== []) {
             $this->audit->record('rbac.roles.changed', 'user', $userId, ['roles' => $current], ['roles' => $roles],
@@ -127,6 +148,7 @@ final class AccessService
     {
         if (!isset($this->rbac->getRolesByUserId($userId)[$role])) {
             $this->rbac->assign($role, $userId);
+            $this->forget($userId);
             $this->audit->record('rbac.role.assigned', 'user', $userId, null, ['role' => $role], ['by' => 'system'], category: 'access', severity: 'notice');
         }
     }

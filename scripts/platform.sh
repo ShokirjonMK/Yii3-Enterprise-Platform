@@ -52,7 +52,8 @@ Usage: scripts/platform.sh <command> [args]
 
   init            Create .env with random secrets (idempotent)
   build           Build PHP images
-  up [profile..]  Start the stack (e.g. "up monitoring")
+  up [profile..]  Start the stack in DEV mode (live code reload; e.g. "up monitoring")
+  fast            Build production images and run the stack in FAST mode (5-15 ms/request)
   down            Stop the stack
   install         Install composer deps, run ./yii platform:install (interactive)
   yii <args>      Run a console command in the app container
@@ -80,6 +81,12 @@ case "${1:-}" in
       [[ "$p" == "monitoring" ]] && cmd_metrics_token
     done
     $COMPOSE "${profiles[@]}" up -d --remove-orphans
+    ;;
+  fast)
+    # Production images (baked code, no bind mounts) — fastest local runtime
+    docker build -f infra/docker/php/Dockerfile --target prod -t yep-php:prod .
+    docker build -f infra/docker/nginx/Dockerfile --build-arg PHP_IMAGE=yep-php:prod -t yep-nginx:prod .
+    $COMPOSE -f compose.yaml -f compose.fast.yaml up -d --remove-orphans
     ;;
   down) $COMPOSE --profile monitoring --profile pooling down --remove-orphans ;;
   fix-perms) cmd_fix_perms ;;

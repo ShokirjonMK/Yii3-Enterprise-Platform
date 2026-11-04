@@ -45,7 +45,8 @@ COPY --from=php /app/public /app/public
 # PHP sources are not served by nginx; index.php only has to exist for try_files / SCRIPT_FILENAME.
 RUN find /app/public -name '*.php' ! -name index.php -delete \
  && chown -R root:root /app/public && chmod -R a-w /app/public \
- && nginx -t
+ && nginx -t \
+ && rm -f /tmp/nginx.pid
 USER 101
 EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=3s --retries=3 CMD wget -qO- http://127.0.0.1:8080/nginx-health || exit 1

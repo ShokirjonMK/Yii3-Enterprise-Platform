@@ -26,6 +26,10 @@ x-php: &php
     PHP_OPCACHE_VALIDATE_TIMESTAMPS: "1"
   volumes:
     - ./:/app
+    # vendor/ lives in a Docker volume (native Linux FS): ~10k files would otherwise be read through the
+    # slow host bind mount on every request. Run `./scripts/platform.sh composer install` to populate it.
+    - vendor:/app/vendor
+    - ./infra/docker/php/conf.d/dev.ini:/usr/local/etc/php/conf.d/zz-dev.ini:ro
   extra_hosts:
     - "host.docker.internal:host-gateway"
   networks: [backend]
@@ -325,6 +329,7 @@ networks:
   backend:
 
 volumes:
+  vendor:
   pg_data:
   redis_data:
   kafka_data:

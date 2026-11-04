@@ -253,8 +253,13 @@ final class InstallCommand extends Command
             if (Environment::bool('APP_DEBUG')) {
                 $errors[] = 'APP_DEBUG must be false in production.';
             }
+            $host = (string) parse_url((string) $this->platform['url'], PHP_URL_HOST);
             if (!str_starts_with((string) $this->platform['url'], 'https://')) {
-                $errors[] = 'APP_URL must use https:// in production.';
+                if (in_array($host, ['localhost', '127.0.0.1', '::1'], true)) {
+                    $warnings[] = 'APP_URL is plain http on localhost (local fast mode) — never expose this setup.';
+                } else {
+                    $errors[] = 'APP_URL must use https:// in production.';
+                }
             }
             if (ini_get('expose_php')) {
                 $warnings[] = 'expose_php should be Off.';

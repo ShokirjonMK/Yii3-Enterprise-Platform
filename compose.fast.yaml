@@ -1,0 +1,35 @@
+# FAST MODE — the platform runs from the production images (code baked into the image, opcache without
+# timestamp checks, optimized autoloader, pre-published assets). ~5–15 ms per request instead of
+# ~200 ms in dev mode, because nothing is read through the slow host bind mount (Windows/macOS).
+#
+#   ./scripts/platform.sh fast      (build images + start)       ./scripts/platform.sh up   (dev mode, live code reload)
+#
+# Code changes require a rebuild in this mode (`./scripts/platform.sh fast`). Data volumes are shared with dev mode.
+# Author: ShokirjonMK
+
+x-fast-php: &fast-php
+  image: yep-php:prod
+  build: !reset null
+  volumes: !reset []
+  environment:
+    APP_ENV: prod
+    APP_DEBUG: "false"
+    PHP_OPCACHE_VALIDATE_TIMESTAMPS: "0"
+    PHP_FPM_MAX_CHILDREN: "32"
+
+services:
+  app:
+    <<: *fast-php
+  worker:
+    <<: *fast-php
+  scheduler:
+    <<: *fast-php
+  relay:
+    <<: *fast-php
+  consumer:
+    <<: *fast-php
+  nginx:
+    image: yep-nginx:prod
+    volumes: !override
+      - ./infra/docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infra/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro

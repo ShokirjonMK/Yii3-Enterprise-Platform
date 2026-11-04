@@ -15,6 +15,9 @@ use Yiisoft\Yii\View\Renderer\CsrfViewInjection;
 
 $root = dirname(__DIR__, 2);
 
+// Secure cookies / HSTS follow the public URL scheme (https in every real deployment; plain http only on localhost).
+$httpsUrl = str_starts_with(Env::string('APP_URL', 'http://localhost:8080'), 'https://');
+
 $replicas = array_map(
     static function (string $hostPort): array {
         [$host, $port] = array_pad(explode(':', $hostPort, 2), 2, '5432');
@@ -183,8 +186,8 @@ return [
         'session' => [
             'options' => [
                 // __Secure- (not __Host-): yiisoft/session always sends a Domain attribute, which __Host- cookies forbid
-                'name' => Env::isProd() ? '__Secure-yep_sid' : 'yep_sid',
-                'cookie_secure' => Env::isProd() ? 1 : 0,
+                'name' => $httpsUrl ? '__Secure-yep_sid' : 'yep_sid',
+                'cookie_secure' => $httpsUrl ? 1 : 0,
                 'cookie_httponly' => 1,
                 'cookie_samesite' => 'Lax',
                 'use_strict_mode' => 1,

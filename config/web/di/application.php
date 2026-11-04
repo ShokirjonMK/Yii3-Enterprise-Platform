@@ -75,7 +75,7 @@ return [
     SecurityHeadersMiddleware::class => [
         '__construct()' => [
             'csp' => $platform['security']['csp'],
-            'hsts' => Environment::isProd(),
+            'hsts' => str_starts_with((string) $platform['url'], 'https://'),
         ],
     ],
 

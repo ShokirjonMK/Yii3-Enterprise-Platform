@@ -64,7 +64,7 @@ final class OpsClients
 
     public function alertmanager(): AlertmanagerClient
     {
-        return new AlertmanagerClient((string) ($this->settings->get('observability.alertmanager_url') ?: 'http://alertmanager:9093'), $this->httpHandler);
+        return new AlertmanagerClient(self::str($this->settings->get('observability.alertmanager_url')), $this->httpHandler);
     }
 
     /** @return array{grafana:?string, jaeger:?string, prometheus:?string, alertmanager:?string} */
