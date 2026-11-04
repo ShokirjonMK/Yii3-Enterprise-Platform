@@ -81,6 +81,9 @@ final class AuthenticationService
         if (!$user->isActive()) {
             $this->fail($login, $user, 'inactive_' . $user->status);
         }
+        if (!$this->users->isTenantActive($user->tenantId)) {
+            $this->fail($login, $user, 'tenant_inactive');
+        }
 
         if (password_needs_rehash((string) $user->passwordHash, PASSWORD_ARGON2ID, ['memory_cost' => 65536, 'time_cost' => 4, 'threads' => 1])) {
             $this->users->update($user->id, ['password_hash' => $this->hasher->hash($password)]);

@@ -127,6 +127,9 @@ final class SsoService
             if (!$user->isActive()) {
                 throw new SsoException('Your account is not active.', 'inactive');
             }
+            if (!$this->users->isTenantActive($user->tenantId)) {
+                throw new SsoException('Your organization is suspended.', 'tenant_inactive');
+            }
             if ($user->authPolicy === AuthPolicy::LOCAL_ONLY) {
                 throw new SsoException('This account may not use single sign-on.', 'policy_denied');
             }

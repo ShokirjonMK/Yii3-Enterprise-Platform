@@ -65,12 +65,12 @@ final class UserRepository
             $q->andWhere(['u.tenant_id' => $restrictTenantId]);
         }
         if (($filters['q'] ?? '') !== '') {
+            // Bound LIKE parameter: yiisoft/db's ['like', …] would escape an already %-wrapped term and never match.
             $term = '%' . Sql::escapeLike(mb_strtolower(trim((string) $filters['q']))) . '%';
-            $q->andWhere(['or',
-                ['like', new Expression('lower(u.username)'), $term, null],
-                ['like', new Expression('lower(u.full_name)'), $term, null],
-                ['like', new Expression('lower(u.email)'), $term, null],
-            ]);
+            $q->andWhere(new Expression(
+                '(lower(u.username) LIKE :uq1 OR lower(u.full_name) LIKE :uq2 OR lower(u.email) LIKE :uq3)',
+                [':uq1' => $term, ':uq2' => $term, ':uq3' => $term],
+            ));
         }
         if (($filters['status'] ?? '') !== '') {
             $q->andWhere(['u.status' => $filters['status']]);
@@ -129,6 +129,15 @@ final class UserRepository
             $q->andWhere(['<>', 'u.id', $excludeUserId]);
         }
         return (int) $q->count();
+    }
+
+    /** Users of suspended/archived tenants must not authenticate (null tenant = platform-level account). */
+    public function isTenantActive(?string $tenantId): bool
+    {
+        if ($tenantId === null) {
+            return true;
+        }
+        return (new Query($this->db))->from('tenants')->where(['id' => $tenantId, 'status' => 'active'])->exists();
     }
 
     public function passwordHistory(string $userId, int $limit): array
