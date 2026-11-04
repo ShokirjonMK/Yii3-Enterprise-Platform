@@ -39,6 +39,7 @@ final class WorkflowEngine
         private readonly ConnectionInterface $db,
         private readonly AccessService $access,
         private readonly AuditLogger $audit,
+        private readonly \App\Platform\Queue\JobQueue $queue,
     ) {}
 
     // ------------------------------------------------------------------------------------------ definitions
@@ -253,6 +254,8 @@ final class WorkflowEngine
                 $this->audit->record('approval.requested', 'approval_request', $approvalId, null,
                     ['transition' => $transition, 'instance_id' => $instance['id'], 'required_approvals' => $t['approval']['required_approvals']],
                     ['workflow' => $wf['code'], 'entity' => $instance['entity_type'] . ':' . $instance['entity_id']], actorId: $actorId);
+                // transactional enqueue: approvers are notified only if the request is committed
+                $this->queue->push(NotifyApproversJob::TYPE, ['request_id' => $approvalId], ['queue' => 'notifications', 'idempotency_key' => 'approval-notify:' . $approvalId]);
             });
             return ['status' => 'pending_approval', 'instance' => $this->instance($instanceId), 'approval_id' => $approvalId];
         }

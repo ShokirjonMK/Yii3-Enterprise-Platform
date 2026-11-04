@@ -33,6 +33,7 @@ final class ApprovalService
         private readonly AccessService $access,
         private readonly AuditLogger $audit,
         private readonly WorkflowEngine $engine,
+        private readonly \App\Platform\Queue\JobQueue $queue,
     ) {}
 
     public function query(): Query
@@ -83,6 +84,7 @@ final class ApprovalService
                 'requested_by' => $requesterId, 'expires_at' => $expiresAt?->format(DATE_ATOM),
             ])->execute();
             $this->audit->record('approval.requested', 'approval_request', $id, null, ['type' => $type, 'required_approvals' => $requiredApprovals], actorId: $requesterId);
+            $this->queue->push(NotifyApproversJob::TYPE, ['request_id' => $id], ['queue' => 'notifications', 'idempotency_key' => 'approval-notify:' . $id]);
         });
         return $id;
     }
