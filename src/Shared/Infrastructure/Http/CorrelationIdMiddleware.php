@@ -41,6 +41,9 @@ final class CorrelationIdMiddleware implements MiddlewareInterface
         }
 
         $request = $request->withAttribute('correlationId', $this->context->correlationId());
-        return $handler->handle($request)->withHeader('X-Request-Id', $this->context->correlationId());
+        $response = $handler->handle($request)->withHeader('X-Request-Id', $this->context->correlationId());
+        // Server-Timing: total server-side time incl. bootstrap (visible in browser DevTools → Network → Timing)
+        $started = (float) ($request->getServerParams()['REQUEST_TIME_FLOAT'] ?? microtime(true));
+        return $response->withHeader('Server-Timing', sprintf('app;dur=%.1f', (microtime(true) - $started) * 1000));
     }
 }

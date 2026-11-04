@@ -15,7 +15,8 @@ x-fast-php: &fast-php
     APP_ENV: prod
     APP_DEBUG: "false"
     PHP_OPCACHE_VALIDATE_TIMESTAMPS: "0"
-    PHP_FPM_MAX_CHILDREN: "32"
+    PHP_FPM_MAX_CHILDREN: "16"
+    PHP_FPM_PM: static        # all workers pre-forked and warm: no spawn latency under load
 
 services:
   app:

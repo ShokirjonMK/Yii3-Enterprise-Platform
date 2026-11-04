@@ -15,7 +15,8 @@ FROM php:8.3-fpm-bookworm AS base
 ENV LC_ALL=C.UTF-8 \
     TZ=UTC \
     PHP_OPCACHE_VALIDATE_TIMESTAMPS=1 \
-    PHP_FPM_MAX_CHILDREN=20
+    PHP_FPM_MAX_CHILDREN=20 \
+    PHP_FPM_PM=dynamic
 
 COPY --from=ext-installer /usr/bin/install-php-extensions /usr/local/bin/
 
