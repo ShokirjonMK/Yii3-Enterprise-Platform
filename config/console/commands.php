@@ -18,6 +18,8 @@ $commands = [
     'outbox:relay' => Command\OutboxRelayCommand::class,
     'kafka:consume' => Command\KafkaConsumeCommand::class,
     'kafka:provision' => Command\KafkaProvisionCommand::class,
+    'kafka:publish' => Command\KafkaPublishCommand::class,
+    'kafka:handlers' => Command\KafkaHandlersCommand::class,
     'audit:verify' => Command\AuditVerifyCommand::class,
 ];
 

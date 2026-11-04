@@ -25,17 +25,25 @@ use Yiisoft\Db\Query\Query;
  *    topic `platform.dlq` + `kafka_dead_letters` table (replayable from the admin panel),
  *  - safe pause/resume from the admin panel (`consumer_state.paused`) — partitions are paused, not closed,
  *  - graceful shutdown on SIGTERM (commits, leaves the group cleanly),
- *  - consumer-lag gauge per partition.
+ *  - consumer-lag gauge per partition,
+ *  - handlers declared with #[KafkaChannel] (auto-discovered): platform envelopes or plain JSON messages
+ *    ({@see KafkaMessageHandlerInterface}); immediate in-process retries with backoff and a configurable
+ *    failure policy (retry_dlq | dlq | skip) — ideas adopted from muxtorov98/yii2-kafka (MIT),
+ *  - automatic restart when the Kafka settings change (graceful exit, the supervisor/orchestrator restarts).
+ *
+ * Author: ShokirjonMK
  */
 final class KafkaConsumerRunner
 {
     public const RETRY_TOPICS = ['platform.retry.1m' => 60, 'platform.retry.10m' => 600];
     public const DLQ_TOPIC = 'platform.dlq';
-    private const MAX_ATTEMPTS = 3;
+    /** exit code of a consumer that stopped because its configuration changed (restart expected) */
+    public const EXIT_CONFIG_CHANGED = 75;
 
     private bool $stop = false;
     private bool $paused = false;
     private float $lastStateCheck = 0;
+    private bool $configChanged = false;
 
     public function __construct(
         private readonly KafkaConfig $config,
@@ -46,9 +54,16 @@ final class KafkaConsumerRunner
         private readonly RequestContext $context,
         private readonly Metrics $metrics,
         private readonly array $groups,
+        private readonly ?KafkaConfigFactory $configFactory = null,
     ) {}
 
-    /** @return array<string, array{topics:list<string>, handlers:array<string,string>}> */
+    /** True when the last run() stopped because the Kafka settings changed. */
+    public function configChanged(): bool
+    {
+        return $this->configChanged;
+    }
+
+    /** @return array<string, array{topics:list<string>, handlers:array<string,string>, raw?:array<string,list<string>>}> */
     public function groups(): array
     {
         return $this->groups;
@@ -70,7 +85,7 @@ final class KafkaConsumerRunner
         try {
             while (!$this->stop) {
                 $this->syncPauseState($consumer, $group);
-                $message = $consumer->consume(1000);
+                $message = $consumer->consume($this->config->consumerPollTimeoutMs);
                 if ($message->err === RD_KAFKA_RESP_ERR__TIMED_OUT || $message->err === RD_KAFKA_RESP_ERR__PARTITION_EOF) {
                     if ($idleExitSeconds > 0 && microtime(true) - $idleSince > $idleExitSeconds) {
                         break;
@@ -82,7 +97,7 @@ final class KafkaConsumerRunner
                     continue;
                 }
                 $idleSince = microtime(true);
-                $isRetry ? $this->handleRetry($message) : $this->process($group, $def['handlers'], $message);
+                $isRetry ? $this->handleRetry($message) : $this->process($group, $def['handlers'], $message, $def['raw'] ?? []);
                 $consumer->commit($message);
                 $this->reportLag($consumer, $message, $group);
                 $processed++;
@@ -98,10 +113,18 @@ final class KafkaConsumerRunner
         return $processed;
     }
 
-    /** @param array<string,string> $handlers */
-    public function process(string $group, array $handlers, Message $message): void
+    /**
+     * @param array<string,string> $handlers event type → EventHandlerInterface class
+     * @param array<string,list<string>> $raw topic (without prefix) → KafkaMessageHandlerInterface classes
+     */
+    public function process(string $group, array $handlers, Message $message, array $raw = []): void
     {
         $headers = $message->headers ?? [];
+        $rawHandlers = $raw[$this->unprefixed((string) $message->topic_name)] ?? [];
+        if ($rawHandlers !== []) {
+            $this->processRaw($group, $rawHandlers, $message);
+            return;
+        }
         try {
             $event = EventEnvelope::fromJson((string) $message->payload);
         } catch (Throwable $e) {
@@ -119,7 +142,7 @@ final class KafkaConsumerRunner
 
         $start = hrtime(true);
         try {
-            $this->db->transaction(function () use ($group, $event, $message, $handlerClass): void {
+            $this->withRetries(fn() => $this->db->transaction(function () use ($group, $event, $message, $handlerClass): void {
                 $fresh = $this->db->createCommand(
                     'INSERT INTO inbox (consumer_group, message_id, topic) VALUES (:g, :m, :t) ON CONFLICT DO NOTHING RETURNING message_id',
                     [':g' => $group, ':m' => $event->id, ':t' => $message->topic_name],
@@ -133,27 +156,120 @@ final class KafkaConsumerRunner
                     throw new \LogicException("$handlerClass must implement EventHandlerInterface");
                 }
                 $handler->handle($event);
-            });
+            }), $group, $event->type);
             $this->metrics->inc('kafka_messages_total', 'Consumed Kafka messages', ['group' => $group, 'result' => 'ok']);
             $this->metrics->observe('kafka_handle_seconds', 'Kafka handler duration', (hrtime(true) - $start) / 1e9, ['group' => $group]);
         } catch (Throwable $e) {
-            $attempts = (int) ($headers['attempts'] ?? 0) + 1;
-            $this->metrics->inc('kafka_messages_total', 'Consumed Kafka messages', ['group' => $group, 'result' => 'error']);
-            $this->logger->warning('Kafka handler failed for {type} (attempt {a}): {e}', ['type' => $event->type, 'a' => $attempts, 'e' => $e->getMessage()]);
-            if ($attempts >= self::MAX_ATTEMPTS) {
-                $this->deadLetter($group, $message, $e->getMessage(), $attempts);
-                return;
-            }
-            $retryTopic = array_keys(self::RETRY_TOPICS)[min($attempts - 1, count(self::RETRY_TOPICS) - 1)];
-            $delay = self::RETRY_TOPICS[$retryTopic];
-            $this->producer->publish($retryTopic, (string) $message->key, (string) $message->payload, array_merge($headers, [
-                'attempts' => (string) $attempts,
-                'original_topic' => $message->topic_name,
-                'target_group' => $group,
-                'not_before' => (string) (time() + $delay),
-                'last_error' => mb_substr($e->getMessage(), 0, 500),
-            ]));
+            $this->fail($group, $message, $event->type, $e);
         }
+    }
+
+    /** @param list<string> $classes */
+    private function processRaw(string $group, array $classes, Message $message): void
+    {
+        $headers = $message->headers ?? [];
+        if (isset($headers['target_group']) && $headers['target_group'] !== $group) {
+            return; // redelivery meant for another consumer group
+        }
+        try {
+            $payload = json_decode((string) $message->payload, true, 64, JSON_THROW_ON_ERROR);
+            if (!is_array($payload)) {
+                throw new \UnexpectedValueException('Message must be a JSON object or array.');
+            }
+        } catch (Throwable $e) {
+            $this->deadLetter($group, $message, 'Unparseable message: ' . $e->getMessage(), (int) ($headers['attempts'] ?? 1));
+            return;
+        }
+        $id = KafkaMessage::idFor((string) ($headers['original_topic'] ?? $message->topic_name), (int) $message->partition, (int) $message->offset, $headers);
+        $this->context->reset();
+        $this->context->setChannel('consumer');
+        if (isset($headers['correlation_id'])) {
+            $this->context->setCorrelationId((string) $headers['correlation_id']);
+        }
+        $start = hrtime(true);
+        $attempt = 0;
+        try {
+            $this->withRetries(function () use ($group, $classes, $message, $payload, $headers, $id, &$attempt): void {
+                $attempt++;
+                $this->db->transaction(function () use ($group, $classes, $message, $payload, $headers, $id, $attempt): void {
+                    $fresh = $this->db->createCommand(
+                        'INSERT INTO inbox (consumer_group, message_id, topic) VALUES (:g, :m, :t) ON CONFLICT DO NOTHING RETURNING message_id',
+                        [':g' => $group, ':m' => $id, ':t' => $message->topic_name],
+                    )->queryScalar();
+                    if ($fresh === false || $fresh === null) {
+                        $this->metrics->inc('kafka_messages_total', 'Consumed Kafka messages', ['group' => $group, 'result' => 'duplicate']);
+                        return;
+                    }
+                    $meta = new KafkaMessage($id, (string) $message->topic_name, (int) $message->partition, (int) $message->offset,
+                        $message->key, array_map('strval', $headers), $group, (int) ($headers['attempts'] ?? 0) + $attempt);
+                    foreach ($classes as $class) {
+                        $handler = $this->container->get($class);
+                        if (!$handler instanceof KafkaMessageHandlerInterface) {
+                            throw new \LogicException("$class must implement KafkaMessageHandlerInterface");
+                        }
+                        $handler->handle($payload, $meta);
+                    }
+                });
+            }, $group, (string) $message->topic_name);
+            $this->metrics->inc('kafka_messages_total', 'Consumed Kafka messages', ['group' => $group, 'result' => 'ok']);
+            $this->metrics->observe('kafka_handle_seconds', 'Kafka handler duration', (hrtime(true) - $start) / 1e9, ['group' => $group]);
+        } catch (Throwable $e) {
+            $this->fail($group, $message, (string) $message->topic_name, $e);
+        }
+    }
+
+    /** Immediate retries in the same process (kafka.retry_attempts × kafka.retry_backoff_ms, linear backoff). */
+    private function withRetries(callable $fn, string $group, string $what): void
+    {
+        $max = max(1, $this->config->retryAttempts);
+        for ($i = 1; ; $i++) {
+            try {
+                $fn();
+                return;
+            } catch (Throwable $e) {
+                if ($i >= $max || $this->stop || $e instanceof PermanentMessageFailure) {
+                    throw $e;
+                }
+                $this->logger->notice('Kafka handler retry {i}/{n} for {w} in {g}: {e}', ['i' => $i, 'n' => $max, 'w' => $what, 'g' => $group, 'e' => $e->getMessage()]);
+                if ($this->config->retryBackoffMs > 0) {
+                    usleep($this->config->retryBackoffMs * 1000 * $i);
+                }
+            }
+        }
+    }
+
+    /** Failure policy after the immediate retries: retry topics → DLQ (default), DLQ at once, or skip. */
+    private function fail(string $group, Message $message, string $what, Throwable $e): void
+    {
+        $headers = $message->headers ?? [];
+        $attempts = (int) ($headers['attempts'] ?? 0) + 1;
+        $this->metrics->inc('kafka_messages_total', 'Consumed Kafka messages', ['group' => $group, 'result' => 'error']);
+        $this->logger->warning('Kafka handler failed for {type} (delivery {a}): {e}', ['type' => $what, 'a' => $attempts, 'e' => $e->getMessage()]);
+        if ($this->config->onFailure === 'skip') {
+            $this->metrics->inc('kafka_messages_total', 'Consumed Kafka messages', ['group' => $group, 'result' => 'skipped']);
+            return;
+        }
+        if ($e instanceof PermanentMessageFailure || $this->config->onFailure === 'dlq' || $attempts >= max(1, $this->config->maxDeliveries)) {
+            $this->deadLetter($group, $message, $e->getMessage(), $attempts);
+            return;
+        }
+        // keep the idempotency id stable: the redelivered copy gets a new offset
+        $headers['message_id'] ??= $headers['event_id'] ?? KafkaMessage::idFor((string) $message->topic_name, (int) $message->partition, (int) $message->offset, $headers);
+        $retryTopic = array_keys(self::RETRY_TOPICS)[min($attempts - 1, count(self::RETRY_TOPICS) - 1)];
+        $delay = self::RETRY_TOPICS[$retryTopic];
+        $this->producer->publish($retryTopic, (string) $message->key, (string) $message->payload, array_merge($headers, [
+            'attempts' => (string) $attempts,
+            'original_topic' => $message->topic_name,
+            'target_group' => $group,
+            'not_before' => (string) (time() + $delay),
+            'last_error' => mb_substr($e->getMessage(), 0, 500),
+        ]));
+    }
+
+    private function unprefixed(string $topic): string
+    {
+        $p = $this->config->topicPrefix;
+        return $p !== '' && str_starts_with($topic, $p) ? substr($topic, strlen($p)) : $topic;
     }
 
     /** Retry-topic consumer: waits until not_before, then re-delivers to the original topic. */
@@ -208,6 +324,12 @@ final class KafkaConsumerRunner
             return;
         }
         $this->lastStateCheck = microtime(true);
+        if ($this->configFactory !== null && $this->configFactory->fresh()->fingerprint() !== $this->config->fingerprint()) {
+            $this->logger->notice('Kafka settings changed; consumer group {g} restarts', ['g' => $group]);
+            $this->configChanged = true;
+            $this->stop = true;
+            return;
+        }
         $paused = (bool) (new Query($this->db))->select('paused')->from('consumer_state')->where(['consumer_group' => $group])->scalar()
             // global switch: Kafka feature off → every group pauses (messages stay in Kafka, nothing is lost)
             || !(bool) $this->db->createCommand("SELECT enabled FROM feature_flags WHERE code = 'messaging.kafka'")->queryScalar();

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Admin\Action\Kafka\KafkaController;
+use App\Admin\Action\Kafka\KafkaToolsController;
 use App\Web\Middleware\RequirePermission;
 use App\Web\Middleware\RequireRecentAuth;
 use Yiisoft\Router\Group;
@@ -26,6 +27,11 @@ return (static function (): array {
             Route::get('/provision/download')->action([KafkaController::class, 'provisionDownload'])->name('admin.kafka.provision.download'),
 
             Route::get('/consumers')->action([KafkaController::class, 'consumers'])->name('admin.kafka.consumers'),
+            Route::get('/handlers')->action([KafkaToolsController::class, 'handlers'])->name('admin.kafka.handlers'),
+            Route::get('/publish')->action([KafkaToolsController::class, 'publishForm'])->name('admin.kafka.publish'),
+            Route::post('/publish')->middleware($manage, RequireRecentAuth::class)->action([KafkaToolsController::class, 'publish'])->name('admin.kafka.publish.send'),
+            Route::get('/settings')->action([KafkaToolsController::class, 'settings'])->name('admin.kafka.settings'),
+            Route::post('/settings')->middleware($manage, RequireRecentAuth::class)->action([KafkaToolsController::class, 'saveSettings'])->name('admin.kafka.settings.save'),
             Route::get('/consumers/' . $group . '/lag')->action([KafkaController::class, 'lag'])->name('admin.kafka.consumers.lag'),
             Route::post('/consumers/' . $group . '/pause')->middleware($manage)->action([KafkaController::class, 'pauseConsumer'])->name('admin.kafka.consumers.pause'),
 

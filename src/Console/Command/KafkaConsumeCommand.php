@@ -6,6 +6,8 @@ namespace App\Console\Command;
 
 use App\Platform\Messaging\Kafka\KafkaConfig;
 use App\Platform\Messaging\Kafka\KafkaConsumerRunner;
+use Predis\ClientInterface;
+use Yiisoft\Db\Connection\ConnectionInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -13,12 +15,14 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Yiisoft\Yii\Console\ExitCode;
 
-#[AsCommand(name: 'kafka:consume', description: 'Run a Kafka consumer group (config/common/events.php)')]
+#[AsCommand(name: 'kafka:consume', description: 'Run a Kafka consumer group (config/common/events.php + #[KafkaChannel] handlers)')]
 final class KafkaConsumeCommand extends Command
 {
     public function __construct(
         private readonly KafkaConsumerRunner $runner,
         private readonly KafkaConfig $config,
+        private readonly ConnectionInterface $db,
+        private readonly ClientInterface $redis,
     ) {
         parent::__construct();
     }
@@ -45,7 +49,7 @@ final class KafkaConsumeCommand extends Command
         $max = $input->getOption('max');
         $n = $this->runner->run($group, $max === null ? null : (int) $max, (int) $input->getOption('idle-exit'));
         $output->writeln("Consumed $n message(s).");
-        return ExitCode::OK;
+        return $this->runner->configChanged() ? KafkaConsumerRunner::EXIT_CONFIG_CHANGED : ExitCode::OK;
     }
 
     /**
@@ -79,14 +83,24 @@ final class KafkaConsumeCommand extends Command
                 // child: fresh process state for the consumer loop
                 pcntl_signal(SIGTERM, SIG_DFL);
                 pcntl_signal(SIGINT, SIG_DFL);
-                exit($this->runner->run($group) >= 0 ? 0 : 1);
+                $this->runner->run($group);
+                exit($this->runner->configChanged() ? KafkaConsumerRunner::EXIT_CONFIG_CHANGED : 0);
             }
             $children[$pid] = $group;
             $output->writeln("started consumer group $group (pid $pid)");
         };
+        // The supervisor read settings (DB/Redis) while building the configuration. A socket inherited across
+        // fork() would be shared by all children (one child's exit/terminate breaks the others), so close
+        // both here; every child opens its own connections lazily. The supervisor itself needs none.
+        $this->db->close();
+        try {
+            $this->redis->disconnect();
+        } catch (\Throwable) {
+        }
         foreach ($groups as $g) {
             $spawn($g);
         }
+        $restart = false;
         while ($children !== []) {
             $pid = pcntl_wait($status);
             if ($pid <= 0) {
@@ -94,12 +108,20 @@ final class KafkaConsumeCommand extends Command
             }
             $group = $children[$pid] ?? null;
             unset($children[$pid]);
+            if (!$stop && pcntl_wifexited($status) && pcntl_wexitstatus($status) === KafkaConsumerRunner::EXIT_CONFIG_CHANGED) {
+                // children are forked from this process and would inherit the old configuration:
+                // stop everything and let the container/pod restart policy start a fresh supervisor
+                $output->writeln('Kafka settings changed; restarting all consumer groups');
+                $forward();
+                $restart = true;
+                continue;
+            }
             if (!$stop && $group !== null) {
                 $output->writeln("consumer group $group exited (status $status); restarting in 5 s");
                 sleep(5);
                 $spawn($group);
             }
         }
-        return ExitCode::OK;
+        return $restart ? KafkaConsumerRunner::EXIT_CONFIG_CHANGED : ExitCode::OK;
     }
 }

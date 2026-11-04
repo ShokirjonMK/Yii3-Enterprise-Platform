@@ -8,8 +8,9 @@ use RdKafka\Producer;
 use RuntimeException;
 
 /**
- * Idempotent Kafka producer (acks=all). {@see publishBatch()} waits for broker acknowledgement of
- * every message — the outbox row is marked published only after a positive delivery report.
+ * Idempotent Kafka producer (acks=all by default). {@see publishBatch()} waits for broker acknowledgement of
+ * every message — the outbox row is marked published only after a positive delivery report. Wait time and
+ * number of confirmation attempts come from the Kafka settings (Admin → 11 Kafka → Settings).
  */
 final class KafkaProducer
 {
@@ -23,7 +24,7 @@ final class KafkaProducer
      * @param list<array{id:string, topic:string, key:string, value:string, headers:array<string,string>}> $messages
      * @return array<string, true|string> id → true (acked) | error message
      */
-    public function publishBatch(array $messages, int $timeoutMs = 15000): array
+    public function publishBatch(array $messages, ?int $timeoutMs = null): array
     {
         if (!$this->config->enabled) {
             throw new RuntimeException('Kafka is disabled (KAFKA_ENABLED=false).');
@@ -38,11 +39,20 @@ final class KafkaProducer
             $topic->producev(RD_KAFKA_PARTITION_UA, 0, $m['value'], $m['key'], $m['headers'], null, $m['id']);
             $producer->poll(0);
         }
-        $deadline = microtime(true) + $timeoutMs / 1000;
-        while ($producer->getOutQLen() > 0 && microtime(true) < $deadline) {
-            $producer->poll(50);
+        // wait for broker acknowledgement: kafka.producer_flush_retries attempts × kafka.producer_flush_timeout_ms
+        $attemptMs = $timeoutMs ?? $this->config->producerFlushTimeoutMs;
+        for ($attempt = 1; $attempt <= max(1, $this->config->producerFlushRetries); $attempt++) {
+            $deadline = microtime(true) + $attemptMs / 1000;
+            while ($producer->getOutQLen() > 0 && microtime(true) < $deadline) {
+                $producer->poll(50);
+            }
+            if ($producer->flush(1000) === RD_KAFKA_RESP_ERR_NO_ERROR && $producer->getOutQLen() === 0) {
+                break;
+            }
+            if ($timeoutMs !== null) {
+                break; // explicit timeout: single attempt (relay / tests)
+            }
         }
-        $producer->flush(1000);
         return $this->reports;
     }
 

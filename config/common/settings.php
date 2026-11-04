@@ -30,6 +30,31 @@ return [
     'api.rate_limit_per_minute' => ['type' => 'int', 'default' => 600, 'min' => 10, 'max' => 100000, 'group' => 'API', 'label' => 'Default rate limit per client (requests/minute)'],
     'api.cors_origins' => ['type' => 'json', 'default' => [], 'group' => 'API', 'label' => 'CORS allowed origins (exact list)'],
 
+    // ---------------------------------------------------------------- Kafka (Admin → 11 Kafka → Settings)
+    // Connection keys keep their env variables (env wins). Long-running consumers/relay restart themselves
+    // automatically after a change (graceful exit → container/pod restart policy).
+    'kafka.brokers' => ['type' => 'string', 'default' => 'kafka:9092', 'group' => 'Kafka', 'label' => 'Bootstrap servers (host:port, comma separated)', 'env' => 'KAFKA_BROKERS', 'critical' => true, 'max' => 500],
+    'kafka.client_id' => ['type' => 'string', 'default' => 'yii3-platform', 'group' => 'Kafka', 'label' => 'Client id', 'env' => 'KAFKA_CLIENT_ID', 'max' => 120],
+    'kafka.topic_prefix' => ['type' => 'string', 'default' => '', 'group' => 'Kafka', 'label' => 'Topic prefix (e.g. "staging.")', 'env' => 'KAFKA_TOPIC_PREFIX', 'critical' => true, 'max' => 60],
+    'kafka.security_protocol' => ['type' => 'enum', 'default' => 'PLAINTEXT', 'options' => ['PLAINTEXT', 'SSL', 'SASL_PLAINTEXT', 'SASL_SSL'], 'group' => 'Kafka', 'label' => 'Security protocol', 'env' => 'KAFKA_SECURITY_PROTOCOL', 'critical' => true],
+    'kafka.sasl_mechanism' => ['type' => 'enum', 'default' => '', 'options' => ['', 'PLAIN', 'SCRAM-SHA-256', 'SCRAM-SHA-512'], 'group' => 'Kafka', 'label' => 'SASL mechanism', 'env' => 'KAFKA_SASL_MECHANISM', 'critical' => true],
+    'kafka.sasl_username' => ['type' => 'string', 'default' => '', 'group' => 'Kafka', 'label' => 'SASL username', 'env' => 'KAFKA_SASL_USERNAME', 'max' => 200],
+    'kafka.sasl_password' => ['type' => 'secret', 'default' => null, 'group' => 'Kafka', 'label' => 'SASL password', 'env' => 'KAFKA_SASL_PASSWORD'],
+    'kafka.ssl_ca_location' => ['type' => 'string', 'default' => '', 'group' => 'Kafka', 'label' => 'CA certificate path (SSL)', 'env' => 'KAFKA_SSL_CA_LOCATION', 'max' => 500],
+    'kafka.producer_acks' => ['type' => 'enum', 'default' => 'all', 'options' => ['all', '1', '0'], 'group' => 'Kafka', 'label' => 'Producer acks (all = idempotent, no loss)'],
+    'kafka.producer_compression' => ['type' => 'enum', 'default' => 'lz4', 'options' => ['lz4', 'zstd', 'snappy', 'gzip', 'none'], 'group' => 'Kafka', 'label' => 'Producer compression'],
+    'kafka.producer_linger_ms' => ['type' => 'int', 'default' => 5, 'min' => 0, 'max' => 1000, 'group' => 'Kafka', 'label' => 'Producer linger (ms)'],
+    'kafka.producer_flush_timeout_ms' => ['type' => 'int', 'default' => 15000, 'min' => 500, 'max' => 120000, 'group' => 'Kafka', 'label' => 'Delivery confirmation timeout per attempt (ms)'],
+    'kafka.producer_flush_retries' => ['type' => 'int', 'default' => 3, 'min' => 1, 'max' => 10, 'group' => 'Kafka', 'label' => 'Delivery confirmation attempts'],
+    'kafka.consumer_auto_offset_reset' => ['type' => 'enum', 'default' => 'earliest', 'options' => ['earliest', 'latest'], 'group' => 'Kafka', 'label' => 'New consumer group starts from'],
+    'kafka.consumer_poll_timeout_ms' => ['type' => 'int', 'default' => 1000, 'min' => 100, 'max' => 10000, 'group' => 'Kafka', 'label' => 'Consumer poll timeout (ms)'],
+    'kafka.consumer_session_timeout_ms' => ['type' => 'int', 'default' => 30000, 'min' => 6000, 'max' => 300000, 'group' => 'Kafka', 'label' => 'Consumer session timeout (ms)'],
+    'kafka.consumer_max_poll_interval_ms' => ['type' => 'int', 'default' => 300000, 'min' => 10000, 'max' => 3600000, 'group' => 'Kafka', 'label' => 'Max processing time per message (max.poll.interval.ms)'],
+    'kafka.retry_attempts' => ['type' => 'int', 'default' => 1, 'min' => 1, 'max' => 10, 'group' => 'Kafka', 'label' => 'Handler attempts in the same process (1 = no immediate retry)'],
+    'kafka.retry_backoff_ms' => ['type' => 'int', 'default' => 500, 'min' => 0, 'max' => 60000, 'group' => 'Kafka', 'label' => 'Pause between immediate attempts (ms)'],
+    'kafka.max_deliveries' => ['type' => 'int', 'default' => 3, 'min' => 1, 'max' => 10, 'group' => 'Kafka', 'label' => 'Deliveries before dead letter (via retry topics 1m → 10m)'],
+    'kafka.on_failure' => ['type' => 'enum', 'default' => 'retry_dlq', 'options' => ['retry_dlq', 'dlq', 'skip'], 'group' => 'Kafka', 'label' => 'When a handler keeps failing: retry topics then DLQ / DLQ at once / skip (log only)'],
+
     // ---------------------------------------------------------------- Notifications
     'notifications.smtp_dsn' => ['type' => 'secret', 'default' => null, 'group' => 'Notifications', 'label' => 'SMTP connection (DSN, e.g. smtp://user:pass@smtp.example.com:587)', 'env' => 'MAILER_DSN'],
     'notifications.mail_from' => ['type' => 'string', 'default' => 'noreply@platform.local', 'group' => 'Notifications', 'label' => 'Sender address (From)', 'format' => 'email', 'env' => 'MAIL_FROM'],

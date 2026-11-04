@@ -403,3 +403,7 @@ fieldset.field { border: 0; padding: 0; margin: 0; }
 .gii-diff__del { background: var(--bad-soft); color: var(--bad); }
 .gii-diff__hunk { color: var(--info); }
 /* === /gii === */
+
+/* settings pages with many fields (Kafka settings): two columns on wide screens */
+.form--grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 4px 20px; }
+pre.code { white-space: pre; }

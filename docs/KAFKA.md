@@ -29,6 +29,10 @@ php yii kafka:consume --group=platform-retry  # built-in: retry topics → origi
 php yii kafka:consume --group=G --max=100 --idle-exit=10   # bounded run (tests)
 php yii worker:health --type=kafka
 php yii kafka:provision [-o runtime/kafka-topics.sh] [--replication-factor 3]   # render topic script + show drift
+php yii kafka:consume --group=all             # one forked process per group (config files + #[KafkaChannel])
+php yii kafka:handlers                        # groups, topics and handlers (incl. discovered ones)
+php yii kafka:publish <topic> '<json>' [--key=K]          # send one JSON message, waits for broker confirmation
+php yii kafka:publish <topic> '[{...},{...}]' --batch     # every array element = one message
 ```
 Compose services: `relay`, `consumer` (and module consumers). Kubernetes: one Deployment per consumer group, scaled
 manually up to the partition count (add partitions before replicas) — operator details in [DEPLOYMENT.md](DEPLOYMENT.md) §4.3 (Strimzi KRaft, `KafkaTopic` resources).
@@ -59,6 +63,59 @@ return ['projects-audit' => ['topics' => ['projects.events'], 'handlers' => ['pr
 - **Pause/resume:** `consumer_state.paused` is polled every 5 s; partitions are *paused* (no rebalance), heartbeats continue.
 - **Shutdown:** SIGTERM → commit, leave the group cleanly.
 
+### 3.1 `#[KafkaChannel]` handlers (adopted from `muxtorov98/yii2-kafka`)
+
+The workflow of [muxtorov98/yii2-kafka](https://packagist.org/packages/muxtorov98/yii2-kafka) (Tulqin Muxtorov, MIT) —
+attribute-declared handlers, auto-discovery, a worker per topic+group, in-process retry with backoff, flush retries,
+`commit_on_failure`, a publish CLI — is built into the platform for Yii3. The package itself is **not** installed: it
+requires `yiisoft/yii2` (the whole Yii2 framework, `@common` aliases, `Yii::createObject`) and would bypass the inbox,
+retry topics, DLQ, metrics, pause/resume and admin UI. Mapping:
+
+| yii2-kafka | Platform |
+|---|---|
+| `#[KafkaChannel(topic, group)]` + `KafkaHandlerInterface::handle(array)` | `App\Platform\Messaging\Kafka\Attribute\KafkaChannel` + `KafkaMessageHandlerInterface::handle(array $payload, KafkaMessage $meta)` (or `EventHandlerInterface` with `events: [...]` for platform envelopes) |
+| handler auto-discovery in `@common/kafka/handlers` | `KafkaHandlerDiscovery`: every class under `src/Platform`, `src/Modules` |
+| `php yii worker/start` (fork per topic+group) | `php yii kafka:consume --group=all` (fork per group, restart with backoff, SIGTERM forwarding) |
+| `retry.max_attempts`, `retry.backoff_ms` | `kafka.retry_attempts`, `kafka.retry_backoff_ms` (then retry topics → DLQ) |
+| `consumer.commit_on_failure` | `kafka.on_failure` = `retry_dlq` (default) · `dlq` · `skip` (= commit_on_failure true) |
+| `producer.flush_timeout_ms`, `flush_retries`, `acks`, `compression`, `linger_ms` | `kafka.producer_*` |
+| `consumer.auto_offset_reset`, `max_poll_interval_ms`, `consume_timeout_ms` | `kafka.consumer_*` |
+| `security.protocol`, `sasl.*`, `ssl.ca` | `kafka.security_protocol`, `kafka.sasl_*` (password encrypted), `kafka.ssl_ca_location` |
+| `common/config/kafka.php` | Admin → 11 Kafka → **Settings** (typed, versioned, audited; env variables win) |
+| `kafka-publish/send`, `kafka-publish/batch` | `kafka:publish` (+ `--batch`), `KafkaPublisher::send()/batch()`, Admin → **Publish** |
+| — (not in the package) | inbox de-duplication, DLQ + replay, metrics, pause/resume, lag, auto-restart on settings change |
+
+```php
+#[KafkaChannel(topic: 'orders.created', group: 'billing', description: 'Invoices for new orders')]
+final class OrderCreatedHandler implements KafkaMessageHandlerInterface
+{
+    public function __construct(private readonly InvoiceService $invoices) {}   // DI autowiring
+
+    public function handle(array $payload, KafkaMessage $message): void
+    {
+        if (!isset($payload['order_id'])) {
+            throw new PermanentMessageFailure('order_id is required');   // → dead letter at once, no retries
+        }
+        $this->invoices->create((int) $payload['order_id']);               // throw anything else → retried
+    }
+}
+```
+- Runs inside a DB transaction with the inbox insert → applied once per consumer group, even on redelivery. The
+  idempotency id is the `event_id` / `message_id` header (set by `KafkaPublisher`), otherwise topic+partition+offset.
+- The group appears automatically in `kafka:consume --group=all`, in `kafka:handlers` and in Admin → Kafka → **Handlers**.
+- Register the topic (Admin → Cluster & topics) and provision it — `KAFKA_AUTO_CREATE_TOPICS_ENABLE=false`.
+- Built-in example: `InboundNotificationHandler` (topic `platform.notifications.inbound`, group `notifications-inbound`):
+  external systems notify users — `{"user": "<id|username|email>", "subject": "…", "message": "…", "channels": ["inapp","email"]}`.
+- Test topic `platform.selftest` (no production consumer) for the Publish tab and integration tests.
+
+### 3.2 Settings changes at runtime
+
+Consumers and the outbox relay compare their configuration with the settings every 5 s. On a change they stop
+gracefully (commit, leave the group) and exit with code **75**; Docker (`restart: unless-stopped`) / Kubernetes start
+them again with the new configuration. `--group=all` restarts all groups together, because forked children would
+otherwise inherit the old configuration. The supervisor closes its DB/Redis connections before forking, so each
+child has its own connections.
+
 ## 4. Topics
 
 The `kafka_topics` table is the **desired state** (partitions, replication factor, retention, cleanup policy).
@@ -80,10 +137,14 @@ per environment when clusters are shared, SASL/TLS via `KAFKA_SECURITY_PROTOCOL`
 | Consumer groups: topics, handlers, processes, per-partition lag (lazy HTMX, `KafkaAdmin::lag`), pause/resume | `admin.kafka.consumers*` | `kafka.view` / `kafka.manage` |
 | Outbox monitor: pending/failed/published, list + filters, re-queue one / all failed | `admin.kafka.outbox*` | `kafka.view` / `kafka.manage` + step-up |
 | Dead letters: list, redacted payload/headers, replay (`KafkaConsumerRunner::replay`) | `admin.kafka.dlq*` | `kafka.view` / `kafka.manage` + step-up |
+| Handlers: every group with topics, handlers (`events.php` and `#[KafkaChannel]`), status, processes | `admin.kafka.handlers` | `kafka.view` |
+| Publish: JSON message or batch to a topic, broker-confirmed, event ids shown | `admin.kafka.publish*` | `kafka.manage` + step-up |
+| Settings: connection, SASL/SSL, producer, consumer, retries and failure policy | `admin.kafka.settings*` | `kafka.manage` + step-up (connection/security: superadmin) |
 
 States are never faked: `KAFKA_ENABLED=false` → **Not configured**; broker unreachable → error banner with the
 (redacted) librdkafka error; lag shows "Lag unavailable". Audit actions: `kafka.topic.registered/updated/unregistered`,
-`kafka.consumer.paused/resumed`, `outbox.requeued`, `outbox.requeued_all`, `kafka.dlq.replayed` (success/failure).
+`kafka.consumer.paused/resumed`, `outbox.requeued`, `outbox.requeued_all`, `kafka.dlq.replayed` (success/failure),
+`kafka.message.published`, `settings.changed` (Kafka settings).
 
 Replay re-publishes the stored payload to the **original topic** with header `replayed=1`; consumers dedupe by event id
 (inbox), so replaying a message that was in fact processed is harmless for idempotent handlers.

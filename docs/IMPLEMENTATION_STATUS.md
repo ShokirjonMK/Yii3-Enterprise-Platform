@@ -61,6 +61,7 @@ _Last update: 2026-11-04 — Author: ShokirjonMK_
 | Optional features ON/OFF from the admin panel (`config/common/features.php`: sections → 404 + hidden menu, API docs, webhooks, Kafka, metrics, tracing) | TESTED (E2E) · VERIFIED (smoke) |
 | User activity log (`user_activity`, every authenticated web/API request, written after the response) · Admin → 20 Audit → User activity | TESTED (E2E) |
 | Application logs in DB (`app_logs`, warning+ from every process, redacted) · Admin → 17 Monitoring → Application logs | TESTED (E2E) |
+| Kafka `#[KafkaChannel]` handlers (auto-discovery, in-process retry/backoff, failure policy, flush retries, publish CLI/UI) — adopted from muxtorov98/yii2-kafka, admin Settings/Handlers/Publish, auto-restart on settings change | TESTED (integration, real broker) · VERIFIED live (inbound notification) |
 | Notification provider credentials (SMTP, Telegram bot, SMS gateway, VAPID) edited in Admin → 08 | TESTED (E2E) · real Telegram/SMS delivery UNVERIFIED |
 | Translations uz/ru (1622 strings, ICU-validated) | VERIFIED |
 | Production image (non-root, read-only, no dev deps), nginx image | VERIFIED (smoke) |

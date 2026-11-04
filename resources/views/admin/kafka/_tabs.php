@@ -10,9 +10,12 @@ declare(strict_types=1);
 $tabs = [
     'admin.kafka' => 'Cluster & topics',
     'admin.kafka.consumers' => 'Consumer groups',
+    'admin.kafka.handlers' => 'Handlers',
     'admin.kafka.outbox' => 'Outbox',
     'admin.kafka.dlq' => 'Dead letters',
     'admin.kafka.provision' => 'Provisioning',
+    'admin.kafka.publish' => 'Publish',
+    'admin.kafka.settings' => 'Settings',
 ];
 ?>
 <nav class="tabs" hx-boost="true" hx-target="#main" hx-select="#main" hx-swap="outerHTML" aria-label="<?= $h->t('Kafka Management') ?>">

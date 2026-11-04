@@ -49,6 +49,8 @@ final class PlatformSeeder
         ['platform.retry.1m', 3, 'Delayed retry topic (1 minute)'],
         ['platform.retry.10m', 3, 'Delayed retry topic (10 minutes)'],
         ['projects.events', 6, 'Projects module domain events'],
+        ['platform.selftest', 1, 'Self-test messages (admin Publish tab, integration tests); no production consumer'],
+        ['platform.notifications.inbound', 3, 'Notifications to users from external systems (JSON: user, subject, message, channels)'],
     ];
 
     public function __construct(private readonly ConnectionInterface $db) {}
@@ -125,6 +127,11 @@ final class PlatformSeeder
                 'en' => ['Approval required: {title}', "{requester} requested your approval: {title}."],
                 'ru' => ['Требуется согласование: {title}', "{requester} запросил(а) согласование: {title}."],
                 'uz' => ['Tasdiqlash talab etiladi: {title}', "{requester} tasdiqlashingizni so'radi: {title}."],
+            ],
+            'external.message' => [
+                'en' => ['{subject}', '{message}'],
+                'ru' => ['{subject}', '{message}'],
+                'uz' => ['{subject}', '{message}'],
             ],
             'incident.opened' => [
                 'en' => ['[{severity}] Incident #{number}: {title}', "Incident #{number} ({severity}) opened on {service}: {title}"],

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Console\Command;
 
+use App\Platform\Messaging\Kafka\KafkaConfig;
+use App\Platform\Messaging\Kafka\KafkaConfigFactory;
 use App\Platform\Messaging\OutboxRelay;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -22,6 +24,8 @@ final class OutboxRelayCommand extends Command
     public function __construct(
         private readonly OutboxRelay $relay,
         private readonly LoggerInterface $logger,
+        private readonly KafkaConfig $config,
+        private readonly KafkaConfigFactory $configFactory,
     ) {
         parent::__construct();
     }
@@ -50,7 +54,16 @@ final class OutboxRelayCommand extends Command
             pcntl_signal(SIGTERM, fn() => $this->stop = true);
             pcntl_signal(SIGINT, fn() => $this->stop = true);
         }
+        $lastCheck = microtime(true);
         while (!$this->stop) {
+            // Kafka settings changed in the admin panel → exit; the container/pod restart policy starts a fresh relay
+            if (microtime(true) - $lastCheck > 5) {
+                $lastCheck = microtime(true);
+                if ($this->configFactory->fresh()->fingerprint() !== $this->config->fingerprint()) {
+                    $this->logger->notice('Kafka settings changed; outbox relay restarts');
+                    return 75;
+                }
+            }
             try {
                 $r = $this->relay->relayOnce($batch);
                 $idle = $r['published'] === 0;
