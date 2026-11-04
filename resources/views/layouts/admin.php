@@ -92,7 +92,7 @@ $this->beginPage();
                     <?php foreach ($visible as $item):
                         $url = $h->url($item['route']);
                         $active = $h->isRoute($item['route']); ?>
-                        <li><a href="<?= $h->e($url) ?>"<?= $active ? ' aria-current="page"' : '' ?>><?= $h->icon($item['icon']) ?><span><?= $h->t($item['label']) ?></span><span class="nav__num"><?= sprintf('%02d', $item['n']) ?></span></a></li>
+                        <li><a href="<?= $h->e($url) ?>"<?= $active ? ' aria-current="page"' : '' ?>><?= $h->icon($item['icon']) ?><span><?= $h->t($item['label']) ?></span><?php if ($item['n'] > 0): ?><span class="nav__num"><?= sprintf('%02d', $item['n']) ?></span><?php endif ?></a></li>
                     <?php endforeach ?>
                 </ul>
             <?php endforeach ?>

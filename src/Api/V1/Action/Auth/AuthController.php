@@ -1,0 +1,313 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Api\V1\Action\Auth;
+
+use App\Api\V1\Http\ApiException;
+use App\Api\V1\Http\ApiRequest;
+use App\Api\V1\Http\ApiResponder;
+use App\Platform\Access\AccessService;
+use App\Platform\Audit\AuditLogger;
+use App\Platform\Identity\Application\ApiTokenService;
+use App\Platform\Identity\Application\AuthenticationService;
+use App\Platform\Identity\Application\MfaService;
+use App\Platform\Identity\Infrastructure\UserRepository;
+use App\Shared\Domain\Exception\ValidationException;
+use App\Shared\Infrastructure\Context\RequestContext;
+use App\Shared\Infrastructure\Database\Sql;
+use OpenApi\Attributes as OA;
+use Psr\Container\ContainerInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Yiisoft\Db\Connection\ConnectionInterface;
+
+/**
+ * Token endpoint (password + client_credentials grants), refresh with rotation & reuse detection,
+ * revocation, current principal and health.
+ */
+final class AuthController
+{
+    /** OAuth scopes understood by API v1 ("*" = everything the user's permissions allow). */
+    public const SCOPES = ['profile', 'users.read', 'users.write', 'projects.read', 'projects.write'];
+
+    /** Implemented by the identity work package (api_clients); used only when present. */
+    public const CLIENT_SERVICE = 'App\\Platform\\Api\\ApiClientService';
+
+    public function __construct(
+        private readonly ApiResponder $responder,
+        private readonly AuthenticationService $auth,
+        private readonly MfaService $mfa,
+        private readonly ApiTokenService $tokens,
+        private readonly AccessService $access,
+        private readonly UserRepository $users,
+        private readonly AuditLogger $audit,
+        private readonly RequestContext $context,
+        private readonly ContainerInterface $container,
+        private readonly ConnectionInterface $db,
+    ) {}
+
+    #[OA\Post(
+        path: '/api/v1/auth/token',
+        operationId: 'authToken',
+        summary: 'Issue an access/refresh token pair',
+        description: "grant_type=password: username + password (+ mfa_code when the account has MFA). Login throttling and account lockout apply (429).\n\ngrant_type=client_credentials: client_id + client_secret of an API client (service account).",
+        security: [],
+        requestBody: new OA\RequestBody(required: true, content: [
+            new OA\JsonContent(properties: [
+                new OA\Property(property: 'grant_type', type: 'string', enum: ['password', 'client_credentials']),
+                new OA\Property(property: 'username', type: 'string'),
+                new OA\Property(property: 'password', type: 'string', format: 'password'),
+                new OA\Property(property: 'mfa_code', type: 'string', example: '123456'),
+                new OA\Property(property: 'client_id', type: 'string'),
+                new OA\Property(property: 'client_secret', type: 'string', format: 'password'),
+                new OA\Property(property: 'scope', type: 'string', example: 'projects.read projects.write'),
+            ], required: ['grant_type']),
+        ]),
+        tags: ['Auth'],
+        responses: [
+            new OA\Response(response: 200, description: 'Token pair', content: new OA\JsonContent(properties: [new OA\Property(property: 'data', ref: '#/components/schemas/TokenPair')])),
+            new OA\Response(response: 400, description: 'unsupported_grant_type / invalid_scope', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
+            new OA\Response(response: 401, description: 'invalid_grant, mfa_required, invalid_mfa_code, invalid_client', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
+            new OA\Response(response: 403, description: 'mfa_enrollment_required / password_change_required', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
+            new OA\Response(ref: '#/components/responses/ValidationFailed', response: 422),
+            new OA\Response(ref: '#/components/responses/TooManyRequests', response: 429),
+        ],
+    )]
+    public function token(ServerRequestInterface $request): ResponseInterface
+    {
+        $body = ApiRequest::body($request);
+        $grant = is_string($body['grant_type'] ?? null) ? $body['grant_type'] : '';
+        return match ($grant) {
+            'password' => $this->passwordGrant($body),
+            'client_credentials' => $this->clientCredentialsGrant($request, $body),
+            '' => throw ValidationException::single('grant_type', 'grant_type is required (password or client_credentials).'),
+            default => throw new ApiException(400, 'unsupported_grant_type', 'Supported grant types: password, client_credentials.'),
+        };
+    }
+
+    #[OA\Post(
+        path: '/api/v1/auth/refresh',
+        operationId: 'authRefresh',
+        summary: 'Rotate a refresh token',
+        description: 'Returns a new pair and revokes the old one. Presenting an already-rotated refresh token revokes the whole token family (theft detection).',
+        security: [],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['refresh_token'], properties: [new OA\Property(property: 'refresh_token', type: 'string')])),
+        tags: ['Auth'],
+        responses: [
+            new OA\Response(response: 200, description: 'New token pair', content: new OA\JsonContent(properties: [new OA\Property(property: 'data', ref: '#/components/schemas/TokenPair')])),
+            new OA\Response(response: 401, description: 'invalid_grant (unknown, expired, revoked or reused token)', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
+            new OA\Response(ref: '#/components/responses/ValidationFailed', response: 422),
+        ],
+    )]
+    public function refresh(ServerRequestInterface $request): ResponseInterface
+    {
+        $body = ApiRequest::body($request);
+        $token = is_string($body['refresh_token'] ?? null) ? trim($body['refresh_token']) : '';
+        if ($token === '') {
+            throw ValidationException::single('refresh_token', 'refresh_token is required.');
+        }
+        $pair = $this->tokens->refresh($token);
+        if ($pair === null) {
+            $this->audit->security('api.token.refresh', 'failure', ['reason' => 'invalid_or_reused'], 'warning');
+            throw new ApiException(401, 'invalid_grant', 'The refresh token is invalid, expired or has been revoked.');
+        }
+        return $this->responder->data($pair);
+    }
+
+    #[OA\Post(
+        path: '/api/v1/auth/revoke',
+        operationId: 'authRevoke',
+        summary: 'Revoke a token (and its whole family)',
+        security: [],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['token'], properties: [new OA\Property(property: 'token', type: 'string', description: 'Access or refresh token')])),
+        tags: ['Auth'],
+        responses: [
+            new OA\Response(response: 204, description: 'Revoked (also returned for unknown tokens, RFC 7009)'),
+            new OA\Response(ref: '#/components/responses/ValidationFailed', response: 422),
+        ],
+    )]
+    public function revoke(ServerRequestInterface $request): ResponseInterface
+    {
+        $body = ApiRequest::body($request);
+        $token = is_string($body['token'] ?? null) ? trim($body['token']) : '';
+        if ($token === '') {
+            throw ValidationException::single('token', 'token is required.');
+        }
+        $this->tokens->revokeByToken($token);
+        $this->audit->security('api.token.revoked', 'success', [], 'info');
+        return $this->responder->noContent();
+    }
+
+    #[OA\Get(
+        path: '/api/v1/me',
+        operationId: 'me',
+        summary: 'Current principal: profile, roles, permissions and token scopes',
+        tags: ['Auth'],
+        responses: [
+            new OA\Response(response: 200, description: 'Profile', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'data', properties: [
+                    new OA\Property(property: 'user', ref: '#/components/schemas/User'),
+                    new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string')),
+                    new OA\Property(property: 'permissions', type: 'array', items: new OA\Items(type: 'string')),
+                    new OA\Property(property: 'scopes', type: 'array', items: new OA\Items(type: 'string')),
+                    new OA\Property(property: 'auth_method', type: 'string'),
+                ], type: 'object'),
+            ])),
+            new OA\Response(ref: '#/components/responses/Unauthorized', response: 401),
+        ],
+    )]
+    public function me(ServerRequestInterface $request): ResponseInterface
+    {
+        $identity = ApiRequest::identity($request);
+        $user = $identity->user;
+        return $this->responder->data([
+            'user' => $user->toPublicArray() + ['version' => $user->version],
+            'roles' => $this->access->rolesOf($user->id),
+            'permissions' => $this->access->permissionsOf($user->id),
+            'scopes' => $identity->scopes,
+            'auth_method' => $identity->authMethod,
+        ]);
+    }
+
+    #[OA\Get(
+        path: '/api/v1/health',
+        operationId: 'health',
+        summary: 'API health (status only)',
+        security: [],
+        tags: ['System'],
+        responses: [
+            new OA\Response(response: 200, description: 'Healthy', content: new OA\JsonContent(properties: [new OA\Property(property: 'data', properties: [new OA\Property(property: 'status', type: 'string', example: 'ok')], type: 'object')])),
+            new OA\Response(response: 503, description: 'Degraded (database unreachable)', content: new OA\JsonContent(ref: '#/components/schemas/Error')),
+        ],
+    )]
+    public function health(): ResponseInterface
+    {
+        try {
+            $this->db->createCommand('SELECT 1')->queryScalar();
+        } catch (\Throwable) {
+            return $this->responder->error(503, 'unavailable', 'The service is temporarily unavailable.');
+        }
+        return $this->responder->data(['status' => 'ok']);
+    }
+
+    // ------------------------------------------------------------------ grants
+
+    private function passwordGrant(array $body): ResponseInterface
+    {
+        $username = is_string($body['username'] ?? null) ? trim($body['username']) : '';
+        $password = is_string($body['password'] ?? null) ? $body['password'] : '';
+        $errors = [];
+        if ($username === '') {
+            $errors['username'][] = 'username is required.';
+        }
+        if ($password === '') {
+            $errors['password'][] = 'password is required.';
+        }
+        if ($errors !== []) {
+            throw new ValidationException($errors);
+        }
+        $scopes = $this->scopes($body['scope'] ?? null, null);
+
+        try {
+            $result = $this->auth->authenticate($username, $password); // throttling + lockout → 429
+        } catch (ValidationException) {
+            throw new ApiException(401, 'invalid_grant', AuthenticationService::GENERIC_ERROR);
+        }
+        $user = $result->user;
+
+        if ($result->mfaRequired) {
+            $code = is_scalar($body['mfa_code'] ?? null) ? preg_replace('/\s+/', '', (string) $body['mfa_code']) : '';
+            if ($code === '') {
+                throw new ApiException(401, 'mfa_required', 'This account uses multi-factor authentication: send mfa_code (TOTP or recovery code).');
+            }
+            if (!$this->mfa->verifyForUser($user, (string) $code)) {
+                $this->auth->recordMfaFailure($user);
+                throw new ApiException(401, 'invalid_mfa_code', 'The MFA code is invalid or has already been used.');
+            }
+        } elseif ($result->mfaSetupRequired) {
+            throw new ApiException(403, 'mfa_enrollment_required', 'MFA enrolment is required for this account. Sign in to the web application to set it up.');
+        }
+        if ($result->mustChangePassword) {
+            throw new ApiException(403, 'password_change_required', 'The password must be changed in the web application before API access is granted.');
+        }
+
+        $this->auth->recordSuccess($user, 'api_password');
+        $pair = $this->tokens->issuePair($user, $scopes);
+        $this->audit->security('api.token.issued', 'success', ['grant' => 'password', 'scope' => $pair['scope']], 'info', $user->id, $user->username);
+        return $this->responder->data($pair);
+    }
+
+    private function clientCredentialsGrant(ServerRequestInterface $request, array $body): ResponseInterface
+    {
+        [$clientId, $secret] = $this->clientCredentials($request, $body);
+        if ($clientId === '' || $secret === '') {
+            throw new ValidationException(array_filter([
+                'client_id' => $clientId === '' ? ['client_id is required.'] : null,
+                'client_secret' => $secret === '' ? ['client_secret is required.'] : null,
+            ]));
+        }
+        if (!class_exists(self::CLIENT_SERVICE) || !$this->container->has(self::CLIENT_SERVICE)) {
+            throw new ApiException(400, 'unsupported_grant_type', 'The client_credentials grant is not available on this deployment.');
+        }
+        /** @var object{authenticate: callable} $service */
+        $service = $this->container->get(self::CLIENT_SERVICE);
+        /** @var array<string,mixed>|null $client */
+        $client = $service->authenticate($clientId, $secret, $this->context->ip());
+        if (!is_array($client)) {
+            $this->audit->security('api.client.auth', 'failure', ['client_id' => $clientId], 'warning');
+            throw new ApiException(401, 'invalid_client', 'Client authentication failed.');
+        }
+        $serviceUserId = $client['service_user_id'] ?? null;
+        $user = is_string($serviceUserId) ? $this->users->find($serviceUserId) : null;
+        if ($user === null || !$user->isActive()) {
+            throw new ApiException(400, 'invalid_client', 'The API client has no active service account.');
+        }
+        $allowed = array_values(array_filter(Sql::json($client['scopes'] ?? []), 'is_string'));
+        $scopes = $this->scopes($body['scope'] ?? null, $allowed === [] ? null : $allowed);
+        $pair = $this->tokens->issuePair($user, $scopes);
+        unset($pair['refresh_token']); // RFC 6749 §4.4.3: no refresh token for client credentials
+        $this->audit->security('api.token.issued', 'success', ['grant' => 'client_credentials', 'client_id' => $clientId, 'scope' => $pair['scope']], 'info', $user->id, $user->username);
+        return $this->responder->data($pair);
+    }
+
+    /** @return array{0:string,1:string} */
+    private function clientCredentials(ServerRequestInterface $request, array $body): array
+    {
+        if (preg_match('/^Basic\s+([A-Za-z0-9+\/=]+)$/', $request->getHeaderLine('Authorization'), $m)) {
+            $decoded = base64_decode($m[1], true);
+            if ($decoded !== false && str_contains($decoded, ':')) {
+                [$id, $secret] = explode(':', $decoded, 2);
+                return [rawurldecode($id), rawurldecode($secret)];
+            }
+        }
+        return [
+            is_string($body['client_id'] ?? null) ? trim($body['client_id']) : '',
+            is_string($body['client_secret'] ?? null) ? $body['client_secret'] : '',
+        ];
+    }
+
+    /**
+     * @param list<string>|null $ceiling scopes the principal may receive at most (null = any)
+     * @return list<string>
+     */
+    private function scopes(mixed $requested, ?array $ceiling): array
+    {
+        if ($requested === null || $requested === '') {
+            return $ceiling ?? ['*'];
+        }
+        if (!is_string($requested)) {
+            throw new ApiException(400, 'invalid_scope', 'scope must be a space-separated string.');
+        }
+        $list = array_values(array_unique(array_filter(preg_split('/\s+/', trim($requested)) ?: [])));
+        foreach ($list as $s) {
+            if ($s !== '*' && !in_array($s, self::SCOPES, true)) {
+                throw new ApiException(400, 'invalid_scope', sprintf('Unknown scope "%s". Known scopes: %s.', $s, implode(' ', self::SCOPES)));
+            }
+            if ($ceiling !== null && !in_array('*', $ceiling, true) && !in_array($s, $ceiling, true)) {
+                throw new ApiException(400, 'invalid_scope', sprintf('Scope "%s" is not allowed for this client.', $s));
+            }
+        }
+        return $list;
+    }
+}

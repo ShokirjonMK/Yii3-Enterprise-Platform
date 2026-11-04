@@ -15,15 +15,16 @@ final class Sql
 
     /**
      * Case-insensitive "contains" condition over several columns (uses pg_trgm indexes when present).
+     * yiisoft/db's LIKE condition escapes the value and wraps it in % itself — pass the plain term.
      *
      * @param list<string> $columns
      */
     public static function search(string $term, array $columns): array
     {
-        $like = '%' . self::escapeLike(mb_strtolower(trim($term))) . '%';
+        $needle = mb_strtolower(trim($term));
         $or = ['or'];
         foreach ($columns as $c) {
-            $or[] = ['like', new Expression("lower($c::text)"), $like, null];
+            $or[] = ['like', new Expression("lower($c::text)"), $needle];
         }
         return $or;
     }

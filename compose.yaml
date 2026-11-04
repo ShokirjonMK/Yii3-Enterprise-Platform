@@ -103,6 +103,15 @@ services:
         condition: service_healthy
     stop_grace_period: 40s
 
+  consumer-projects:
+    <<: *php
+    command: ["php", "yii", "kafka:consume", "--group=projects-audit"]
+    depends_on:
+      <<: *php-depends
+      kafka:
+        condition: service_healthy
+    stop_grace_period: 40s
+
   postgres:
     image: postgres:17-alpine
     environment:

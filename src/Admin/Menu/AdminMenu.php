@@ -52,6 +52,9 @@ final class AdminMenu
                 ['n' => 22, 'label' => 'Developer Tools', 'route' => 'admin.devtools', 'icon' => 'code', 'permission' => 'devtools.use'],
                 ['n' => 23, 'label' => 'Business Modules', 'route' => 'admin.modules', 'icon' => 'grid', 'permission' => 'modules.view'],
             ]],
+            ['group' => 'Business modules', 'items' => [
+                ['n' => 0, 'label' => 'Projects', 'route' => 'admin.projects', 'icon' => 'folder', 'permission' => 'projects.view'],
+            ]],
         ];
     }
 
@@ -64,6 +67,7 @@ final class AdminMenu
                 $items[] = $i;
             }
         }
+        $items = array_values(array_filter($items, static fn($i) => $i['n'] > 0));
         usort($items, static fn($a, $b) => $a['n'] <=> $b['n']);
         return $items;
     }

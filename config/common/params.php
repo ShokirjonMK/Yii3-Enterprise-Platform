@@ -223,4 +223,11 @@ return [
     'yiisoft/yii-gii' => [
         'enabled' => false,
     ],
+
+    // FastRoute would cache its dispatch table in the *shared* Redis cache under a fixed key; during
+    // rolling deployments pods of different versions would then serve each other's route tables.
+    // Building the table per request costs ~1–2 ms, so the shared cache is disabled.
+    'yiisoft/router-fastroute' => [
+        'enableCache' => false,
+    ],
 ];
