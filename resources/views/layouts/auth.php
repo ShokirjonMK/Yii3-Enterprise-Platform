@@ -45,7 +45,7 @@ $this->beginPage();
                 <li><?= $h->t('Role-based access control across tenants') ?></li>
             </ul>
         </div>
-        <div class="small">© <?= date('Y') ?> <a href="<?= $h->e($platform['authorUrl']) ?>" rel="noopener" target="_blank"><?= $h->e($platform['author']) ?></a> · v<?= $h->e($platform['version']) ?></div>
+        <div class="small">© <?= date('Y') ?> <?= $h->e($platform['name']) ?> · Developer <a href="<?= $h->e($platform['authorUrl']) ?>" rel="noopener" target="_blank"><?= $h->e($platform['author']) ?></a> · v<?= $h->e($platform['version']) ?></div>
     </section>
     <section class="auth__panel">
         <div class="auth__card">

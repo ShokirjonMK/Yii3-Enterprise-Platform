@@ -76,6 +76,7 @@ final class ApiPlatformTest extends ApiTestCase
         $before = (array) $settings->get('api.cors_origins');
         $super = Fixtures::user(['superadmin']);
         $settings->set($super['id'], 'api.cors_origins', array_values(array_unique([...$before, self::ORIGIN])), comment: 'API CORS test');
+        sleep(3); // settings propagate to PHP-FPM workers within ≤ 2 s (APCu config revision cache)
         try {
             $r = $this->http->json('OPTIONS', '/api/v1/projects', null, ['Origin' => self::ORIGIN, 'Access-Control-Request-Method' => 'POST', 'Access-Control-Request-Headers' => 'authorization, content-type']);
             self::assertSame(204, $r->getStatusCode());

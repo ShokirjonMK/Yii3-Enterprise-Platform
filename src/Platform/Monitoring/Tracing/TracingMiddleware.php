@@ -27,10 +27,14 @@ final class TracingMiddleware implements MiddlewareInterface
         private readonly TracerProviderInterface $provider,
         private readonly CurrentRoute $route,
         private readonly RequestContext $context,
+        private readonly ?\App\Platform\FeatureFlags\FeatureFlagService $flags = null,
     ) {}
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+        if ($this->flags !== null && !$this->flags->isEnabled('observability.tracing')) {
+            return $handler->handle($request);
+        }
         $tracer = $this->provider->getTracer('yii3-platform.http');
         $parent = TraceContextPropagator::getInstance()->extract(
             array_map(static fn(array $v) => implode(',', $v), $request->getHeaders()),

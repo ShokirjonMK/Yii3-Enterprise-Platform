@@ -58,7 +58,11 @@ _Last update: 2026-11-04 — Author: ShokirjonMK_
 | Settings (versions, rollback, encrypted secrets), feature flags (rollout, dependencies, critical guard) | TESTED |
 | Audit (append-only, HMAC, partitions) | TESTED |
 | Observability: JSON logs + redaction, Prometheus metrics, OpenTelemetry tracing, health endpoints | TESTED · VERIFIED locally |
-| Translations uz/ru (1555 strings, ICU-validated) | VERIFIED |
+| Optional features ON/OFF from the admin panel (`config/common/features.php`: sections → 404 + hidden menu, API docs, webhooks, Kafka, metrics, tracing) | TESTED (E2E) · VERIFIED (smoke) |
+| User activity log (`user_activity`, every authenticated web/API request, written after the response) · Admin → 20 Audit → User activity | TESTED (E2E) |
+| Application logs in DB (`app_logs`, warning+ from every process, redacted) · Admin → 17 Monitoring → Application logs | TESTED (E2E) |
+| Notification provider credentials (SMTP, Telegram bot, SMS gateway, VAPID) edited in Admin → 08 | TESTED (E2E) · real Telegram/SMS delivery UNVERIFIED |
+| Translations uz/ru (1622 strings, ICU-validated) | VERIFIED |
 | Production image (non-root, read-only, no dev deps), nginx image | VERIFIED (smoke) |
 | Kubernetes HA (CNPG, Redis Sentinel, Strimzi, KEDA, NetworkPolicies), GitLab CI, GitHub Actions | VALIDATED · NOT APPLIED / NOT RUN on a runner |
 

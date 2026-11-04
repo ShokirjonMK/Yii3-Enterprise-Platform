@@ -17,12 +17,8 @@ use Yiisoft\Session\SessionMiddleware;
  * every file returns a list of Route/Group objects that inherit this group's security middleware:
  * session → CSRF → locale → session registry/gates → login → admin network allowlist → admin.access → error mapping.
  */
-$sections = [];
-$files = glob(__DIR__ . '/admin/*.php') ?: [];
-sort($files);
-foreach ($files as $file) {
-    $sections = [...$sections, ...require $file];
-}
+// Optional sections are wrapped in RequireFeature groups (config/common/features.php): disabled → 404
+$sections = \App\Platform\FeatureFlags\FeatureRegistry::loadRoutes('admin', glob(__DIR__ . '/admin/*.php') ?: []);
 
 return [
     Group::create('/admin')
@@ -35,6 +31,7 @@ return [
             AdminNetworkMiddleware::class,
             DomainErrorMiddleware::class,
             RequirePermission::for('admin.access'),
+            \App\Platform\Audit\ActivityLogMiddleware::class,
         )
         ->routes(...$sections),
 ];

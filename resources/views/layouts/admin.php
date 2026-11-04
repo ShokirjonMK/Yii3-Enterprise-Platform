@@ -85,7 +85,7 @@ $this->beginPage();
         <div class="sidebar__brand"><span class="sidebar__logo">Y3</span><span><?= $h->e($platform['name']) ?></span></div>
         <nav hx-boost="true" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-indicator="#global-progress">
             <?php foreach (AdminMenu::groups() as $group):
-                $visible = array_filter($group['items'], static fn($i) => $can($i['permission']) && $h->urlOrNull($i['route']) !== null);
+                $visible = array_filter($group['items'], static fn($i) => $can($i['permission']) && $feature($i['route']) && $h->urlOrNull($i['route']) !== null);
                 if ($visible === []) { continue; } ?>
                 <div class="sidebar__group"><?= $h->t($group['group']) ?></div>
                 <ul class="nav">
@@ -97,7 +97,7 @@ $this->beginPage();
                 </ul>
             <?php endforeach ?>
         </nav>
-        <div class="sidebar__foot">v<?= $h->e($platform['version']) ?> · <a href="/" class="muted"><?= $h->t('Open web app') ?></a><br><span class="signature"><?= $h->t('Built by') ?> <a href="<?= $h->e($platform['authorUrl']) ?>" rel="noopener" target="_blank"><?= $h->e($platform['author']) ?></a></span></div>
+        <div class="sidebar__foot">v<?= $h->e($platform['version']) ?> · <a href="/" class="muted"><?= $h->t('Open web app') ?></a><br><span class="signature">Developer <a href="<?= $h->e($platform['authorUrl']) ?>" rel="noopener" target="_blank"><?= $h->e($platform['author']) ?></a></span></div>
     </aside>
 
     <div class="main-col">
@@ -130,6 +130,12 @@ $this->beginPage();
             </details>
         </header>
         <?= $renderMain() ?>
+        <footer class="web-footer admin-footer">
+            <div class="web-footer__inner">
+                <span>© <?= date('Y') ?> <?= $h->e($platform['name']) ?> · v<?= $h->e($platform['version']) ?></span>
+                <span class="signature">Developer <a href="<?= $h->e($platform['authorUrl']) ?>" rel="noopener" target="_blank"><?= $h->e($platform['author']) ?></a></span>
+            </div>
+        </footer>
     </div>
 </div>
 <div class="toasts" role="status" aria-live="polite"></div>

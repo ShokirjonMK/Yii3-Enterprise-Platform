@@ -13,11 +13,13 @@ final class WorkflowAdminTest extends TestCase
 {
     protected function setUp(): void
     {
+        Fixtures::enableFeatures(['feature.workflow']);
         Fixtures::resetLoginThrottle();
     }
 
     protected function tearDown(): void
     {
+        Fixtures::restoreFeatures();
         $db = Fixtures::db();
         $db->createCommand("DELETE FROM workflow_instances WHERE entity_id LIKE 'e2e-%'")->execute();
         $db->createCommand("DELETE FROM workflows WHERE code LIKE 'e2e.%'")->execute();

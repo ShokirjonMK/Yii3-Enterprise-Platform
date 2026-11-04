@@ -16,11 +16,13 @@ final class IntegrationsAdminTest extends TestCase
 {
     protected function setUp(): void
     {
+        Fixtures::enableFeatures(['feature.integrations', 'feature.webhooks']);
         Fixtures::resetLoginThrottle();
     }
 
     protected function tearDown(): void
     {
+        Fixtures::restoreFeatures();
         $db = Fixtures::db();
         $db->createCommand("DELETE FROM integrations WHERE code LIKE 'e2e-%'")->execute();
         $db->createCommand("DELETE FROM webhook_endpoints WHERE code LIKE 'e2e-%'")->execute();

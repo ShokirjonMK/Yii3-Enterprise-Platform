@@ -40,10 +40,12 @@ foreach (AdminMenu::flat() as $item) {
     $r = $web->get((string) $path);
     $ms = (int) round((microtime(true) - $t) * 1000);
     $ok = $r->getStatusCode() === 200 && str_contains($web->body(), 'id="main"');
-    // Developer Tools are intentionally unavailable (404) when the stack runs with APP_ENV=prod (fast mode)
-    $na = !$ok && $r->getStatusCode() === 404 && str_starts_with((string) $path, '/admin/devtools');
+    // 404 is expected for (a) a section whose optional feature flag is OFF and (b) Developer Tools in prod (fast) mode
+    $flag = App\Platform\FeatureFlags\FeatureRegistry::flagForMenu($item['route']);
+    $flagOff = $flag !== null && !Fixtures::db()->createCommand('SELECT enabled FROM feature_flags WHERE code = :c', [':c' => $flag])->queryScalar();
+    $na = !$ok && $r->getStatusCode() === 404 && ($flagOff || str_starts_with((string) $path, '/admin/devtools'));
     $fail += ($ok || $na) ? 0 : 1;
-    $rows[] = sprintf('%-4s %-30s %-24s %s %5d ms', $ok ? 'OK' : ($na ? 'N/A' : 'FAIL'), sprintf('%02d %s', $item['n'], $item['label']), $path, $r->getStatusCode(), $ms);
+    $rows[] = sprintf('%-4s %-30s %-24s %s %5d ms%s', $ok ? 'OK' : ($na ? ($flagOff ? 'OFF' : 'N/A') : 'FAIL'), sprintf('%02d %s', $item['n'], $item['label']), $path, $r->getStatusCode(), $ms, $flagOff ? "  (flag $flag disabled)" : '');
 }
 foreach (['/admin/projects' => 'Projects (module)', '/admin/contracts' => 'Contracts (Gii module)', '/admin/devtools/gii' => 'Enterprise Gii', '/projects' => 'Web: projects', '/account' => 'Web: profile', '/api/docs' => 'API docs'] as $path => $label) {
     $t = microtime(true);

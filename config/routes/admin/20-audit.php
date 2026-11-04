@@ -14,6 +14,7 @@ return [
         Route::get('/export.csv')->middleware(RequirePermission::for('audit.export'))->action([AuditController::class, 'export'])->name('admin.audit.export'),
         Route::get('/integrity')->action([AuditController::class, 'partitions'])->name('admin.audit.partitions'),
         Route::post('/integrity')->middleware(RequirePermission::for('audit.export'))->action([AuditController::class, 'verify'])->name('admin.audit.verify'),
+        Route::get('/activity')->action([App\Admin\Action\Audit\ActivityController::class, 'index'])->name('admin.audit.activity'),
         Route::get('/{id:\d+}')->action([AuditController::class, 'view'])->name('admin.audit.view'),
     ),
 ];

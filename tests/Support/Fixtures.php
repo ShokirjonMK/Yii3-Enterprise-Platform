@@ -86,6 +86,44 @@ final class Fixtures
         }
     }
 
+    /** @var array<string,bool> flags changed by enableFeatures() → original state */
+    private static array $flagBackup = [];
+
+    /**
+     * Turns optional features on for an HTTP test (they are OFF on fresh installs) and remembers the previous
+     * state; restoreFeatures() (call in tearDown) puts it back. Waits for per-process config caches (≤ 2 s).
+     *
+     * @param list<string> $codes
+     */
+    public static function enableFeatures(array $codes): void
+    {
+        $changed = false;
+        foreach ($codes as $code) {
+            $was = (bool) self::db()->createCommand('SELECT enabled FROM feature_flags WHERE code = :c', [':c' => $code])->queryScalar();
+            if (!$was) {
+                self::$flagBackup[$code] = false;
+                self::db()->createCommand()->update('feature_flags', ['enabled' => true, 'status' => 'enabled'], ['code' => $code])->execute();
+                $changed = true;
+            }
+        }
+        if ($changed) {
+            TestContainer::service(\App\Platform\Settings\ConfigRevision::class)->bump();
+            sleep(3);
+        }
+    }
+
+    public static function restoreFeatures(): void
+    {
+        if (self::$flagBackup === []) {
+            return;
+        }
+        foreach (self::$flagBackup as $code => $enabled) {
+            self::db()->createCommand()->update('feature_flags', ['enabled' => $enabled, 'status' => $enabled ? 'enabled' : 'disabled'], ['code' => $code])->execute();
+        }
+        self::$flagBackup = [];
+        TestContainer::service(\App\Platform\Settings\ConfigRevision::class)->bump();
+    }
+
     public static function db(): ConnectionInterface
     {
         return TestContainer::service(ConnectionInterface::class);

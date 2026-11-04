@@ -31,6 +31,8 @@ return [
     'api.cors_origins' => ['type' => 'json', 'default' => [], 'group' => 'API', 'label' => 'CORS allowed origins (exact list)'],
 
     // ---------------------------------------------------------------- Notifications
+    'notifications.smtp_dsn' => ['type' => 'secret', 'default' => null, 'group' => 'Notifications', 'label' => 'SMTP connection (DSN, e.g. smtp://user:pass@smtp.example.com:587)', 'env' => 'MAILER_DSN'],
+    'notifications.mail_from' => ['type' => 'string', 'default' => 'noreply@platform.local', 'group' => 'Notifications', 'label' => 'Sender address (From)', 'format' => 'email', 'env' => 'MAIL_FROM'],
     'notifications.telegram_bot_token' => ['type' => 'secret', 'default' => null, 'group' => 'Notifications', 'label' => 'Telegram bot token', 'env' => 'TELEGRAM_BOT_TOKEN'],
     'notifications.telegram_alert_chat' => ['type' => 'string', 'default' => '', 'group' => 'Notifications', 'label' => 'Telegram alert chat id', 'env' => 'TELEGRAM_ALERT_CHAT_ID'],
     'notifications.sms_gateway_url' => ['type' => 'string', 'default' => '', 'group' => 'Notifications', 'label' => 'SMS gateway endpoint (HTTPS)', 'format' => 'url'],
@@ -44,6 +46,8 @@ return [
     'retention.integration_logs_days' => ['type' => 'int', 'default' => 30, 'min' => 1, 'max' => 365, 'group' => 'Retention', 'label' => 'Integration log retention (days)'],
     'retention.jobs_days' => ['type' => 'int', 'default' => 14, 'min' => 1, 'max' => 365, 'group' => 'Retention', 'label' => 'Finished job retention (days)'],
     'retention.login_attempts_days' => ['type' => 'int', 'default' => 90, 'min' => 7, 'max' => 730, 'group' => 'Retention', 'label' => 'Login attempt retention (days)'],
+    'retention.activity_days' => ['type' => 'int', 'default' => 90, 'min' => 1, 'max' => 3650, 'group' => 'Retention', 'label' => 'User activity log retention (days)'],
+    'retention.app_logs_days' => ['type' => 'int', 'default' => 30, 'min' => 1, 'max' => 3650, 'group' => 'Retention', 'label' => 'Application log retention (days)'],
     'retention.backups_days' => ['type' => 'int', 'default' => 30, 'min' => 1, 'max' => 3650, 'group' => 'Retention', 'label' => 'Backup retention (days)'],
 
     // ---------------------------------------------------------------- Operations

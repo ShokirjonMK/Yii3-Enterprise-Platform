@@ -208,7 +208,9 @@ final class KafkaConsumerRunner
             return;
         }
         $this->lastStateCheck = microtime(true);
-        $paused = (bool) (new Query($this->db))->select('paused')->from('consumer_state')->where(['consumer_group' => $group])->scalar();
+        $paused = (bool) (new Query($this->db))->select('paused')->from('consumer_state')->where(['consumer_group' => $group])->scalar()
+            // global switch: Kafka feature off → every group pauses (messages stay in Kafka, nothing is lost)
+            || !(bool) $this->db->createCommand("SELECT enabled FROM feature_flags WHERE code = 'messaging.kafka'")->queryScalar();
         if ($paused !== $this->paused) {
             $assignment = $consumer->getAssignment();
             $paused ? $consumer->pause($assignment) : $consumer->resume($assignment);

@@ -43,6 +43,9 @@ final class MaintenanceJobs implements JobHandlerInterface
     public function partitions(): array
     {
         $created = (int) $this->db->createCommand("SELECT platform_ensure_monthly_partitions('audit_log', 0, 3)")->queryScalar();
+        foreach (['user_activity', 'app_logs'] as $table) {
+            $created += (int) $this->db->createCommand("SELECT platform_ensure_monthly_partitions('$table', 0, 3)")->queryScalar();
+        }
         $retention = (int) $this->settings->get('retention.audit_months');
         $cutoff = (new \DateTimeImmutable("first day of -$retention months"))->format('Ym');
         $detached = [];
@@ -72,6 +75,8 @@ final class MaintenanceJobs implements JobHandlerInterface
         $r['api_tokens'] = $this->db->createCommand("DELETE FROM api_tokens WHERE expires_at < now() - interval '30 days'")->execute();
         $r['bootstrap_tokens'] = $this->db->createCommand('DELETE FROM bootstrap_tokens WHERE expires_at < now()')->execute();
         $r['workers'] = $this->db->createCommand("DELETE FROM workers WHERE status IN ('stopped','lost') AND heartbeat_at < now() - interval '1 day'")->execute();
+        $r['user_activity'] = $this->db->createCommand('DELETE FROM user_activity WHERE occurred_at < now() - make_interval(days => :d)', [':d' => $days('retention.activity_days')])->execute();
+        $r['app_logs'] = $this->db->createCommand('DELETE FROM app_logs WHERE occurred_at < now() - make_interval(days => :d)', [':d' => $days('retention.app_logs_days')])->execute();
         $r['schedule_runs'] = $this->db->createCommand("DELETE FROM schedule_runs WHERE created_at < now() - interval '30 days'")->execute();
         return $r;
     }

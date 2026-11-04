@@ -15,7 +15,7 @@ use Yiisoft\Router\Route;
  */
 return [
     Group::create('/webhooks')
-        ->middleware(DomainErrorMiddleware::json())
+        ->middleware(DomainErrorMiddleware::json(), \App\Platform\FeatureFlags\RequireFeature::for('feature.webhooks'))
         ->routes(
             Route::post('/{code:[a-z0-9][a-z0-9_-]{1,63}}')->action(WebhookReceiveAction::class)->name('webhooks.receive'),
         ),

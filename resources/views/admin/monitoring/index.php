@@ -18,6 +18,7 @@ $links = array_filter($o['links']);
         <p class="page-head__sub"><?= $h->t('RED metrics, queues, consumer lag, data store exporters and active alerts.') ?></p>
     </div>
     <div class="page-head__actions">
+        <a class="btn btn--sm" href="<?= $h->url('admin.monitoring.logs') ?>"><?= $h->icon('file') ?> <?= $h->t('Application logs') ?></a>
         <?php foreach (['grafana' => 'Grafana', 'jaeger' => 'Jaeger', 'prometheus' => 'Prometheus', 'alertmanager' => 'Alertmanager'] as $k => $label): ?>
             <?php if (isset($links[$k])): ?><a class="btn btn--sm" href="<?= $h->e($links[$k]) ?>" target="_blank" rel="noopener noreferrer"><?= $h->icon('activity') ?> <?= $h->e($label) ?></a><?php endif ?>
         <?php endforeach ?>

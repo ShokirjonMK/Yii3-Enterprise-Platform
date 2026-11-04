@@ -21,10 +21,14 @@ final class MetricsMiddleware implements MiddlewareInterface
     public function __construct(
         private readonly Metrics $metrics,
         private readonly CurrentRoute $route,
+        private readonly ?\App\Platform\FeatureFlags\FeatureFlagService $flags = null,
     ) {}
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+        if ($this->flags !== null && !$this->flags->isEnabled('observability.metrics')) {
+            return $handler->handle($request);
+        }
         $start = hrtime(true);
         $status = 500;
         try {

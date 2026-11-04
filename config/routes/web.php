@@ -20,13 +20,11 @@ use Yiisoft\Session\SessionMiddleware;
  * config/routes/web/*.php (loaded inside the authenticated group below).
  */
 $moduleRoutes = [];
-foreach (glob(__DIR__ . '/web/*.php') ?: [] as $file) {
-    $moduleRoutes = [...$moduleRoutes, ...require $file];
-}
+$moduleRoutes = \App\Platform\FeatureFlags\FeatureRegistry::loadRoutes('web', glob(__DIR__ . '/web/*.php') ?: []);
 
 return [
     Group::create()
-        ->middleware(SessionMiddleware::class, CsrfTokenMiddleware::class, LocaleMiddleware::class, AuthContextMiddleware::class, DomainErrorMiddleware::class)
+        ->middleware(SessionMiddleware::class, CsrfTokenMiddleware::class, LocaleMiddleware::class, AuthContextMiddleware::class, DomainErrorMiddleware::class, \App\Platform\Audit\ActivityLogMiddleware::class)
         ->routes(
             Route::get('/')->action([HomeController::class, 'index'])->name('web.home'),
 

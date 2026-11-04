@@ -12,6 +12,33 @@ First steps after `./yii platform:install`:
 5. **19 Backup** — run a backup and a restore verification; enable the nightly schedules in **10 Jobs & Scheduler**.
 6. Optional demo data in non-production: `./scripts/platform.sh demo`.
 
+## Optional features — switch on only what the project uses
+
+Every optional part is a feature flag (registry: `config/common/features.php`), toggled in **21 System Settings → Feature flags**
+(per tenant/user rollout possible). A disabled section disappears from the menu and its URLs return 404; a disabled subsystem
+does no work at all (no queries, no network). Changes reach all processes within ~2 s.
+
+| Flag | Default | Effect when OFF |
+|---|---|---|
+| `feature.integrations`, `feature.webhooks`, `feature.workflow`, `feature.infrastructure`, `feature.deployments` | OFF | section 07 / inbound webhooks / 09 / 15 / 16 hidden, 404 |
+| `messaging.kafka` | OFF | outbox relay and consumers pause; section 11 hidden |
+| `feature.multitenancy`, `feature.api_management`, `feature.notifications`, `feature.database_admin`, `feature.redis_admin`, `feature.storage`, `feature.monitoring`, `feature.backups`, `feature.incidents`, `feature.business_modules`, `module.<code>` | ON | the matching section/module hidden, 404 |
+| `api.v1`, `api.docs` | ON | REST API / OpenAPI + Swagger UI return 404 |
+| `audit.user_activity` | ON | no rows written to `user_activity` |
+| `logging.database` | ON | logs only to stderr (JSON), not to `app_logs` |
+| `observability.metrics` / `observability.tracing` | ON / OFF | `/metrics` 404 and no counters / no OpenTelemetry spans |
+
+Core sections (dashboard, users, auth, RBAC, jobs, security, audit, settings) cannot be switched off.
+
+**Logs and user actions:** *20 Audit* — tamper-evident audit log of every change (who/what/before/after) plus **User activity**
+(every page and API call: user, route, status, duration, IP, correlation id; filters, 24 h KPIs). *17 Monitoring → Application logs* —
+warnings/errors of web, API, workers and consumers with context (secrets masked). Retention: `retention.activity_days` (90),
+`retention.app_logs_days` (30), monthly partitions created automatically.
+
+**08 Notifications → Settings** (per channel): SMTP DSN + sender, Telegram bot token + alert chat id, SMS gateway URL/token/sender,
+Web Push VAPID keys (or *Generate key pair*). Secrets are encrypted, never displayed again, saving requires re-authentication;
+an environment variable with the same purpose overrides the field and is marked "set by environment".
+
 | # | Section | What you can do | Permissions (view / manage) |
 |---|---|---|---|
 | 01 | Dashboard | live KPIs (auto refresh), dependency health, recent activity, sign-in chart, global search | admin.access |

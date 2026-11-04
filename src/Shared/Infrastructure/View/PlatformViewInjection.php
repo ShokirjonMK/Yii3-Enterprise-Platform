@@ -29,6 +29,7 @@ final class PlatformViewInjection implements CommonParametersInjectionInterface,
         private readonly RequestProviderInterface $requestProvider,
         private readonly FlashInterface $flash,
         private readonly array $platform,
+        private readonly \App\Platform\FeatureFlags\FeatureFlagService $flags,
     ) {}
 
     public function getCommonParameters(): array
@@ -51,6 +52,11 @@ final class PlatformViewInjection implements CommonParametersInjectionInterface,
                     return false;
                 }
                 return $this->permissionCache[$permission] ??= $this->access->can($identity->user->id, $permission);
+            },
+            // $feature('admin.kafka') → false when the optional feature behind that menu route is switched off
+            'feature' => function (string $route) use ($identity): bool {
+                $flag = \App\Platform\FeatureFlags\FeatureRegistry::flagForMenu($route);
+                return $flag === null || $this->flags->isEnabled($flag, $identity?->user->tenantId, $identity?->user->id);
             },
             'isHtmx' => Htmx::isPartial($request),
             'request' => $request,

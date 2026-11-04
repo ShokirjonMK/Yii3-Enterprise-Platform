@@ -21,7 +21,7 @@ final class PlatformSeeder
         ['security.mfa_enforcement', 'MFA enforcement for privileged roles', 'Critical control — cannot be disabled through feature flags.', true, true, []],
         ['security.audit', 'Audit logging', 'Critical control — cannot be disabled through feature flags.', true, true, []],
         ['api.v1', 'REST API v1', 'Public REST API under /api/v1.', true, false, []],
-        ['messaging.kafka', 'Kafka event streaming', 'Outbox relay publishes domain events to Kafka. When disabled events stay in the outbox (not lost).', true, false, ['service:kafka']],
+        ['messaging.kafka', 'Kafka event streaming', 'Outbox relay publishes domain events to Kafka. When disabled events stay in the outbox (not lost).', false, false, ['service:kafka']],
         ['notifications.email', 'E-mail notifications', 'SMTP delivery.', true, false, ['service:mailer']],
         ['notifications.telegram', 'Telegram notifications', 'Telegram Bot API delivery.', false, false, ['channel:telegram']],
         ['notifications.sms', 'SMS notifications', 'HTTP SMS gateway delivery.', false, false, ['channel:sms']],
@@ -68,6 +68,16 @@ final class PlatformSeeder
                 'INSERT INTO feature_flags (code, name, description, enabled, status, is_critical, dependencies)
                  VALUES (:c, :n, :d, :e, :s, :cr, :dep) ON CONFLICT (code) DO NOTHING',
                 [':c' => $code, ':n' => $name, ':d' => $desc, ':e' => $enabled, ':s' => $enabled ? 'enabled' : 'disabled', ':cr' => $critical, ':dep' => json_encode($deps)],
+            )->execute();
+        }
+
+        // Optional features (config/common/features.php): fresh installs start with unused features OFF
+        foreach (\App\Platform\FeatureFlags\FeatureRegistry::all() as $code => $def) {
+            $stats['flags'] += $this->db->createCommand(
+                'INSERT INTO feature_flags (code, name, description, enabled, status, is_critical, dependencies)
+                 VALUES (:c, :n, :d, :e, :s, false, :dep) ON CONFLICT (code) DO NOTHING',
+                [':c' => $code, ':n' => $def['name'], ':d' => $def['description'], ':e' => (bool) $def['default'],
+                 ':s' => $def['default'] ? 'enabled' : 'disabled', ':dep' => json_encode($def['dependencies'] ?? [])],
             )->execute();
         }
 

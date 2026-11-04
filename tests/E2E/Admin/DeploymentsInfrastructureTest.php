@@ -15,12 +15,14 @@ final class DeploymentsInfrastructureTest extends TestCase
 {
     protected function setUp(): void
     {
+        Fixtures::enableFeatures(['feature.infrastructure', 'feature.deployments']);
         Fixtures::resetLoginThrottle();
         Fixtures::db()->createCommand("UPDATE deployments SET status = 'failed', error = 'e2e cleanup' WHERE environment = 'staging' AND status IN ('requested','approved','running')")->execute();
     }
 
     protected function tearDown(): void
     {
+        Fixtures::restoreFeatures();
         Fixtures::cleanup();
     }
 

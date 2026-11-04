@@ -51,7 +51,7 @@ $this->beginPage();
     <title><?= $h->e($title) ?></title>
     <?php $this->head() ?>
 </head>
-<body hx-headers='{"X-CSRF-Token":"<?= $h->e($csrf) ?>"}'>
+<body class="page-sticky" hx-headers='{"X-CSRF-Token":"<?= $h->e($csrf) ?>"}'>
 <?php $this->beginBody() ?>
 <a class="skip-link" href="#main"><?= $h->t('Skip to content') ?></a>
 <div class="htmx-indicator progress-bar" id="global-progress" aria-hidden="true"></div>
@@ -61,7 +61,7 @@ $this->beginPage();
         <nav class="web-nav" hx-boost="true" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-indicator="#global-progress">
             <a href="<?= $h->url('web.home') ?>"<?= $h->isRoute('web.home') ? ' aria-current="page"' : '' ?>><?= $h->t('Home') ?></a>
             <?php if ($identity): ?>
-                <?php if ($can('projects.view')): ?><a href="<?= $h->url('web.projects') ?>"<?= $h->isRoute('web.projects') ? ' aria-current="page"' : '' ?>><?= $h->t('Projects') ?></a><?php endif ?>
+                <?php if ($can('projects.view') && $feature('admin.projects')): ?><a href="<?= $h->url('web.projects') ?>"<?= $h->isRoute('web.projects') ? ' aria-current="page"' : '' ?>><?= $h->t('Projects') ?></a><?php endif ?>
                 <a href="<?= $h->url('web.notifications') ?>"<?= $h->isRoute('web.notifications') ? ' aria-current="page"' : '' ?>><?= $h->t('Notifications') ?></a>
                 <a href="<?= $h->url('web.profile') ?>"<?= $h->isRoute('web.profile', 'web.security') ? ' aria-current="page"' : '' ?>><?= $h->t('Profile') ?></a>
             <?php endif ?>
@@ -81,7 +81,7 @@ $this->beginPage();
 <footer class="web-footer">
     <div class="web-footer__inner">
         <span>© <?= date('Y') ?> <?= $h->e($platform['name']) ?> · v<?= $h->e($platform['version']) ?></span>
-        <span class="signature"><?= $h->t('Built by') ?> <a href="<?= $h->e($platform['authorUrl']) ?>" rel="noopener" target="_blank"><?= $h->e($platform['author']) ?></a></span>
+        <span class="signature">Developer <a href="<?= $h->e($platform['authorUrl']) ?>" rel="noopener" target="_blank"><?= $h->e($platform['author']) ?></a></span>
     </div>
 </footer>
 <div class="toasts" role="status" aria-live="polite"></div>

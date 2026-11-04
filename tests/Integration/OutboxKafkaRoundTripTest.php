@@ -27,6 +27,9 @@ final class OutboxKafkaRoundTripTest extends IntegrationTestCase
             self::markTestSkipped('Kafka disabled');
         }
         self::$received = [];
+        // messaging.kafka is OFF on fresh installs (unused features disabled); this test needs it on
+        $this->db->createCommand()->update('feature_flags', ['enabled' => true, 'status' => 'enabled'], ['code' => 'messaging.kafka'])->execute();
+        $this->get(\App\Platform\Settings\ConfigRevision::class)->bump();
     }
 
     public function testOutboxEventIsPublishedAndConsumedOnce(): void

@@ -18,8 +18,14 @@ final class WebhookHttpTest extends TestCase
 {
     private string $code;
 
+    protected function setUp(): void
+    {
+        Fixtures::enableFeatures(['feature.webhooks']);
+    }
+
     protected function tearDown(): void
     {
+        Fixtures::restoreFeatures();
         Fixtures::db()->createCommand('DELETE FROM webhook_endpoints WHERE code = :c', [':c' => $this->code])->execute();
         Fixtures::cleanup();
     }

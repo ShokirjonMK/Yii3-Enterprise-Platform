@@ -21,13 +21,16 @@ foreach ($it as $f) {
         $files[] = $f->getPathname();
     }
 }
-$it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/src'));
+$it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/src')); // Gii templates are code generators, not UI
 foreach ($it as $f) {
     if ($f->isFile() && str_ends_with($f->getFilename(), '.php')) {
         $files[] = $f->getPathname();
     }
 }
 foreach ($files as $file) {
+    if (str_contains(str_replace(DIRECTORY_SEPARATOR, '/', $file), '/Gii/templates/')) {
+        continue;
+    }
     $src = (string) file_get_contents($file);
     if (preg_match_all("/\\\$h->tr?\\(\\s*'((?:[^'\\\\]|\\\\.)*)'/", $src, $m)) {
         foreach ($m[1] as $s) {

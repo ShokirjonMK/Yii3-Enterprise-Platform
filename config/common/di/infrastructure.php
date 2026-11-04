@@ -39,11 +39,15 @@ return [
         },
     ],
 
-    LoggerInterface::class => static function (RequestContext $context) use ($platform): LoggerInterface {
+    LoggerInterface::class => static function (RequestContext $context, Psr\Container\ContainerInterface $container) use ($platform): LoggerInterface {
         $levels = Environment::isProd()
             ? [LogLevel::EMERGENCY, LogLevel::ALERT, LogLevel::CRITICAL, LogLevel::ERROR, LogLevel::WARNING, LogLevel::NOTICE, LogLevel::INFO]
             : [];
-        $logger = new Logger([new JsonStreamTarget('php://stderr', $context, $platform['observability']['serviceName'], $levels)]);
+        $logger = new Logger([
+            new JsonStreamTarget('php://stderr', $context, $platform['observability']['serviceName'], $levels),
+            // warning+ also into app_logs for Admin → Monitoring → Logs (flag logging.database)
+            new App\Shared\Infrastructure\Logging\DatabaseLogTarget($container, $context),
+        ]);
         $logger->setFlushInterval(100);
         return $logger;
     },

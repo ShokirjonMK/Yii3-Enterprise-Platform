@@ -22,6 +22,7 @@ $categories = ['security', 'auth', 'access', 'data', 'config', 'ops', 'system', 
         <p class="page-head__sub"><?= $h->t('Immutable, HMAC-signed audit trail of every state change and security event.') ?></p>
     </div>
     <div class="page-head__actions">
+        <a class="btn" href="<?= $h->url('admin.audit.activity') ?>"><?= $h->icon('activity') ?> <?= $h->t('User activity') ?></a>
         <a class="btn" href="<?= $h->url('admin.audit.partitions') ?>"><?= $h->icon('database') ?> <?= $h->t('Integrity & partitions') ?></a>
         <?php if ($can('audit.export')): ?>
             <a class="btn btn--primary" href="<?= $h->e($h->url('admin.audit.export', [], array_filter($filters, static fn($v) => $v !== ''))) ?>" download><?= $h->icon('download') ?> <?= $h->t('Export CSV') ?></a>
