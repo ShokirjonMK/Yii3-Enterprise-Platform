@@ -43,5 +43,5 @@ $manage = $can('notifications.manage');
         <?php endforeach ?>
         </tbody>
     </table></div>
-    <div class="card__foot"><span class="small muted"><?= $h->t('Telegram: bot token + per-user chat id. SMS: HTTPS gateway (JSON {to, text, from}). Web Push: VAPID keys; browsers subscribe via /notifications/push/subscribe.') ?></span></div>
+    <div class="card__foot"><span class="small muted"><?= $h->t('Telegram: bot token + per-user chat id. SMS: HTTPS gateway (JSON: to, text, from). Web Push: VAPID keys; browsers subscribe via /notifications/push/subscribe.') ?></span></div>
 </div>
