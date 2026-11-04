@@ -61,11 +61,17 @@ final class AuthContextMiddleware implements MiddlewareInterface
             $this->context->setTenantId($identity->user->tenantId);
             $request = $request->withAttribute('identity', $identity);
 
-            foreach ($this->auth->gates() as $gate) {
-                $allowed = self::GATE_ROUTES[$gate] ?? [];
+            // Gates are completed in a fixed order (password change first, then MFA enrolment); only the
+            // first pending gate is enforced, otherwise two gates would redirect to each other.
+            foreach (array_keys(self::GATE_ROUTES) as $gate) {
+                if (!in_array($gate, $this->auth->gates(), true)) {
+                    continue;
+                }
+                $allowed = self::GATE_ROUTES[$gate];
                 if (!in_array($this->route->getName(), $allowed, true)) {
                     return $this->redirect($allowed[0]);
                 }
+                break;
             }
         }
         return $handler->handle($request);

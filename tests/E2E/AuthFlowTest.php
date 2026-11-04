@@ -126,6 +126,25 @@ final class AuthFlowTest extends TestCase
         self::assertSame('/', $web->url());
     }
 
+    /** Bootstrap superadmin scenario: forced password change AND mandatory MFA enrolment, in that order. */
+    public function testFirstLoginWithBothGatesPasswordThenMfa(): void
+    {
+        $u = Fixtures::user(['superadmin'], extra: ['must_change_password' => true, 'mfa_required' => true]);
+        $web = new WebClient();
+        $web->get('/login');
+        $web->post('/login', ['login' => $u['username'], 'password' => $u['password']]);
+        self::assertSame('/auth/password', $web->url(), 'password gate first, no redirect loop');
+
+        $new = 'Fresh-Admin-Pass!' . random_int(100, 999);
+        $web->post('/auth/password', ['current_password' => $u['password'], 'new_password' => $new, 'new_password_confirm' => $new]);
+        self::assertSame('/auth/mfa/setup', $web->url(), 'then MFA enrolment');
+
+        preg_match('/Manual key[^<]*<code>([A-Z2-7 ]+)<\/code>/', $web->body(), $m);
+        $web->post('/auth/mfa/setup', ['code' => Fixtures::totp(str_replace(' ', '', (string) ($m[1] ?? '')))]);
+        $web->get('/admin');
+        self::assertSame('/admin', $web->url(), 'full access after both gates');
+    }
+
     public function testAccountLockoutAfterRepeatedFailures(): void
     {
         $u = Fixtures::user(['user']);

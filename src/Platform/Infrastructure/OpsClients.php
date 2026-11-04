@@ -59,22 +59,22 @@ final class OpsClients
 
     public function prometheus(): PrometheusClient
     {
-        return new PrometheusClient(Environment::nullableString('PROMETHEUS_URL'), $this->httpHandler, 2.0);
+        return new PrometheusClient(self::str($this->settings->get('observability.prometheus_url')), $this->httpHandler, 2.0);
     }
 
     public function alertmanager(): AlertmanagerClient
     {
-        return new AlertmanagerClient(Environment::string('ALERTMANAGER_URL', 'http://alertmanager:9093'), $this->httpHandler);
+        return new AlertmanagerClient((string) ($this->settings->get('observability.alertmanager_url') ?: 'http://alertmanager:9093'), $this->httpHandler);
     }
 
     /** @return array{grafana:?string, jaeger:?string, prometheus:?string, alertmanager:?string} */
     public function links(): array
     {
         return [
-            'grafana' => Environment::nullableString('GRAFANA_URL'),
-            'jaeger' => Environment::nullableString('JAEGER_URL'),
-            'prometheus' => Environment::nullableString('PROMETHEUS_PUBLIC_URL'),
-            'alertmanager' => Environment::nullableString('ALERTMANAGER_PUBLIC_URL'),
+            'grafana' => self::str($this->settings->get('observability.grafana_url')),
+            'jaeger' => self::str($this->settings->get('observability.jaeger_url')),
+            'prometheus' => self::str($this->settings->get('observability.prometheus_public_url')),
+            'alertmanager' => self::str($this->settings->get('observability.alertmanager_public_url')),
         ];
     }
 

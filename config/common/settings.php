@@ -53,5 +53,12 @@ return [
     'ops.kubernetes_api' => ['type' => 'string', 'default' => '', 'group' => 'Operations', 'label' => 'Kubernetes API URL', 'format' => 'url', 'env' => 'K8S_API_URL'],
     'ops.kubernetes_namespace' => ['type' => 'string', 'default' => 'platform', 'group' => 'Operations', 'label' => 'Kubernetes namespace', 'env' => 'K8S_NAMESPACE'],
     'ops.kubernetes_token' => ['type' => 'secret', 'default' => null, 'group' => 'Operations', 'label' => 'Kubernetes service-account token', 'env' => 'K8S_TOKEN', 'critical' => true],
+    // ---------------------------------------------------------------- Observability (env value wins when set)
+    'observability.prometheus_url' => ['type' => 'string', 'default' => '', 'group' => 'Observability', 'label' => 'Prometheus API URL (internal)', 'format' => 'url', 'env' => 'PROMETHEUS_URL'],
+    'observability.alertmanager_url' => ['type' => 'string', 'default' => '', 'group' => 'Observability', 'label' => 'Alertmanager API URL (internal)', 'format' => 'url', 'env' => 'ALERTMANAGER_URL'],
+    'observability.grafana_url' => ['type' => 'string', 'default' => '', 'group' => 'Observability', 'label' => 'Grafana URL (link)', 'format' => 'url', 'env' => 'GRAFANA_URL'],
+    'observability.jaeger_url' => ['type' => 'string', 'default' => '', 'group' => 'Observability', 'label' => 'Jaeger UI URL (link)', 'format' => 'url', 'env' => 'JAEGER_URL'],
+    'observability.prometheus_public_url' => ['type' => 'string', 'default' => '', 'group' => 'Observability', 'label' => 'Prometheus UI URL (link)', 'format' => 'url', 'env' => 'PROMETHEUS_PUBLIC_URL'],
+    'observability.alertmanager_public_url' => ['type' => 'string', 'default' => '', 'group' => 'Observability', 'label' => 'Alertmanager UI URL (link)', 'format' => 'url', 'env' => 'ALERTMANAGER_PUBLIC_URL'],
     'ops.backup_offsite_bucket' => ['type' => 'string', 'default' => '', 'group' => 'Operations', 'label' => 'Off-site backup bucket (S3)', 'env' => 'BACKUP_OFFSITE_BUCKET'],
 ];
