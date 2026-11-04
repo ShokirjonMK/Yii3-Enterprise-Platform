@@ -1,0 +1,161 @@
+# Web tier: nginx (static assets baked into the image) + PHP-FPM in one pod, talking over 127.0.0.1:9000.
+# Both images contain the same public/ tree (the nginx image copies it from the php image at build time),
+# so no shared volume is needed and the root filesystems stay read-only.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels:
+    app.kubernetes.io/name: yii3-platform
+    app.kubernetes.io/component: web
+spec:
+  replicas: 3
+  revisionHistoryLimit: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: yii3-platform
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: yii3-platform
+        app.kubernetes.io/component: web
+        tier: app
+    spec:
+      serviceAccountName: platform-app
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 33
+        runAsGroup: 33
+        fsGroup: 33
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app.kubernetes.io/name: yii3-platform, app.kubernetes.io/component: web }
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app.kubernetes.io/name: yii3-platform, app.kubernetes.io/component: web }
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels: { app.kubernetes.io/name: yii3-platform, app.kubernetes.io/component: web }
+      containers:
+        - name: nginx
+          image: yep-nginx
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 8080, protocol: TCP }
+          securityContext:
+            runAsUser: 101
+            runAsGroup: 101
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 500m, memory: 128Mi }
+          startupProbe:
+            httpGet: { path: /nginx-health, port: http }
+            periodSeconds: 2
+            failureThreshold: 30
+          # Readiness goes through PHP: /health/ready checks PostgreSQL + Redis.
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /nginx-health, port: http }
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              # Let endpoints/ingress drop the pod before nginx stops accepting connections, then drain gracefully.
+              exec: { command: ["/bin/sh", "-c", "sleep 10 && nginx -s quit && sleep 5"] }
+          volumeMounts:
+            - { name: nginx-tmp, mountPath: /tmp }
+        - name: php
+          image: yep-php
+          imagePullPolicy: IfNotPresent
+          command: ["php-fpm", "--nodaemonize"]
+          envFrom:
+            - configMapRef: { name: platform-config }
+            - secretRef: { name: platform-secrets }
+          env:
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: platform-db-app, key: password } }
+            - name: KAFKA_SASL_PASSWORD
+              valueFrom: { secretKeyRef: { name: platform-app, key: password } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 250m, memory: 384Mi }
+            limits: { cpu: "2", memory: 1Gi }
+          startupProbe:
+            exec: { command: ["php-fpm-healthcheck"] }
+            periodSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            exec: { command: ["php-fpm-healthcheck"] }
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec: { command: ["php-fpm-healthcheck"] }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          lifecycle:
+            preStop:
+              # php-fpm treats SIGTERM as "fast shutdown"; SIGQUIT finishes in-flight requests.
+              exec: { command: ["/bin/sh", "-c", "sleep 15 && kill -QUIT 1 && sleep 20"] }
+          volumeMounts:
+            - { name: runtime, mountPath: /app/runtime }
+            - { name: php-tmp, mountPath: /tmp }
+            - { name: kafka-ca, mountPath: /etc/kafka-ca, readOnly: true }
+      volumes:
+        - name: runtime
+          emptyDir: { sizeLimit: 1Gi }
+        - name: php-tmp
+          emptyDir: { sizeLimit: 512Mi }
+        - name: nginx-tmp
+          emptyDir: { sizeLimit: 256Mi }
+        - name: kafka-ca
+          secret:
+            secretName: platform-kafka-cluster-ca-cert
+            items: [{ key: ca.crt, path: ca.crt }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  labels:
+    app.kubernetes.io/name: yii3-platform
+    app.kubernetes.io/component: web
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: yii3-platform
+    app.kubernetes.io/component: web
+  ports:
+    - { name: http, port: 80, targetPort: http, protocol: TCP }

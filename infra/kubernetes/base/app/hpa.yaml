@@ -1,0 +1,35 @@
+# Web tier autoscaling on CPU (PHP-FPM is CPU bound). Requests-per-pod could be added as a custom metric
+# through prometheus-adapter (platform_http_requests_total), but the counter is cluster-aggregated in Redis,
+# so per-pod RPS is not available from the app itself — use the ingress-nginx metric
+# nginx_ingress_controller_requests if request-based scaling is needed.
+#
+# Workers are NOT scaled by an HPA here: KEDA owns their HPA (app/keda-worker.yaml). Never define both.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web
+  minReplicas: 3
+  maxReplicas: 12
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 65 }
+    - type: Resource
+      resource:
+        name: memory
+        target: { type: Utilization, averageUtilization: 80 }
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - { type: Percent, value: 100, periodSeconds: 60 }
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - { type: Pods, value: 1, periodSeconds: 120 }

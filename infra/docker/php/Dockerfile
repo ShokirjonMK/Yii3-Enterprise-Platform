@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1.7
 #
 # Yii3 Enterprise Platform — PHP 8.3 FPM / CLI image.
+# Author: ShokirjonMK — https://github.com/ShokirjonMK/Yii3-Enterprise-Platform
 # Targets:
 #   base  — runtime extensions only
 #   dev   — + composer, pcov, dev tooling (bind-mounted source)
@@ -73,6 +74,19 @@ RUN composer dump-autoload --no-dev --classmap-authoritative --no-interaction \
 
 # ---------------------------------------------------------------- prod
 FROM base AS prod
+ARG VERSION=dev
+ARG REVISION=unknown
+ARG CREATED=unknown
+LABEL org.opencontainers.image.title="yii3-enterprise-platform-php" \
+      org.opencontainers.image.description="Yii3 Enterprise Platform — PHP 8.3 FPM/CLI production image (web, workers, scheduler, relay, consumers)" \
+      org.opencontainers.image.authors="ShokirjonMK" \
+      org.opencontainers.image.vendor="ShokirjonMK" \
+      org.opencontainers.image.source="https://github.com/ShokirjonMK/Yii3-Enterprise-Platform" \
+      org.opencontainers.image.url="https://github.com/ShokirjonMK/Yii3-Enterprise-Platform" \
+      org.opencontainers.image.documentation="https://github.com/ShokirjonMK/Yii3-Enterprise-Platform/blob/main/docs/DEPLOYMENT.md" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${REVISION}" \
+      org.opencontainers.image.created="${CREATED}"
 ENV APP_ENV=prod APP_DEBUG=false PHP_OPCACHE_VALIDATE_TIMESTAMPS=0
 # Build tooling is not needed at runtime (composer is never copied into this stage).
 RUN apt-get purge -y git unzip gnupg gpg gpg-agent dirmngr gpgsm \

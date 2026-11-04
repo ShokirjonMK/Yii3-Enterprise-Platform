@@ -1,0 +1,81 @@
+# Yii3 Enterprise Platform — Alertmanager. Author: ShokirjonMK
+#
+# No secrets in this file:
+#   - Telegram bot token  -> bot_token_file  /run/alertmanager/telegram-bot-token   (TELEGRAM_BOT_TOKEN)
+#   - Telegram chat id    -> the line marked "@TELEGRAM_CHAT_ID@" is replaced at start-up (TELEGRAM_ALERT_CHAT_ID)
+#   - SMTP password       -> auth_password_file /run/alertmanager/smtp-password       (ALERT_SMTP_PASSWORD, optional)
+# In docker compose the alertmanager entrypoint wrapper writes these files from .env (compose.yaml, monitoring
+# profile). In Kubernetes mount them from a Secret (alertmanager-platform-secrets) at /run/alertmanager.
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: mailpit:1025
+  smtp_from: alertmanager@platform.local
+  smtp_require_tls: false
+  # Production: smtp_smarthost: smtp.example.com:587, smtp_require_tls: true, smtp_auth_username: alerts@example.com,
+  #             smtp_auth_password_file: /run/alertmanager/smtp-password
+
+templates:
+  - /etc/alertmanager/templates/*.tmpl
+
+route:
+  receiver: email-ops
+  group_by: [alertname, severity, namespace]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: [severity="critical"]
+      receiver: critical
+      group_wait: 10s
+      repeat_interval: 1h
+      continue: false
+    - matchers: [severity="warning", team="security"]
+      receiver: security
+    - matchers: [severity="warning"]
+      receiver: email-ops
+    - matchers: [severity="info"]
+      receiver: blackhole
+
+inhibit_rules:
+  # A down database/redis explains the app-level symptoms — do not page for both.
+  - source_matchers: [alertname=~"PostgresDown|RedisDown"]
+    target_matchers: [alertname=~"HighErrorRate|HighLatencyP95|WorkersDown|OldestJobAge|QueueBacklog"]
+  - source_matchers: [alertname="PlatformAppDown"]
+    target_matchers: [alertname=~"HighErrorRate|HighLatencyP95.*"]
+  - source_matchers: [severity="critical"]
+    target_matchers: [severity="warning"]
+    equal: [alertname, namespace]
+
+receivers:
+  - name: blackhole
+
+  - name: email-ops
+    email_configs:
+      - to: ops@platform.local
+        send_resolved: true
+        headers:
+          Subject: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} ({{ .CommonLabels.severity }})'
+
+  - name: security
+    email_configs:
+      - to: security@platform.local
+        send_resolved: true
+    telegram_configs:
+      - bot_token_file: /run/alertmanager/telegram-bot-token
+        chat_id: -1000000000000 # @TELEGRAM_CHAT_ID@
+        parse_mode: HTML
+        message: '{{ template "telegram.platform.message" . }}'
+        send_resolved: true
+
+  - name: critical
+    email_configs:
+      - to: ops@platform.local
+        send_resolved: true
+        headers:
+          Subject: '[{{ .Status | toUpper }}][CRITICAL] {{ .CommonLabels.alertname }}'
+    telegram_configs:
+      - bot_token_file: /run/alertmanager/telegram-bot-token
+        chat_id: -1000000000000 # @TELEGRAM_CHAT_ID@
+        parse_mode: HTML
+        message: '{{ template "telegram.platform.message" . }}'
+        send_resolved: true

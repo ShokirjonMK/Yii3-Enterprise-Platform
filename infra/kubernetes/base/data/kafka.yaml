@@ -1,0 +1,177 @@
+# Kafka 3.9 (KRaft, no ZooKeeper) managed by Strimzi: 3 nodes that are both controller and broker.
+#
+# Quorum / split-brain: the KRaft metadata quorum (3 voters) needs a majority (2) to elect the active controller
+# and commit metadata, so a partitioned minority can neither elect a leader nor change ISR. Data durability:
+# replication factor 3 + min.insync.replicas 2 + producer acks=all  -> one broker can be lost without data loss
+# or write unavailability; unclean leader election is disabled.
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: dual-role
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  replicas: 3
+  roles: [controller, broker]
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 100Gi
+        deleteClaim: false
+        kraftMetadata: shared
+  resources:
+    requests: { cpu: 500m, memory: 3Gi }
+    limits: { memory: 3Gi }
+  jvmOptions:
+    -Xms: 1536m
+    -Xmx: 1536m
+  template:
+    pod:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels: { strimzi.io/cluster: platform-kafka, strimzi.io/pool-name: dual-role }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { strimzi.io/cluster: platform-kafka, strimzi.io/pool-name: dual-role }
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: platform-kafka
+  annotations:
+    strimzi.io/node-pools: enabled
+    strimzi.io/kraft: enabled
+spec:
+  kafka:
+    version: 3.9.0
+    metadataVersion: 3.9-IV0
+    listeners:
+      # In-cluster TLS listener with SCRAM-SHA-512 authentication (KAFKA_SECURITY_PROTOCOL=SASL_SSL)
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+        authentication:
+          type: scram-sha-512
+        networkPolicyPeers:
+          - podSelector:
+              matchLabels: { tier: app }
+    authorization:
+      type: simple
+      superUsers: []
+    rack:
+      topologyKey: topology.kubernetes.io/zone
+    config:
+      default.replication.factor: 3
+      min.insync.replicas: 2
+      offsets.topic.replication.factor: 3
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      unclean.leader.election.enable: false
+      auto.create.topics.enable: false
+      num.partitions: 3
+      log.retention.hours: 168
+      replica.selector.class: org.apache.kafka.common.replica.RackAwareReplicaSelector
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          name: kafka-metrics
+          key: kafka-metrics-config.yml
+  entityOperator:
+    topicOperator:
+      resources:
+        requests: { cpu: 50m, memory: 256Mi }
+        limits: { memory: 512Mi }
+    userOperator:
+      resources:
+        requests: { cpu: 50m, memory: 256Mi }
+        limits: { memory: 512Mi }
+  kafkaExporter:
+    # Consumer-group lag & topic metrics (kafka_consumergroup_lag) exposed on the exporter pod
+    topicRegex: ".*"
+    groupRegex: ".*"
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+      limits: { memory: 256Mi }
+---
+# Application identity. The User Operator creates Secret "platform-app" (key: password) used as KAFKA_SASL_PASSWORD.
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: platform-app
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  authentication:
+    type: scram-sha-512
+  authorization:
+    type: simple
+    acls:
+      # Produce/consume platform.* and <module>.events topics (outbox relay, consumers, retry/DLQ routing)
+      - resource: { type: topic, name: platform., patternType: prefix }
+        operations: [Describe, Read, Write, DescribeConfigs]
+      - resource: { type: topic, name: projects., patternType: prefix }
+        operations: [Describe, Read, Write, DescribeConfigs]
+      # Consumer groups platform-default, platform-retry, module groups (platform-*)
+      - resource: { type: group, name: platform-, patternType: prefix }
+        operations: [Describe, Read]
+      # Admin UI: list topics / describe cluster (health check); topic creation stays with the Topic Operator
+      - resource: { type: cluster }
+        operations: [Describe, DescribeConfigs]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-metrics
+data:
+  # Condensed version of Strimzi's examples/metrics/kafka-metrics.yaml rules
+  kafka-metrics-config.yml: |
+    lowercaseOutputName: true
+    rules:
+      - pattern: kafka.server<type=(.+), name=(.+), clientId=(.+), topic=(.+), partition=(.*)><>Value
+        name: kafka_server_$1_$2
+        type: GAUGE
+        labels: { clientId: "$3", topic: "$4", partition: "$5" }
+      - pattern: kafka.server<type=(.+), name=(.+), clientId=(.+), brokerHost=(.+), brokerPort=(.+)><>Value
+        name: kafka_server_$1_$2
+        type: GAUGE
+        labels: { clientId: "$3", broker: "$4:$5" }
+      - pattern: kafka.server<type=(.+), cipher=(.+), protocol=(.+), listener=(.+), networkProcessor=(.+)><>connections
+        name: kafka_server_$1_connections_tls_info
+        type: GAUGE
+        labels: { cipher: "$2", protocol: "$3", listener: "$4", networkProcessor: "$5" }
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)PerSec\w*, (.+)=(.+), (.+)=(.+)><>Count
+        name: kafka_$1_$2_$3_total
+        type: COUNTER
+        labels: { "$4": "$5", "$6": "$7" }
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)PerSec\w*, (.+)=(.+)><>Count
+        name: kafka_$1_$2_$3_total
+        type: COUNTER
+        labels: { "$4": "$5" }
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)PerSec\w*><>Count
+        name: kafka_$1_$2_$3_total
+        type: COUNTER
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+), (.+)=(.+)><>Value
+        name: kafka_$1_$2_$3
+        type: GAUGE
+        labels: { "$4": "$5", "$6": "$7" }
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+)><>Value
+        name: kafka_$1_$2_$3
+        type: GAUGE
+        labels: { "$4": "$5" }
+      - pattern: kafka.(\w+)<type=(.+), name=(.+)><>Value
+        name: kafka_$1_$2_$3
+        type: GAUGE
+      - pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+)><>(\d+)thPercentile
+        name: kafka_$1_$2_$3
+        type: GAUGE
+        labels: { "$4": "$5", quantile: "0.$6" }

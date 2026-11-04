@@ -246,6 +246,14 @@ services:
     volumes:
       - ./observability/prometheus:/etc/prometheus:ro
       - prometheus_data:/prometheus
+      # /metrics bearer token, generated from METRICS_TOKEN by `scripts/platform.sh metrics-token`
+      # (runtime/ is gitignored; `scripts/platform.sh up monitoring` creates it automatically)
+      - type: bind
+        source: ./runtime/metrics-token
+        target: /etc/prometheus-secrets/metrics-token
+        read_only: true
+        bind:
+          create_host_path: false
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
     networks: [backend]
@@ -253,7 +261,22 @@ services:
   alertmanager:
     image: prom/alertmanager:v0.28.1
     profiles: [monitoring]
-    command: ["--config.file=/etc/alertmanager/alertmanager.yml"]
+    # The committed config has no secrets: the Telegram bot token is written to a tmpfs file and the chat id is
+    # substituted at start-up from .env (TELEGRAM_BOT_TOKEN / TELEGRAM_ALERT_CHAT_ID; both optional).
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        umask 077
+        printf '%s' "$${TELEGRAM_BOT_TOKEN:-0:not-configured}" > /run/alertmanager/telegram-bot-token
+        CHAT="$${TELEGRAM_ALERT_CHAT_ID:-}"
+        case "$$CHAT" in ''|*[!0-9-]*) CHAT=-1000000000000 ;; esac
+        sed "s|-1000000000000 # @TELEGRAM_CHAT_ID@|$$CHAT|" /etc/alertmanager/alertmanager.yml > /run/alertmanager/alertmanager.yml
+        exec /bin/alertmanager --config.file=/run/alertmanager/alertmanager.yml --storage.path=/alertmanager
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_ALERT_CHAT_ID: ${TELEGRAM_ALERT_CHAT_ID:-}
+    tmpfs:
+      - /run/alertmanager:mode=0700,uid=65534,gid=65534
     volumes:
       - ./observability/alertmanager:/etc/alertmanager:ro
     networks: [backend]

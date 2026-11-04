@@ -182,7 +182,8 @@ return [
     'yiisoft/session' => [
         'session' => [
             'options' => [
-                'name' => Env::isProd() ? '__Host-yep_sid' : 'yep_sid',
+                // __Secure- (not __Host-): yiisoft/session always sends a Domain attribute, which __Host- cookies forbid
+                'name' => Env::isProd() ? '__Secure-yep_sid' : 'yep_sid',
                 'cookie_secure' => Env::isProd() ? 1 : 0,
                 'cookie_httponly' => 1,
                 'cookie_samesite' => 'Lax',

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform
+  labels:
+    # Pod Security Admission: every workload in this namespace satisfies the "restricted" profile
+    # (CNPG / Strimzi / Redis pods included — they run non-root with RuntimeDefault seccomp).
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted

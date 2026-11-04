@@ -1,0 +1,615 @@
+# Yii3 Enterprise Platform — GitLab CI/CD pipeline.
+# Author: ShokirjonMK — https://github.com/ShokirjonMK/Yii3-Enterprise-Platform
+# (The source of truth is the GitHub repository; this pipeline runs on the GitLab mirror. A minimal GitHub Actions
+#  workflow for lint + unit tests lives in .github/workflows/ci.yml.)
+#
+# Stages and the full list of CI/CD variables are documented in docs/CI_CD.md.
+# Secrets are NEVER stored in this file: they come from protected + masked GitLab CI/CD variables
+# (KUBECONFIG_* are "File" type variables). Production jobs only run on protected refs (default branch / tags).
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+stages:
+  - validate
+  - build-deps
+  - quality
+  - test-unit
+  - test-integration
+  - test-api
+  - security
+  - build
+  - scan
+  - deploy-staging
+  - smoke-staging
+  - approve-production
+  - deploy-production
+  - verify-production
+  - rollback
+
+variables:
+  FF_NETWORK_PER_BUILD: "true"           # service aliases (postgres, redis, kafka) resolvable from all containers
+  DOCKER_TLS_CERTDIR: "/certs"
+  DOCKER_IMAGE: docker:27.5
+  DIND_IMAGE: docker:27.5-dind
+  K8S_TOOLS_IMAGE: alpine/k8s:1.31.4     # kubectl, kustomize, yq, curl, bash
+  CI_PHP_IMAGE: $CI_REGISTRY_IMAGE/ci:$CI_COMMIT_REF_SLUG
+  IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+  PHP_IMAGE: $CI_REGISTRY_IMAGE/php
+  NGINX_IMAGE: $CI_REGISTRY_IMAGE/nginx
+  COMPOSER_CACHE_DIR: $CI_PROJECT_DIR/.composer-cache
+  COMPOSER_NO_INTERACTION: "1"
+  # Non-secret test configuration (throw-away service containers that exist only for this job)
+  APP_SECRET: ci-only-not-a-secret-0000000000000000000000000000000000000000000000
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_USER: platform
+  DB_PASSWORD: ci-only-password
+  DB_NAME: platform
+  DB_TEST_NAME: platform_test
+  DB_SSLMODE: disable
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: ""
+  REDIS_MODE: standalone
+  KAFKA_BROKERS: kafka:9092
+  MAILER_DSN: null://null
+  S3_KEY: ci
+  S3_SECRET: ci-only-secret
+  METRICS_TOKEN: ci-only-metrics-token
+
+default:
+  interruptible: true
+  retry:
+    max: 1
+    when: [runner_system_failure, stuck_or_timeout_failure, scheduler_failure]
+
+# ------------------------------------------------------------------ templates
+.php:
+  image:
+    name: $CI_PHP_IMAGE
+    docker:
+      user: root                          # dev target runs as www-data; the CI build dir is owned by root
+  needs:
+    - job: ci-image
+    - job: composer-install
+      artifacts: true
+  before_script:
+    - mkdir -p runtime tests/_output
+
+.service-redis: &svc-redis
+  name: redis:7.4-alpine
+  alias: redis
+
+.service-kafka: &svc-kafka
+  name: apache/kafka:3.9.1
+  alias: kafka
+  variables:
+    KAFKA_NODE_ID: "1"
+    KAFKA_PROCESS_ROLES: broker,controller
+    KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+    KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+    KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+    KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+    KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+    KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+    KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+    KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+    KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+    KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"   # CI only; topics are provisioned explicitly in real environments
+    KAFKA_NUM_PARTITIONS: "3"
+    CLUSTER_ID: 5L6g3nShT-eMCtK--X86sw
+
+.docker:
+  image: $DOCKER_IMAGE
+  services:
+    - name: $DIND_IMAGE
+      alias: docker
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - docker buildx create --use --driver docker-container --name ci >/dev/null
+
+.k8s:
+  image:
+    name: $K8S_TOOLS_IMAGE
+    entrypoint: [""]
+  interruptible: false
+
+.on-default-branch-or-tag:
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ================================================================== validate
+validate:yaml:
+  stage: validate
+  image: python:3.12-alpine
+  needs: []
+  script:
+    - pip install -q pyyaml
+    - |
+      python - <<'EOF'
+      import glob, sys, yaml
+      class L(yaml.SafeLoader): pass
+      L.add_multi_constructor('!', lambda l, s, n: None)   # GitLab !reference etc.
+      files = ['.gitlab-ci.yml', 'compose.yaml'] + glob.glob('observability/**/*.y*ml', recursive=True) \
+            + glob.glob('infra/**/*.y*ml', recursive=True)
+      bad = 0
+      for f in files:
+          try:
+              list(yaml.load_all(open(f), Loader=L))
+          except Exception as e:
+              bad += 1; print('FAIL', f, e)
+      print(f'{len(files) - bad}/{len(files)} YAML files OK'); sys.exit(1 if bad else 0)
+      EOF
+
+validate:composer:
+  stage: validate
+  image: composer:2
+  needs: []
+  script:
+    - composer validate --strict --no-check-publish
+
+validate:kubernetes:
+  stage: validate
+  image:
+    name: $K8S_TOOLS_IMAGE
+    entrypoint: [""]
+  needs: []
+  script:
+    - wget -qO- https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz -C /usr/local/bin kubeconform
+    - bash scripts/ci/k8s-validate.sh staging production
+  rules:
+    - exists: [infra/kubernetes/**/*]
+
+validate:observability:
+  stage: validate
+  image:
+    name: prom/prometheus:v3.5.0
+    entrypoint: [""]
+  needs: []
+  script:
+    - mkdir -p runtime && printf 'ci-placeholder' > runtime/metrics-token
+    - promtool check config observability/prometheus/prometheus.yml || promtool check config --syntax-only observability/prometheus/prometheus.yml
+    - promtool check rules observability/prometheus/rules/*.yml
+  rules:
+    - exists: [observability/prometheus/prometheus.yml]
+
+validate:alertmanager:
+  stage: validate
+  image:
+    name: prom/alertmanager:v0.28.1
+    entrypoint: [""]
+  needs: []
+  script:
+    - amtool check-config observability/alertmanager/alertmanager.yml
+  rules:
+    - exists: [observability/alertmanager/alertmanager.yml]
+
+validate:shell:
+  stage: validate
+  image: koalaman/shellcheck-alpine:v0.10.0
+  needs: []
+  script:
+    - shellcheck -S warning scripts/*.sh scripts/ci/*.sh infra/docker/php/healthcheck.sh infra/docker/s3/entrypoint.sh
+
+# ================================================================== build-deps
+ci-image:
+  extends: .docker
+  stage: build-deps
+  needs: []
+  script:
+    - >
+      docker buildx build --target dev
+      --cache-from type=registry,ref=$CI_REGISTRY_IMAGE/ci:buildcache
+      --cache-to type=registry,ref=$CI_REGISTRY_IMAGE/ci:buildcache,mode=max
+      -f infra/docker/php/Dockerfile -t "$CI_PHP_IMAGE" --push .
+
+composer-install:
+  stage: build-deps
+  image:
+    name: $CI_PHP_IMAGE
+    docker:
+      user: root
+  needs: [ci-image]
+  cache:
+    key:
+      files: [composer.lock]
+    paths: [.composer-cache/]
+  script:
+    - composer install --no-progress --prefer-dist --no-interaction
+  artifacts:
+    expire_in: 1 day
+    paths: [vendor/, config/.merge-plan.php]
+
+# ================================================================== quality
+lint:php:
+  extends: .php
+  stage: quality
+  script:
+    - find src config migrations tests public -name '*.php' -print0 | xargs -0 -n 1 -P 4 php -l > lint.log 2>&1 || { grep -v '^No syntax errors' lint.log; exit 1; }
+    - php -l yii
+    - echo "$(grep -c '^No syntax errors' lint.log) files OK"
+
+cs:
+  extends: .php
+  stage: quality
+  script:
+    - PHP_CS_FIXER_IGNORE_ENV=1 php vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --dry-run --diff
+
+psalm:
+  extends: .php
+  stage: quality
+  script:
+    - php vendor/bin/psalm --no-cache --no-progress --output-format=code_climate > psalm.json || { php vendor/bin/psalm --no-cache --no-progress; exit 1; }
+  artifacts:
+    when: always
+    reports:
+      codequality: psalm.json
+
+dependency-analyser:
+  extends: .php
+  stage: quality
+  script:
+    - php vendor/bin/composer-dependency-analyser --config=composer-dependency-analyser.php
+
+composer-audit:
+  extends: .php
+  stage: quality
+  script:
+    - composer audit --locked --no-interaction --format=plain
+
+# ================================================================== tests
+test:unit:
+  extends: .php
+  stage: test-unit
+  variables:
+    APP_ENV: test
+    SKIP_TEST_DB_SETUP: "1"
+  script:
+    - php vendor/bin/phpunit --testsuite unit --log-junit tests/_output/unit.xml
+  artifacts:
+    when: always
+    reports:
+      junit: tests/_output/unit.xml
+
+test:integration:
+  extends: .php
+  stage: test-integration
+  services:
+    - name: postgres:17-alpine
+      alias: postgres
+      variables:
+        POSTGRES_USER: platform
+        POSTGRES_PASSWORD: ci-only-password
+        POSTGRES_DB: platform_test
+    - *svc-redis
+    - *svc-kafka
+  variables:
+    APP_ENV: test                         # tests/bootstrap.php migrates + seeds DB_TEST_NAME (platform_test)
+    KAFKA_ENABLED: "true"
+  script:
+    - php -d pcov.enabled=1 vendor/bin/phpunit --testsuite integration --log-junit tests/_output/integration.xml --coverage-text --coverage-cobertura tests/_output/coverage.xml --colors=never
+  coverage: '/^\s*Lines:\s*\d+.\d+\%/'
+  artifacts:
+    when: always
+    reports:
+      junit: tests/_output/integration.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: tests/_output/coverage.xml
+
+# HTTP suites against the application started inside the job (php -S on the dev image; same code path as
+# php-fpm behind nginx: public/index.php → HttpApplicationRunner).
+.test-http:
+  extends: .php
+  stage: test-api
+  services:
+    - name: postgres:17-alpine
+      alias: postgres
+      variables:
+        POSTGRES_USER: platform
+        POSTGRES_PASSWORD: ci-only-password
+        POSTGRES_DB: platform
+    - *svc-redis
+    - *svc-kafka
+  variables:
+    APP_ENV: dev                          # plain-http server: prod requires HTTPS for __Host- session cookies
+    APP_DEBUG: "false"
+    KAFKA_ENABLED: "true"
+    E2E_BASE_URL: http://127.0.0.1:8080
+    APP_URL: http://127.0.0.1:8080
+  after_script:
+    - tail -n 200 runtime/php-server.log || true
+  artifacts:
+    when: always
+    paths: [runtime/php-server.log]
+    reports:
+      junit: tests/_output/$SUITE.xml
+
+test:api:
+  extends: .test-http
+  variables:
+    SUITE: api
+  script:
+    - sh scripts/ci/start-test-app.sh
+    - if [ -d tests/Api ]; then php vendor/bin/phpunit --testsuite api --log-junit tests/_output/api.xml; else echo "tests/Api not present yet"; fi
+
+test:e2e:
+  extends: .test-http
+  variables:
+    SUITE: e2e
+  script:
+    - sh scripts/ci/start-test-app.sh
+    - php vendor/bin/phpunit --testsuite e2e --log-junit tests/_output/e2e.xml
+
+test:security:
+  extends: .test-http
+  variables:
+    SUITE: security
+  script:
+    - sh scripts/ci/start-test-app.sh
+    - if [ -d tests/Security ]; then php vendor/bin/phpunit --testsuite security --log-junit tests/_output/security.xml; else echo "tests/Security not present yet"; fi
+
+# ================================================================== security (source)
+secrets:gitleaks:
+  stage: security
+  image:
+    name: zricethezav/gitleaks:v8.24.2
+    entrypoint: [""]
+  needs: []
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - gitleaks git --redact --verbose --exit-code 1 --report-format sarif --report-path gitleaks.sarif .
+  artifacts:
+    when: always
+    paths: [gitleaks.sarif]
+
+trivy:fs:
+  stage: security
+  image:
+    name: aquasec/trivy:0.65.0
+    entrypoint: [""]
+  needs: []
+  variables:
+    TRIVY_CACHE_DIR: .trivycache
+  cache:
+    key: trivy
+    paths: [.trivycache/]
+  script:
+    - trivy fs --scanners vuln,secret,misconfig --severity HIGH,CRITICAL --exit-code 1 --ignore-unfixed --skip-dirs vendor,runtime .
+    - trivy fs --format cyclonedx --output sbom-source.cdx.json .
+  artifacts:
+    when: always
+    paths: [sbom-source.cdx.json]
+
+sast:semgrep:
+  stage: security
+  image: semgrep/semgrep:1.131.0
+  needs: []
+  script:
+    - semgrep scan --config p/php --config p/secrets --metrics=off --error --exclude vendor --exclude runtime --sarif --output semgrep.sarif .
+  artifacts:
+    when: always
+    paths: [semgrep.sarif]
+
+# ================================================================== build & push images
+build:images:
+  extends: .docker
+  stage: build
+  needs:
+    - job: test:unit
+    - job: test:integration
+    - job: lint:php
+  script:
+    - >
+      docker buildx build --target prod --pull --provenance=mode=max --sbom=true
+      --cache-from type=registry,ref=$PHP_IMAGE:buildcache
+      --cache-to type=registry,ref=$PHP_IMAGE:buildcache,mode=max
+      --build-arg VERSION="$IMAGE_TAG" --build-arg REVISION="$CI_COMMIT_SHA" --build-arg CREATED="$CI_PIPELINE_CREATED_AT"
+      -f infra/docker/php/Dockerfile -t "$PHP_IMAGE:$IMAGE_TAG" --push .
+    - >
+      docker buildx build --pull --provenance=mode=max --sbom=true
+      --build-arg PHP_IMAGE="$PHP_IMAGE:$IMAGE_TAG"
+      --build-arg VERSION="$IMAGE_TAG" --build-arg REVISION="$CI_COMMIT_SHA" --build-arg CREATED="$CI_PIPELINE_CREATED_AT"
+      -f infra/docker/nginx/Dockerfile -t "$NGINX_IMAGE:$IMAGE_TAG" --push .
+    - |
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        docker buildx imagetools create -t "$PHP_IMAGE:$CI_COMMIT_TAG" "$PHP_IMAGE:$IMAGE_TAG"
+        docker buildx imagetools create -t "$NGINX_IMAGE:$CI_COMMIT_TAG" "$NGINX_IMAGE:$IMAGE_TAG"
+      fi
+    - docker buildx imagetools inspect "$PHP_IMAGE:$IMAGE_TAG" --format '{{json .Manifest.Digest}}' | tr -d '"' > php.digest
+    - docker buildx imagetools inspect "$NGINX_IMAGE:$IMAGE_TAG" --format '{{json .Manifest.Digest}}' | tr -d '"' > nginx.digest
+  artifacts:
+    paths: [php.digest, nginx.digest]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
+    - when: on_success
+
+# ================================================================== scan / sbom / sign (images)
+trivy:image:
+  stage: scan
+  image:
+    name: aquasec/trivy:0.65.0
+    entrypoint: [""]
+  needs: [build:images]
+  variables:
+    TRIVY_USERNAME: $CI_REGISTRY_USER
+    TRIVY_PASSWORD: $CI_REGISTRY_PASSWORD
+    TRIVY_CACHE_DIR: .trivycache
+  cache:
+    key: trivy
+    paths: [.trivycache/]
+  script:
+    - trivy image --severity CRITICAL --exit-code 1 --ignore-unfixed "$PHP_IMAGE:$IMAGE_TAG"
+    - trivy image --severity CRITICAL --exit-code 1 --ignore-unfixed "$NGINX_IMAGE:$IMAGE_TAG"
+    - trivy image --severity HIGH --exit-code 0 --format template --template "@contrib/gitlab.tpl" -o container-scanning.json "$PHP_IMAGE:$IMAGE_TAG"
+  artifacts:
+    when: always
+    reports:
+      container_scanning: container-scanning.json
+
+sbom:syft:
+  stage: scan
+  image:
+    name: anchore/syft:v1.30.0-debug
+    entrypoint: [""]
+  needs: [build:images]
+  variables:
+    SYFT_REGISTRY_AUTH_AUTHORITY: $CI_REGISTRY
+    SYFT_REGISTRY_AUTH_USERNAME: $CI_REGISTRY_USER
+    SYFT_REGISTRY_AUTH_PASSWORD: $CI_REGISTRY_PASSWORD
+  script:
+    - /syft scan "registry:$PHP_IMAGE:$IMAGE_TAG" -o cyclonedx-json=sbom-php.cdx.json -o spdx-json=sbom-php.spdx.json
+    - /syft scan "registry:$NGINX_IMAGE:$IMAGE_TAG" -o cyclonedx-json=sbom-nginx.cdx.json
+  artifacts:
+    expire_in: 1 year
+    paths: [sbom-*.json]
+    reports:
+      cyclonedx: [sbom-php.cdx.json, sbom-nginx.cdx.json]
+
+sign:cosign:
+  stage: scan
+  image: bitnami/cosign:2.5.3
+  needs: [build:images]
+  id_tokens:
+    SIGSTORE_ID_TOKEN:
+      aud: sigstore
+  script:
+    - cosign login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD"
+    - cosign sign --yes "$PHP_IMAGE@$(cat php.digest)"
+    - cosign sign --yes "$NGINX_IMAGE@$(cat nginx.digest)"
+  rules:
+    - if: $COSIGN_ENABLED == "true" && ($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH)
+
+# ================================================================== staging
+deploy:staging:
+  extends: .k8s
+  stage: deploy-staging
+  needs: [build:images, trivy:image]
+  resource_group: staging
+  environment:
+    name: staging
+    url: $STAGING_URL
+    deployment_tier: staging
+  script:
+    - export KUBECONFIG="$KUBECONFIG_STAGING"
+    - kubectl version --client
+    - bash scripts/ci/deploy.sh staging "${STAGING_NAMESPACE:-platform-staging}" "$IMAGE_TAG"
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH =~ /^release\//
+
+smoke:staging:
+  stage: smoke-staging
+  image:
+    name: curlimages/curl:8.15.0
+    entrypoint: [""]
+  needs: [deploy:staging]
+  script:
+    - sh scripts/ci/smoke.sh "$STAGING_URL"
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH =~ /^release\//
+
+dast:zap-baseline:
+  stage: smoke-staging
+  image: ghcr.io/zaproxy/zaproxy:stable
+  needs: [deploy:staging]
+  script:
+    - mkdir -p /zap/wrk && zap-baseline.py -t "$STAGING_URL" -r zap-report.html -J zap-report.json -I || true
+    - cp /zap/wrk/zap-report.* . 2>/dev/null || true
+  artifacts:
+    when: always
+    paths: [zap-report.html, zap-report.json]
+  allow_failure: true
+  rules:
+    - if: $CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH =~ /^release\//
+      when: manual
+
+# ================================================================== production
+approve:production:
+  stage: approve-production
+  image: alpine:3.20
+  needs: [smoke:staging]
+  script:
+    - echo "Production deployment of $IMAGE_TAG approved by $GITLAB_USER_LOGIN"
+  environment:
+    name: production
+    action: prepare
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: manual
+      allow_failure: false
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+      allow_failure: false
+
+deploy:production:
+  extends: .k8s
+  stage: deploy-production
+  needs: [approve:production, build:images]
+  resource_group: production
+  environment:
+    name: production
+    url: $PRODUCTION_URL
+    deployment_tier: production
+  script:
+    - export KUBECONFIG="$KUBECONFIG_PRODUCTION"
+    - bash scripts/ci/deploy.sh production "${PRODUCTION_NAMESPACE:-platform-prod}" "$IMAGE_TAG"
+  rules:
+    - !reference [.on-default-branch-or-tag, rules]
+
+verify:production:
+  stage: verify-production
+  image:
+    name: curlimages/curl:8.15.0
+    entrypoint: [""]
+  needs: [deploy:production]
+  script:
+    - sh scripts/ci/smoke.sh "$PRODUCTION_URL"
+  rules:
+    - !reference [.on-default-branch-or-tag, rules]
+
+rollback:production:
+  extends: .k8s
+  stage: rollback
+  needs: [deploy:production]
+  resource_group: production
+  environment:
+    name: production
+    action: access
+  script:
+    - export KUBECONFIG="$KUBECONFIG_PRODUCTION"
+    - bash scripts/ci/rollback.sh "${PRODUCTION_NAMESPACE:-platform-prod}" "${ROLLBACK_REVISION:-}"
+    - sh scripts/ci/smoke.sh "$PRODUCTION_URL"
+  rules:
+    - if: $CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+      allow_failure: true
+
+rollback:staging:
+  extends: .k8s
+  stage: rollback
+  needs: [deploy:staging]
+  resource_group: staging
+  environment:
+    name: staging
+    action: access
+  script:
+    - export KUBECONFIG="$KUBECONFIG_STAGING"
+    - bash scripts/ci/rollback.sh "${STAGING_NAMESPACE:-platform-staging}" "${ROLLBACK_REVISION:-}"
+  rules:
+    - if: $CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH =~ /^release\//
+      when: manual
+      allow_failure: true

@@ -1,0 +1,157 @@
+# Staging overlay — namespace platform-staging. Same HA topology as production (3 PG / 3 Redis / 3 Kafka nodes,
+# so failover can be rehearsed) but smaller resources and fewer app replicas.
+# Author: ShokirjonMK — https://github.com/ShokirjonMK/Yii3-Enterprise-Platform
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: platform-staging
+
+resources:
+  - ../../base
+
+labels:
+  - pairs:
+      app.kubernetes.io/instance: platform-staging
+      platform.yii3/environment: staging
+    includeSelectors: false
+    includeTemplates: true
+
+configMapGenerator:
+  - name: platform-config
+    behavior: merge
+    literals:
+      - APP_URL=https://staging.platform.example.com
+      - S3_ENDPOINT=https://s3.example.com
+      - S3_BUCKET=platform-staging-files
+      - MAIL_FROM=noreply@staging.platform.example.com
+      - GRAFANA_URL=https://grafana.staging.example.com
+      - PHP_FPM_MAX_CHILDREN=10
+
+images:
+  - name: yep-php
+    newName: registry.example.com/platform/php
+    newTag: latest
+  - name: yep-nginx
+    newName: registry.example.com/platform/nginx
+    newTag: latest
+
+patches:
+  - target: { kind: Namespace, name: platform }
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: platform-staging
+  - target: { kind: Ingress, name: web }
+    patch: |-
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: staging.platform.example.com
+      - op: replace
+        path: /spec/rules/0/host
+        value: staging.platform.example.com
+      - op: replace
+        path: /metadata/annotations/cert-manager.io~1cluster-issuer
+        value: letsencrypt-staging
+  - target: { kind: ExternalSecret, name: platform-secrets }
+    patch: |-
+      - op: replace
+        path: /spec/dataFrom/0/extract/key
+        value: staging/platform/app-env
+  - target: { kind: ExternalSecret, name: platform-db-app }
+    patch: |-
+      - op: replace
+        path: /spec/data/0/remoteRef/key
+        value: staging/platform/postgres
+  - target: { kind: ExternalSecret, name: platform-backup-s3 }
+    patch: |-
+      - op: replace
+        path: /spec/data/0/remoteRef/key
+        value: staging/platform/s3-backup
+      - op: replace
+        path: /spec/data/1/remoteRef/key
+        value: staging/platform/s3-backup
+  - target: { kind: ExternalSecret, name: platform-metrics-token }
+    patch: |-
+      - op: replace
+        path: /spec/data/0/remoteRef/key
+        value: staging/platform/app-env
+  - target: { kind: Cluster, name: platform-pg }
+    patch: |-
+      - op: replace
+        path: /spec/backup/barmanObjectStore/destinationPath
+        value: s3://platform-staging-backups/postgres
+      - op: replace
+        path: /spec/storage/size
+        value: 20Gi
+      - op: replace
+        path: /spec/walStorage/size
+        value: 10Gi
+      - op: replace
+        path: /spec/resources
+        value: { requests: { cpu: 250m, memory: 1Gi }, limits: { memory: 1Gi } }
+      - op: replace
+        path: /spec/postgresql/parameters/shared_buffers
+        value: 256MB
+      - op: replace
+        path: /spec/postgresql/parameters/effective_cache_size
+        value: 768MB
+  - target: { kind: HorizontalPodAutoscaler, name: web }
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 2
+      - op: replace
+        path: /spec/maxReplicas
+        value: 4
+  - target: { kind: Deployment, name: web }
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+  - target: { kind: ScaledObject, name: worker }
+    patch: |-
+      - op: replace
+        path: /spec/minReplicaCount
+        value: 1
+      - op: replace
+        path: /spec/maxReplicaCount
+        value: 4
+  - target: { kind: KafkaNodePool, name: dual-role }
+    patch: |-
+      - op: replace
+        path: /spec/storage/volumes/0/size
+        value: 20Gi
+      - op: replace
+        path: /spec/resources
+        value: { requests: { cpu: 250m, memory: 1536Mi }, limits: { memory: 1536Mi } }
+      - op: replace
+        path: /spec/jvmOptions
+        value: { "-Xms": 768m, "-Xmx": 768m }
+  - target: { kind: StatefulSet, name: redis }
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value: { requests: { cpu: 50m, memory: 512Mi }, limits: { memory: 512Mi } }
+  - target: { kind: ConfigMap, name: redis-config }
+    patch: |-
+      - op: replace
+        path: /data/redis.conf
+        value: |
+          bind 0.0.0.0
+          protected-mode no
+          port 6379
+          dir /data
+          maxmemory 384mb
+          maxmemory-policy volatile-lru
+          appendonly yes
+          appendfsync everysec
+          aof-use-rdb-preamble yes
+          save 900 1
+          min-replicas-to-write 1
+          min-replicas-max-lag 10
+          replica-read-only yes
+          repl-diskless-sync yes
+          rename-command FLUSHALL ""
+          rename-command FLUSHDB ""
+          rename-command DEBUG ""
+          rename-command KEYS ""

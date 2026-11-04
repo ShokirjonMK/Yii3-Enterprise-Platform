@@ -1,0 +1,199 @@
+# One Deployment per Kafka consumer group (config/common/events.php + config/common/events/*.php).
+# Replicas share partitions via the consumer-group protocol; keep replicas <= partitions of the group's topics.
+# Add a new group by copying a block and changing the name/--group (or with a kustomize patch in an overlay).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-platform-default
+  labels:
+    app.kubernetes.io/name: yii3-platform
+    app.kubernetes.io/component: consumer
+    platform.yii3/consumer-group: platform-default
+spec:
+  replicas: 2
+  revisionHistoryLimit: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: yii3-platform
+      app.kubernetes.io/component: consumer
+      platform.yii3/consumer-group: platform-default
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: yii3-platform
+        app.kubernetes.io/component: consumer
+        platform.yii3/consumer-group: platform-default
+        tier: app
+    spec:
+      serviceAccountName: platform-app
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      # Consumer commits offsets and leaves the group cleanly on SIGTERM (KafkaConsumerRunner).
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 33
+        runAsGroup: 33
+        fsGroup: 33
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels: { app.kubernetes.io/component: consumer, platform.yii3/consumer-group: platform-default }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app.kubernetes.io/component: consumer, platform.yii3/consumer-group: platform-default }
+      containers:
+        - name: consumer
+          image: yep-php
+          imagePullPolicy: IfNotPresent
+          command: ["php", "yii", "kafka:consume", "--group=platform-default"]
+          envFrom:
+            - configMapRef: { name: platform-config }
+            - secretRef: { name: platform-secrets }
+          env:
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: platform-db-app, key: password } }
+            - name: KAFKA_SASL_PASSWORD
+              valueFrom: { secretKeyRef: { name: platform-app, key: password } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: "1", memory: 384Mi }
+          startupProbe:
+            exec: { command: ["php", "yii", "worker:health", "--type=kafka"] }
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 18
+          livenessProbe:
+            exec: { command: ["php", "yii", "worker:health", "--type=kafka"] }
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec: { command: ["/bin/sh", "-c", "sleep 2"] }
+          volumeMounts:
+            - { name: runtime, mountPath: /app/runtime }
+            - { name: tmp, mountPath: /tmp }
+            - { name: kafka-ca, mountPath: /etc/kafka-ca, readOnly: true }
+      volumes:
+        - name: runtime
+          emptyDir: { sizeLimit: 256Mi }
+        - name: tmp
+          emptyDir: { sizeLimit: 256Mi }
+        - name: kafka-ca
+          secret:
+            secretName: platform-kafka-cluster-ca-cert
+            items: [{ key: ca.crt, path: ca.crt }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-platform-retry
+  labels:
+    app.kubernetes.io/name: yii3-platform
+    app.kubernetes.io/component: consumer
+    platform.yii3/consumer-group: platform-retry
+spec:
+  replicas: 2
+  revisionHistoryLimit: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: yii3-platform
+      app.kubernetes.io/component: consumer
+      platform.yii3/consumer-group: platform-retry
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: yii3-platform
+        app.kubernetes.io/component: consumer
+        platform.yii3/consumer-group: platform-retry
+        tier: app
+    spec:
+      serviceAccountName: platform-app
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 33
+        runAsGroup: 33
+        fsGroup: 33
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels: { app.kubernetes.io/component: consumer, platform.yii3/consumer-group: platform-retry }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app.kubernetes.io/component: consumer, platform.yii3/consumer-group: platform-retry }
+      containers:
+        - name: consumer
+          image: yep-php
+          imagePullPolicy: IfNotPresent
+          command: ["php", "yii", "kafka:consume", "--group=platform-retry"]
+          envFrom:
+            - configMapRef: { name: platform-config }
+            - secretRef: { name: platform-secrets }
+          env:
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: platform-db-app, key: password } }
+            - name: KAFKA_SASL_PASSWORD
+              valueFrom: { secretKeyRef: { name: platform-app, key: password } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 384Mi }
+          startupProbe:
+            exec: { command: ["php", "yii", "worker:health", "--type=kafka"] }
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 18
+          livenessProbe:
+            exec: { command: ["php", "yii", "worker:health", "--type=kafka"] }
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec: { command: ["/bin/sh", "-c", "sleep 2"] }
+          volumeMounts:
+            - { name: runtime, mountPath: /app/runtime }
+            - { name: tmp, mountPath: /tmp }
+            - { name: kafka-ca, mountPath: /etc/kafka-ca, readOnly: true }
+      volumes:
+        - name: runtime
+          emptyDir: { sizeLimit: 256Mi }
+        - name: tmp
+          emptyDir: { sizeLimit: 256Mi }
+        - name: kafka-ca
+          secret:
+            secretName: platform-kafka-cluster-ca-cert
+            items: [{ key: ca.crt, path: ca.crt }]

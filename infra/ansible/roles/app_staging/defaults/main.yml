@@ -1,0 +1,9 @@
+---
+app_staging_root: /opt/yep
+app_staging_registry: registry.example.com/yep
+app_staging_version: "1.0.0"
+app_staging_http_port: 80
+app_staging_health_retries: 30
+app_staging_health_delay: 5
+app_staging_queues: default,notifications,integrations
+app_staging_consumer_groups: [platform-default, platform-retry]

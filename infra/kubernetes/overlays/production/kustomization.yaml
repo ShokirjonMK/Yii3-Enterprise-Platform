@@ -1,0 +1,88 @@
+# Production overlay — namespace platform-prod.
+# Author: ShokirjonMK — https://github.com/ShokirjonMK/Yii3-Enterprise-Platform
+#
+# Image tags are pinned by CI:  kustomize edit set image yep-php=$CI_REGISTRY_IMAGE/php:$TAG yep-nginx=...
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: platform-prod
+
+resources:
+  - ../../base
+
+labels:
+  - pairs:
+      app.kubernetes.io/instance: platform-prod
+      platform.yii3/environment: production
+    includeSelectors: false
+    includeTemplates: true
+
+configMapGenerator:
+  - name: platform-config
+    behavior: merge
+    literals:
+      - APP_URL=https://platform.example.com
+      - S3_ENDPOINT=https://s3.example.com
+      - S3_BUCKET=platform-prod-files
+      - MAIL_FROM=noreply@platform.example.com
+      - GRAFANA_URL=https://grafana.example.com
+      - OTEL_TRACES_SAMPLER_ARG=0.1
+
+images:
+  - name: yep-php
+    newName: registry.example.com/platform/php
+    newTag: "1.0.0"
+  - name: yep-nginx
+    newName: registry.example.com/platform/nginx
+    newTag: "1.0.0"
+
+patches:
+  # Namespace object follows the overlay namespace
+  - target: { kind: Namespace, name: platform }
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: platform-prod
+  - target: { kind: Ingress, name: web }
+    patch: |-
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: platform.example.com
+      - op: replace
+        path: /spec/rules/0/host
+        value: platform.example.com
+  # Remote secret paths in the secret manager
+  - target: { kind: ExternalSecret, name: platform-secrets }
+    patch: |-
+      - op: replace
+        path: /spec/dataFrom/0/extract/key
+        value: prod/platform/app-env
+  # Backups bucket / endpoint for CloudNativePG
+  - target: { kind: Cluster, name: platform-pg }
+    patch: |-
+      - op: replace
+        path: /spec/backup/barmanObjectStore/destinationPath
+        value: s3://platform-prod-backups/postgres
+      - op: replace
+        path: /spec/backup/barmanObjectStore/endpointURL
+        value: https://s3.example.com
+      - op: add
+        path: /spec/storage/storageClass
+        value: fast-ssd
+      - op: add
+        path: /spec/walStorage/storageClass
+        value: fast-ssd
+  # Production capacity
+  - target: { kind: HorizontalPodAutoscaler, name: web }
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 3
+      - op: replace
+        path: /spec/maxReplicas
+        value: 20
+  - target: { kind: KafkaNodePool, name: dual-role }
+    patch: |-
+      - op: replace
+        path: /spec/storage/volumes/0/size
+        value: 200Gi

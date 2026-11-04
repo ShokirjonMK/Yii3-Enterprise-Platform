@@ -1,0 +1,440 @@
+# Redis 7.4 HA without third-party charts: 3 Redis data nodes (1 master + 2 replicas, AOF+RDB on PVCs)
+# + 3 Sentinels (quorum 2) + a 2-replica HAProxy "redis-master" that always forwards to the current master.
+#
+#   App (Predis, REDIS_MODE=sentinel)  -> asks Sentinels (REDIS_SENTINELS) for "mymaster", connects to the master
+#   Metrics adapter (ext-redis, no Sentinel support) -> REDIS_HOST=redis-master (HAProxy, role:master health check)
+#
+# Split-brain protection:
+#   - failover needs a majority of Sentinels (quorum 2 of 3) to agree the master is down AND to authorise the
+#     failover (majority vote, epochs) — an isolated minority can never promote a replica.
+#   - min-replicas-to-write 1 / min-replicas-max-lag 10: a master partitioned away from all replicas stops
+#     accepting writes after 10 s, so the old master cannot keep diverging; when it rejoins, Sentinel reconfigures
+#     it as a replica of the new master (its divergent writes in that window are discarded).
+#   - instances announce stable DNS names (StatefulSet pod FQDNs), not pod IPs, so restarts never confuse Sentinel.
+#
+# Auth: data nodes require REDIS_PASSWORD (requirepass + masterauth). Sentinels do not require a password
+# (the app's Predis Sentinel client does not send one); they are reachable only from app pods (NetworkPolicy).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+data:
+  redis.conf: |
+    bind 0.0.0.0
+    protected-mode no
+    port 6379
+    dir /data
+    maxmemory 1536mb
+    # Sessions, locks, rate-limit windows and metrics live here: only evict keys that have a TTL.
+    maxmemory-policy volatile-lru
+    appendonly yes
+    appendfsync everysec
+    aof-use-rdb-preamble yes
+    save 900 1
+    save 300 100
+    min-replicas-to-write 1
+    min-replicas-max-lag 10
+    replica-read-only yes
+    repl-diskless-sync yes
+    latency-monitor-threshold 100
+    slowlog-log-slower-than 10000
+    rename-command FLUSHALL ""
+    rename-command FLUSHDB ""
+    rename-command DEBUG ""
+    rename-command KEYS ""
+  init-redis.sh: |
+    #!/bin/sh
+    # Decide the role of this data node at start: follow the master Sentinel reports; bootstrap redis-0 as master.
+    set -eu
+    DOMAIN="${NAMESPACE}.svc.cluster.local"
+    SELF="$(hostname).redis-headless.${DOMAIN}"
+    MASTER=""
+    for i in 0 1 2; do
+      S="redis-sentinel-${i}.redis-sentinel-headless.${DOMAIN}"
+      M="$(timeout 3 redis-cli -h "$S" -p 26379 sentinel get-master-addr-by-name mymaster 2>/dev/null | head -n1 || true)"
+      if [ -n "$M" ]; then MASTER="$M"; break; fi
+    done
+    [ -n "$MASTER" ] || MASTER="redis-0.redis-headless.${DOMAIN}"
+    {
+      cat /config/redis.conf
+      echo "requirepass \"${REDIS_PASSWORD}\""
+      echo "masterauth \"${REDIS_PASSWORD}\""
+      echo "replica-announce-ip ${SELF}"
+      echo "replica-announce-port 6379"
+      if [ "$MASTER" != "$SELF" ]; then echo "replicaof ${MASTER} 6379"; fi
+    } > /etc/redis-runtime/redis.conf
+    chmod 600 /etc/redis-runtime/redis.conf
+    echo "redis role: $([ "$MASTER" = "$SELF" ] && echo master || echo "replica of ${MASTER}")"
+  init-sentinel.sh: |
+    #!/bin/sh
+    # Ask the other Sentinels for the current master; bootstrap with redis-0. Config is regenerated on every start
+    # (Sentinel rediscovers replicas and peers within seconds via hello messages).
+    set -eu
+    DOMAIN="${NAMESPACE}.svc.cluster.local"
+    SELF="$(hostname).redis-sentinel-headless.${DOMAIN}"
+    MASTER=""
+    for i in 0 1 2; do
+      S="redis-sentinel-${i}.redis-sentinel-headless.${DOMAIN}"
+      [ "$S" = "$SELF" ] && continue
+      M="$(timeout 3 redis-cli -h "$S" -p 26379 sentinel get-master-addr-by-name mymaster 2>/dev/null | head -n1 || true)"
+      if [ -n "$M" ]; then MASTER="$M"; break; fi
+    done
+    [ -n "$MASTER" ] || MASTER="redis-0.redis-headless.${DOMAIN}"
+    cat > /etc/redis-runtime/sentinel.conf <<EOF
+    port 26379
+    dir /tmp
+    sentinel resolve-hostnames yes
+    sentinel announce-hostnames yes
+    sentinel announce-ip ${SELF}
+    sentinel announce-port 26379
+    sentinel monitor mymaster ${MASTER} 6379 2
+    sentinel auth-pass mymaster ${REDIS_PASSWORD}
+    sentinel down-after-milliseconds mymaster 5000
+    sentinel failover-timeout mymaster 60000
+    sentinel parallel-syncs mymaster 1
+    EOF
+    chmod 600 /etc/redis-runtime/sentinel.conf
+    echo "sentinel monitoring ${MASTER}"
+  haproxy.cfg: |
+    global
+      maxconn 4096
+      log stdout format raw local0 warning
+    defaults
+      mode tcp
+      log global
+      timeout connect 3s
+      timeout client 1h
+      timeout server 1h
+      timeout check 2s
+    resolvers k8s
+      parse-resolv-conf
+      hold valid 5s
+      hold obsolete 5s
+    frontend health
+      mode http
+      bind :8404
+      monitor-uri /healthz
+    frontend redis
+      bind :6379
+      default_backend redis-master
+    backend redis-master
+      option tcp-check
+      tcp-check connect
+      tcp-check send "AUTH ${REDIS_PASSWORD}\r\n"
+      tcp-check expect string +OK
+      tcp-check send "PING\r\n"
+      tcp-check expect string +PONG
+      tcp-check send "INFO replication\r\n"
+      tcp-check expect string role:master
+      tcp-check send "QUIT\r\n"
+      tcp-check expect string +OK
+      default-server check inter 1s fall 2 rise 2 on-marked-down shutdown-sessions resolvers k8s init-addr none
+      server redis-0 redis-0.redis-headless.${NAMESPACE}.svc.cluster.local:6379
+      server redis-1 redis-1.redis-headless.${NAMESPACE}.svc.cluster.local:6379
+      server redis-2 redis-2.redis-headless.${NAMESPACE}.svc.cluster.local:6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-headless
+  labels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: server }
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: { app.kubernetes.io/name: redis, app.kubernetes.io/component: server }
+  ports:
+    - { name: redis, port: 6379, targetPort: redis }
+    - { name: metrics, port: 9121, targetPort: metrics }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-sentinel-headless
+  labels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: sentinel }
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: { app.kubernetes.io/name: redis, app.kubernetes.io/component: sentinel }
+  ports:
+    - { name: sentinel, port: 26379, targetPort: sentinel }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-master
+  labels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: master-proxy }
+spec:
+  selector: { app.kubernetes.io/name: redis, app.kubernetes.io/component: master-proxy }
+  ports:
+    - { name: redis, port: 6379, targetPort: redis }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  labels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: server }
+spec:
+  serviceName: redis-headless
+  replicas: 3
+  podManagementPolicy: OrderedReady
+  updateStrategy: { type: RollingUpdate }
+  selector:
+    matchLabels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: server }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: server, tier: data }
+    spec:
+      serviceAccountName: platform-redis
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: server }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: server }
+      initContainers:
+        - name: config
+          image: redis:7.4-alpine
+          command: ["/bin/sh", "/config/init-redis.sh"]
+          env:
+            - name: NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+            - name: REDIS_PASSWORD
+              valueFrom: { secretKeyRef: { name: platform-secrets, key: REDIS_PASSWORD } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 32Mi }
+          volumeMounts:
+            - { name: config, mountPath: /config, readOnly: true }
+            - { name: runtime-config, mountPath: /etc/redis-runtime }
+      containers:
+        - name: redis
+          image: redis:7.4-alpine
+          command: ["redis-server", "/etc/redis-runtime/redis.conf"]
+          ports:
+            - { name: redis, containerPort: 6379 }
+          env:
+            - name: REDISCLI_AUTH
+              valueFrom: { secretKeyRef: { name: platform-secrets, key: REDIS_PASSWORD } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 250m, memory: 2Gi }
+            limits: { memory: 2Gi }
+          startupProbe:
+            exec: { command: ["redis-cli", "ping"] }
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            exec: { command: ["sh", "-c", "redis-cli ping | grep -q PONG"] }
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec: { command: ["sh", "-c", "redis-cli ping | grep -qE 'PONG|LOADING'"] }
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 4
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: runtime-config, mountPath: /etc/redis-runtime, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+        - name: exporter
+          image: oliver006/redis_exporter:v1.74.0
+          ports:
+            - { name: metrics, containerPort: 9121 }
+          env:
+            - { name: REDIS_ADDR, value: "redis://127.0.0.1:6379" }
+            - name: REDIS_PASSWORD
+              valueFrom: { secretKeyRef: { name: platform-secrets, key: REDIS_PASSWORD } }
+          securityContext:
+            runAsUser: 59000
+            runAsGroup: 59000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 64Mi }
+      volumes:
+        - name: config
+          configMap: { name: redis-config, defaultMode: 0444 }
+        - name: runtime-config
+          emptyDir: { medium: Memory, sizeLimit: 1Mi }
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: { storage: 10Gi }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-sentinel
+  labels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: sentinel }
+spec:
+  serviceName: redis-sentinel-headless
+  replicas: 3
+  podManagementPolicy: Parallel
+  updateStrategy: { type: RollingUpdate }
+  selector:
+    matchLabels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: sentinel }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: sentinel, tier: data }
+    spec:
+      serviceAccountName: platform-redis
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: sentinel }
+      initContainers:
+        - name: config
+          image: redis:7.4-alpine
+          command: ["/bin/sh", "/config/init-sentinel.sh"]
+          env:
+            - name: NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+            - name: REDIS_PASSWORD
+              valueFrom: { secretKeyRef: { name: platform-secrets, key: REDIS_PASSWORD } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 32Mi }
+          volumeMounts:
+            - { name: config, mountPath: /config, readOnly: true }
+            - { name: runtime-config, mountPath: /etc/redis-runtime }
+      containers:
+        - name: sentinel
+          image: redis:7.4-alpine
+          # Sentinel rewrites its config file at runtime, hence the writable (memory) runtime-config volume.
+          command: ["redis-sentinel", "/etc/redis-runtime/sentinel.conf"]
+          ports:
+            - { name: sentinel, containerPort: 26379 }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 64Mi }
+          readinessProbe:
+            exec: { command: ["sh", "-c", "redis-cli -p 26379 sentinel get-master-addr-by-name mymaster | grep -q ."] }
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec: { command: ["sh", "-c", "redis-cli -p 26379 ping | grep -q PONG"] }
+            periodSeconds: 15
+            timeoutSeconds: 5
+          volumeMounts:
+            - { name: runtime-config, mountPath: /etc/redis-runtime }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: config
+          configMap: { name: redis-config, defaultMode: 0444 }
+        - name: runtime-config
+          emptyDir: { medium: Memory, sizeLimit: 1Mi }
+        - name: tmp
+          emptyDir: { sizeLimit: 16Mi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-master-proxy
+  labels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: master-proxy }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: master-proxy }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: master-proxy, tier: data }
+    spec:
+      serviceAccountName: platform-redis
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 99
+        runAsGroup: 99
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: master-proxy }
+      containers:
+        - name: haproxy
+          image: haproxy:3.0-alpine
+          args: ["-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+          ports:
+            - { name: redis, containerPort: 6379 }
+            - { name: health, containerPort: 8404 }
+          env:
+            # HAProxy resolvers do not use the resolv.conf search path -> FQDNs built from the namespace
+            - name: NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+            - name: REDIS_PASSWORD
+              valueFrom: { secretKeyRef: { name: platform-secrets, key: REDIS_PASSWORD } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+            limits: { cpu: 500m, memory: 128Mi }
+          readinessProbe:
+            httpGet: { path: /healthz, port: health }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: health }
+            periodSeconds: 15
+          volumeMounts:
+            - { name: config, mountPath: /usr/local/etc/haproxy, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: config
+          configMap:
+            name: redis-config
+            items: [{ key: haproxy.cfg, path: haproxy.cfg }]
+        - name: tmp
+          emptyDir: { sizeLimit: 16Mi }

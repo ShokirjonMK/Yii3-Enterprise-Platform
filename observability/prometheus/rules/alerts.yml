@@ -1,0 +1,314 @@
+# Alerting rules — Yii3 Enterprise Platform. Author: ShokirjonMK
+# severity: critical (page: Telegram + e-mail) | warning (e-mail) | info (dashboard only)
+# Every alert links to docs/runbooks (runbook_url) and docs/MONITORING.md.
+groups:
+  # ---------------------------------------------------------------- application / HTTP
+  - name: platform-app
+    rules:
+      - alert: PlatformAppDown
+        expr: up{job="platform-app"} == 0
+        for: 2m
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "Application /metrics endpoint is unreachable"
+          description: "Prometheus cannot scrape {{ $labels.instance }} for 2m (nginx/php-fpm down, token mismatch or NetworkPolicy)."
+          runbook_url: docs/MONITORING.md#platformappdown
+
+      - alert: HighErrorRate
+        expr: platform:http_error_ratio:rate5m > 0.02 and platform:http_requests:rate5m > 0.5
+        for: 5m
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "HTTP 5xx ratio above 2%"
+          description: "{{ $value | humanizePercentage }} of requests failed with 5xx over the last 5 minutes."
+          runbook_url: docs/MONITORING.md#higherrorrate
+
+      - alert: HighLatencyP95
+        expr: platform:http_request_duration_seconds:p95 > 1
+        for: 10m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "p95 HTTP latency above 1s"
+          description: "p95 latency is {{ $value | humanizeDuration }} (all routes). Check the per-route dashboard panel and slow queries."
+          runbook_url: docs/MONITORING.md#highlatencyp95
+
+      - alert: HighLatencyP95Route
+        expr: platform:http_request_duration_seconds:p95_by_route > 2 and on (route) platform:http_requests:rate5m_by_route > 0.1
+        for: 15m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "Route {{ $labels.route }} p95 latency above 2s"
+          description: "p95 for {{ $labels.route }} is {{ $value | humanizeDuration }}."
+
+      - alert: MetricsCollectorFailing
+        expr: max without (instance, pod) (platform_collector_errors) > 0
+        for: 15m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "Scrape-time metrics collector reported a failure"
+          description: "MetricsCollector could not query PostgreSQL; queue/outbox/worker gauges may be stale."
+
+  # ---------------------------------------------------------------- queue / workers / scheduler
+  - name: platform-runtime
+    rules:
+      - alert: QueueBacklog
+        expr: sum by (queue) (platform:queue_pending_jobs) > 1000
+        for: 10m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "Queue {{ $labels.queue }} backlog above 1000 jobs"
+          description: "{{ $value }} pending jobs for 10m. Check worker count/KEDA scaling and failing handlers."
+          runbook_url: docs/MONITORING.md#queuebacklog
+
+      - alert: OldestJobAge
+        expr: max without (instance, pod) (platform_queue_oldest_pending_seconds) > 300
+        for: 5m
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "Oldest runnable job waits longer than 5 minutes"
+          description: "Oldest pending job age is {{ $value | humanizeDuration }} — workers are stalled or saturated."
+          runbook_url: docs/MONITORING.md#oldestjobage
+
+      - alert: DeadJobs
+        expr: sum(max without (instance, pod) (platform_queue_jobs{status="dead"})) > 0
+        for: 15m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "Dead jobs present"
+          description: "{{ $value }} jobs exhausted their retries. Inspect Admin > Jobs and retry or cancel."
+
+      - alert: WorkersDown
+        expr: (sum(max without (instance, pod) (platform_workers_alive{type="queue"})) or vector(0)) < 1
+        for: 3m
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "No live queue workers"
+          description: "No queue worker heartbeat within 90 s. Jobs are not being processed."
+          runbook_url: docs/MONITORING.md#workersdown
+
+      - alert: ConsumersDown
+        expr: (sum(max without (instance, pod) (platform_workers_alive{type="kafka"})) or vector(0)) < 1
+        for: 5m
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "No live Kafka consumers"
+          description: "No Kafka consumer heartbeat within 90 s."
+
+      - alert: JobFailureRate
+        expr: |
+          sum by (queue) (platform:jobs_processed:rate5m_by_status{status!="succeeded"})
+            / clamp_min(sum by (queue) (platform:jobs_processed:rate5m_by_status), 1e-9) > 0.1
+          and sum by (queue) (platform:jobs_processed:rate5m_by_status) > 0.05
+        for: 15m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "More than 10% of jobs on {{ $labels.queue }} fail"
+          description: "Failure ratio {{ $value | humanizePercentage }}."
+
+  # ---------------------------------------------------------------- messaging (outbox / Kafka)
+  - name: platform-messaging
+    rules:
+      - alert: ConsumerLag
+        expr: platform:kafka_consumer_lag:sum > 1000 or sum by (consumergroup) (kafka_consumergroup_lag) > 1000
+        for: 10m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "Kafka consumer lag above 1000 messages"
+          description: "Group {{ $labels.group }}{{ $labels.consumergroup }} lags by {{ $value }} messages."
+          runbook_url: docs/MONITORING.md#consumerlag
+
+      - alert: OutboxStuck
+        expr: |
+          max without (instance, pod) (platform_outbox_events{status="pending"}) > 100
+          and (sum(platform:outbox_published:rate5m{result="ok"}) or vector(0)) == 0
+        for: 10m
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "Transactional outbox is not draining"
+          description: "{{ $value }} events pending and nothing published for 10m (relay down or Kafka unreachable)."
+          runbook_url: docs/MONITORING.md#outboxstuck
+
+      - alert: OutboxFailedEvents
+        expr: max without (instance, pod) (platform_outbox_events{status="failed"}) > 0
+        for: 15m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "Outbox events in failed state"
+          description: "{{ $value }} events failed to publish. After fixing the cause: php yii outbox:relay --requeue-failed"
+
+      - alert: DLQNotEmpty
+        expr: max without (instance, pod) (platform_kafka_dead_letters) > 0
+        for: 5m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "Dead-letter queue contains unreplayed messages"
+          description: "{{ $value }} messages in the DLQ. Inspect and replay from Admin > Messaging."
+          runbook_url: docs/MONITORING.md#dlqnotempty
+
+      - alert: KafkaBrokerDown
+        expr: kafka_brokers < max_over_time(kafka_brokers[1h]) or count(up{job=~".*kafka.*"} == 0) > 0
+        for: 2m
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "Kafka broker count dropped / exporter target down"
+          description: "Fewer brokers than during the last hour ({{ $value }}). With RF=3/min.insync=2 a second loss stops writes."
+          runbook_url: docs/MONITORING.md#kafkabrokerdown
+
+      - alert: KafkaUnderReplicatedPartitions
+        expr: sum(kafka_topic_partition_under_replicated_partition) > 0 or sum(kafka_server_replicamanager_underreplicatedpartitions) > 0
+        for: 5m
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "Kafka has under-replicated partitions"
+          description: "{{ $value }} partitions are under-replicated."
+
+  # ---------------------------------------------------------------- security
+  - name: platform-security
+    rules:
+      - alert: LoginFailureSpike
+        expr: max without (instance, pod) (platform_login_failures_5m) > 50
+        for: 2m
+        labels: { severity: warning, team: security }
+        annotations:
+          summary: "Login failure spike ({{ $value }} in 5 minutes)"
+          description: "Possible credential stuffing / brute force. Check Admin > Security > Login attempts and source IPs."
+          runbook_url: docs/MONITORING.md#loginfailurespike
+
+      - alert: LoginFailureFlood
+        expr: max without (instance, pod) (platform_login_failures_5m) > 500
+        for: 1m
+        labels: { severity: critical, team: security }
+        annotations:
+          summary: "Login failure flood ({{ $value }} in 5 minutes)"
+          description: "Consider tightening ingress rate limits / blocking source ranges."
+
+      - alert: CriticalIncidentOpen
+        expr: sum(max without (instance, pod) (platform_incidents_open{severity="critical"})) > 0
+        for: 1m
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "A critical incident is open"
+          description: "{{ $value }} critical incident(s) open in Admin > Incidents."
+
+  # ---------------------------------------------------------------- PostgreSQL
+  - name: postgres
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0 or absent(pg_up or cnpg_collector_up)
+        for: 1m
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "PostgreSQL is down / exporter cannot connect"
+          description: "{{ $labels.instance }} reports pg_up=0 (or no PostgreSQL metrics at all)."
+          runbook_url: docs/MONITORING.md#postgresdown
+
+      - alert: PostgresReplicationLag
+        expr: max(pg_replication_lag_seconds or pg_replication_lag or cnpg_pg_replication_lag) > 30
+        for: 5m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "PostgreSQL replication lag above 30s"
+          description: "Standby lag {{ $value | humanizeDuration }}; reads from DB_REPLICAS are stale (sticky-primary window is 5 s)."
+          runbook_url: docs/MONITORING.md#postgresreplicationlag
+
+      - alert: PostgresConnectionsHigh
+        expr: |
+          sum(pg_stat_activity_count) / max(pg_settings_max_connections) > 0.8
+          or sum by (pod) (cnpg_backends_total) / max by (pod) (cnpg_pg_settings_setting{name="max_connections"}) > 0.8
+        for: 5m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "PostgreSQL connections above 80% of max_connections"
+          description: "Usage {{ $value | humanizePercentage }}. Lower PHP_FPM_MAX_CHILDREN x replicas or enable PgBouncer."
+
+      - alert: PostgresDeadlocks
+        expr: sum(increase(pg_stat_database_deadlocks[10m])) > 5
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "PostgreSQL deadlocks detected"
+          description: "{{ $value }} deadlocks in 10 minutes."
+
+      - alert: PostgresWALArchivingFailing
+        expr: increase(cnpg_pg_stat_archiver_failed_count[15m]) > 0
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "WAL archiving to object storage fails"
+          description: "Point-in-time recovery is at risk on {{ $labels.pod }}."
+
+  # ---------------------------------------------------------------- Redis
+  - name: redis
+    rules:
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "Redis is down"
+          description: "{{ $labels.instance }} unreachable: sessions, locks, rate limits and metrics are affected."
+          runbook_url: docs/MONITORING.md#redisdown
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / (redis_memory_max_bytes > 0) > 0.9
+        for: 5m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "Redis memory above 90% of maxmemory"
+          description: "{{ $labels.instance }} uses {{ $value | humanizePercentage }} of maxmemory; evictions will start."
+
+      - alert: RedisEvictions
+        expr: rate(redis_evicted_keys_total[5m]) > 0
+        for: 5m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "Redis is evicting keys"
+          description: "{{ $value }} keys/s evicted on {{ $labels.instance }} (sessions may be lost). Raise maxmemory."
+
+      # Fires when a master lost replicas compared with the last hour (no false positive on standalone dev Redis).
+      - alert: RedisReplicaLost
+        expr: redis_connected_slaves < max_over_time(redis_connected_slaves[1h])
+        for: 5m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "Redis master lost a replica"
+          description: "{{ $labels.instance }} has {{ $value }} replicas. With min-replicas-to-write 1 the master rejects writes when none are left."
+
+  # ---------------------------------------------------------------- infrastructure
+  - name: infrastructure
+    rules:
+      - alert: DiskSpaceLow
+        expr: |
+          (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes) < 0.15
+          or (kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes) < 0.15
+        for: 10m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "Less than 15% disk space left"
+          description: "{{ $labels.instance }}{{ $labels.persistentvolumeclaim }} {{ $labels.mountpoint }} has {{ $value | humanizePercentage }} free."
+
+      - alert: DiskSpaceCritical
+        expr: |
+          (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes) < 0.05
+          or (kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes) < 0.05
+        for: 5m
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "Less than 5% disk space left"
+          description: "{{ $labels.instance }}{{ $labels.persistentvolumeclaim }} {{ $labels.mountpoint }} is almost full."
+
+      # Requires blackbox_exporter probing the public URL (probe_ssl_earliest_cert_expiry). cert-manager renews at
+      # 2/3 of the lifetime, so 14 days left means renewal has been failing for weeks.
+      - alert: CertificateExpiringSoon
+        expr: (probe_ssl_earliest_cert_expiry - time()) < 14 * 86400
+        for: 1h
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "TLS certificate expires in less than 14 days"
+          description: "{{ $labels.instance }} certificate expires in {{ $value | humanizeDuration }}."
+
+      - alert: TargetDown
+        expr: up{job!="platform-app"} == 0
+        for: 5m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "Scrape target {{ $labels.job }} is down"
+          description: "{{ $labels.instance }} has been unreachable for 5 minutes."

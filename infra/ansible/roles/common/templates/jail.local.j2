@@ -1,0 +1,6 @@
+# {{ ansible_managed }}
+[sshd]
+enabled = true
+port = {{ common_ssh_port }}
+maxretry = 5
+bantime = 1h

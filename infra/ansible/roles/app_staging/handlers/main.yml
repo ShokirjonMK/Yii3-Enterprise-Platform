@@ -1,0 +1,7 @@
+---
+- name: Recreate staging stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_staging_root }}"
+    files: [compose.staging.yaml]
+    state: present
+    recreate: always

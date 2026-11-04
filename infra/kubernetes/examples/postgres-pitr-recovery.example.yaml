@@ -1,0 +1,55 @@
+# POINT-IN-TIME RECOVERY example (NOT part of any kustomization).
+#
+# Restores the S3 backup + WAL archive of "platform-pg" into a NEW cluster "platform-pg-restore" at a target time.
+# Procedure (docs/DEPLOYMENT.md "Disaster recovery"):
+#   1. Scale app writers to 0 (web, worker, scheduler, relay, consumers) or put the platform in maintenance.
+#   2. kubectl -n platform-prod apply -f postgres-pitr-recovery.example.yaml   (edit targetTime first)
+#   3. Wait for "Cluster in healthy state"; verify data (php yii audit:verify, row counts).
+#   4. Point DB_HOST/DB_REPLICAS to platform-pg-restore-rw/-ro (ConfigMap patch) and scale the app back up.
+#   5. The restored cluster archives to a NEW serverName so it never overwrites the original timeline.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: platform-pg-restore
+spec:
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.5-standard-bookworm
+  minSyncReplicas: 1
+  maxSyncReplicas: 1
+  enableSuperuserAccess: false
+  storage:
+    size: 100Gi
+  walStorage:
+    size: 30Gi
+  bootstrap:
+    recovery:
+      source: platform-pg-origin
+      database: platform
+      owner: platform
+      secret:
+        name: platform-db-app
+      recoveryTarget:
+        # RFC 3339 / PostgreSQL timestamp; alternatively targetLSN / targetXID / targetName / targetImmediate
+        targetTime: "2026-11-04 10:00:00.00000+00"
+        exclusive: false
+  externalClusters:
+    - name: platform-pg-origin
+      barmanObjectStore:
+        serverName: platform-pg
+        destinationPath: s3://platform-backups/postgres
+        endpointURL: https://s3.example.com
+        s3Credentials:
+          accessKeyId: { name: platform-backup-s3, key: ACCESS_KEY_ID }
+          secretAccessKey: { name: platform-backup-s3, key: ACCESS_SECRET_KEY }
+        wal:
+          maxParallel: 8
+  backup:
+    retentionPolicy: 30d
+    barmanObjectStore:
+      serverName: platform-pg-restore
+      destinationPath: s3://platform-backups/postgres
+      endpointURL: https://s3.example.com
+      s3Credentials:
+        accessKeyId: { name: platform-backup-s3, key: ACCESS_KEY_ID }
+        secretAccessKey: { name: platform-backup-s3, key: ACCESS_SECRET_KEY }
+      wal: { compression: gzip }

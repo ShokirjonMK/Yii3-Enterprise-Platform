@@ -1,0 +1,183 @@
+# {{ ansible_managed }}
+#
+# Yii3 Enterprise Platform — Author: ShokirjonMK — https://github.com/ShokirjonMK/Yii3-Enterprise-Platform
+# Yii3 Enterprise Platform — compose-based STAGING on a single Docker host.
+# This is NOT highly available (single PostgreSQL/Redis/Kafka node, single host). Production = infra/kubernetes.
+#
+# The web "pod" is emulated with network namespaces: nginx joins the app container's namespace
+# (network_mode: service:app) so the production nginx config (fastcgi_pass 127.0.0.1:9000) is used unchanged.
+# NOTE: Docker-published ports bypass ufw; only the HTTP port of the web pod is published.
+name: yep-staging
+
+x-labels: &labels
+  author: ShokirjonMK
+  org.opencontainers.image.source: https://github.com/ShokirjonMK/Yii3-Enterprise-Platform
+  com.yep.environment: staging
+
+x-php: &php
+  labels: *labels
+  image: {{ app_staging_registry }}/yep-php:{{ app_staging_version }}
+  env_file: [app.env]
+  read_only: true
+  tmpfs:
+    - /tmp
+    - /app/runtime:uid=33,gid=33
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  networks: [backend]
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *php
+    command: ["php-fpm"]
+    ports:
+      - "{{ app_staging_http_port }}:8080"
+    healthcheck:
+      test: ["CMD", "php-fpm-healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  nginx:
+    image: {{ app_staging_registry }}/yep-nginx:{{ app_staging_version }}
+    labels: *labels
+    network_mode: service:app
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    <<: *php
+    command: ["php", "yii", "queue:work", "--queue={{ app_staging_queues }}", "--sleep=1"]
+    stop_grace_period: 70s
+    healthcheck:
+      test: ["CMD", "php", "yii", "worker:health", "--type=queue"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  scheduler:
+    <<: *php
+    command: ["php", "yii", "scheduler:run", "--daemon"]
+    stop_grace_period: 30s
+    healthcheck:
+      disable: true
+
+  relay:
+    <<: *php
+    command: ["php", "yii", "outbox:relay", "--daemon"]
+    stop_grace_period: 30s
+    healthcheck:
+      disable: true
+
+{% for group in app_staging_consumer_groups %}
+  consumer-{{ group }}:
+    <<: *php
+    command: ["php", "yii", "kafka:consume", "--group={{ group }}"]
+    stop_grace_period: 40s
+    healthcheck:
+      test: ["CMD", "php", "yii", "worker:health", "--type=kafka"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+{% endfor %}
+  # One-shot migration job: docker compose --profile tools run --rm migrate
+  migrate:
+    <<: *php
+    profiles: [tools]
+    restart: "no"
+    command: ["sh", "-c", "php yii migrate:up --no-interaction && php yii rbac:sync && php yii platform:seed"]
+    healthcheck:
+      disable: true
+
+  postgres:
+    image: postgres:17-alpine
+    labels: *labels
+    environment:
+      POSTGRES_DB: platform
+      POSTGRES_USER: platform
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    secrets: [db_password]
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U platform -d platform"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    labels: *labels
+    command: ["sh", "-c", "exec redis-server --appendonly yes --maxmemory-policy noeviction --requirepass \"$$(cat /run/secrets/redis_password)\""]
+    secrets: [redis_password]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$(cat /run/secrets/redis_password)\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+    restart: unless-stopped
+
+  kafka:
+    image: apache/kafka:3.9.1
+    labels: *labels
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      CLUSTER_ID: "{{ app_staging_kafka_cluster_id }}"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 20s
+    networks: [backend]
+    restart: unless-stopped
+
+secrets:
+  db_password:
+    file: ./secrets/db_password
+  redis_password:
+    file: ./secrets/redis_password
+
+networks:
+  backend:
+
+volumes:
+  pg_data:
+  redis_data:
+  kafka_data:

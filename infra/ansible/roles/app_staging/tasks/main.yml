@@ -1,0 +1,99 @@
+---
+# Yii3 Enterprise Platform — Author: ShokirjonMK — https://github.com/ShokirjonMK/Yii3-Enterprise-Platform
+- name: Create application directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  loop:
+    - "{{ app_staging_root }}"
+    - "{{ app_staging_root }}/secrets"
+
+- name: Render environment file from vault variables
+  ansible.builtin.template:
+    src: app.env.j2
+    dest: "{{ app_staging_root }}/app.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Recreate staging stack
+
+- name: Write data-service secrets
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "{{ app_staging_root }}/secrets/{{ item.name }}"
+    owner: root
+    group: root
+    # Read by the non-root postgres/redis users inside their containers; the directory itself is 0750 root.
+    mode: "0644"
+  loop:
+    - { name: db_password, value: "{{ vault_db_password }}" }
+    - { name: redis_password, value: "{{ vault_redis_password }}" }
+  loop_control:
+    label: "{{ item.name }}"
+  no_log: true
+
+- name: Render compose file
+  ansible.builtin.template:
+    src: compose.staging.yaml.j2
+    dest: "{{ app_staging_root }}/compose.staging.yaml"
+    owner: root
+    group: root
+    mode: "0640"
+
+- name: Validate compose file
+  ansible.builtin.command:
+    cmd: docker compose -f compose.staging.yaml config --quiet
+    chdir: "{{ app_staging_root }}"
+  changed_when: false
+
+- name: Log in to the container registry
+  community.docker.docker_login:
+    registry_url: "{{ app_staging_registry.split('/')[0] }}"
+    username: "{{ vault_registry_username }}"
+    password: "{{ vault_registry_password }}"
+  no_log: true
+
+- name: Pull images
+  community.docker.docker_compose_v2_pull:
+    project_src: "{{ app_staging_root }}"
+    files: [compose.staging.yaml]
+
+- name: Start data services
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_staging_root }}"
+    files: [compose.staging.yaml]
+    services: [postgres, redis, kafka]
+    state: present
+    wait: true
+    wait_timeout: 300
+
+# Expand/contract: migrations are backward compatible, so they run before the new code is started.
+- name: Run migrations, RBAC sync and seed
+  ansible.builtin.command:
+    cmd: docker compose -f compose.staging.yaml --profile tools run --rm migrate
+    chdir: "{{ app_staging_root }}"
+  register: app_staging_migrate
+  changed_when: "'pplied' in app_staging_migrate.stdout"
+
+- name: Start / update all application services
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_staging_root }}"
+    files: [compose.staging.yaml]
+    state: present
+    remove_orphans: true
+    wait: true
+    wait_timeout: 300
+
+- name: Wait for /health/ready
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ app_staging_http_port }}/health/ready"
+    status_code: 200
+    return_content: true
+  register: app_staging_ready
+  until: app_staging_ready.status == 200 and (app_staging_ready.json.status | default('')) != 'down'
+  retries: "{{ app_staging_health_retries }}"
+  delay: "{{ app_staging_health_delay }}"

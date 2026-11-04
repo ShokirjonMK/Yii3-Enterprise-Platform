@@ -1,0 +1,94 @@
+# Transactional-outbox relay (outbox table -> Kafka). Two replicas: rows are claimed with
+# SELECT ... FOR UPDATE SKIP LOCKED, so replicas never publish the same event twice concurrently, and
+# consumers are idempotent (inbox table) for the at-least-once edge cases.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: relay
+  labels:
+    app.kubernetes.io/name: yii3-platform
+    app.kubernetes.io/component: relay
+spec:
+  replicas: 2
+  revisionHistoryLimit: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: yii3-platform
+      app.kubernetes.io/component: relay
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: yii3-platform
+        app.kubernetes.io/component: relay
+        tier: app
+    spec:
+      serviceAccountName: platform-app
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 33
+        runAsGroup: 33
+        fsGroup: 33
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels: { app.kubernetes.io/name: yii3-platform, app.kubernetes.io/component: relay }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app.kubernetes.io/name: yii3-platform, app.kubernetes.io/component: relay }
+      containers:
+        - name: relay
+          image: yep-php
+          imagePullPolicy: IfNotPresent
+          command: ["php", "yii", "outbox:relay", "--daemon"]
+          envFrom:
+            - configMapRef: { name: platform-config }
+            - secretRef: { name: platform-secrets }
+          env:
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: platform-db-app, key: password } }
+            - name: KAFKA_SASL_PASSWORD
+              valueFrom: { secretKeyRef: { name: platform-app, key: password } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: "1", memory: 384Mi }
+          # No per-process heartbeat for the relay: stuck publishing is detected by the OutboxStuck alert
+          # (platform_outbox_events{status="pending"}), liveness only verifies the runtime boots.
+          livenessProbe:
+            exec: { command: ["php", "yii", "list", "--raw", "outbox"] }
+            periodSeconds: 60
+            timeoutSeconds: 15
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec: { command: ["/bin/sh", "-c", "sleep 2"] }
+          volumeMounts:
+            - { name: runtime, mountPath: /app/runtime }
+            - { name: tmp, mountPath: /tmp }
+            - { name: kafka-ca, mountPath: /etc/kafka-ca, readOnly: true }
+      volumes:
+        - name: runtime
+          emptyDir: { sizeLimit: 256Mi }
+        - name: tmp
+          emptyDir: { sizeLimit: 256Mi }
+        - name: kafka-ca
+          secret:
+            secretName: platform-kafka-cluster-ca-cert
+            items: [{ key: ca.crt, path: ca.crt }]

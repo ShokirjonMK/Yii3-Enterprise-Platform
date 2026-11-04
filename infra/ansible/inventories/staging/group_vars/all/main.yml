@@ -1,0 +1,20 @@
+---
+# Non-secret staging settings. Secrets live in vault.yml (ansible-vault encrypted, see vault.yml.example).
+common_timezone: UTC
+common_ssh_allowed_users: [deploy]
+common_firewall_tcp_ports: [22, 80, 443]
+
+app_staging_root: /opt/yep
+app_staging_registry: registry.example.com/yep
+app_staging_version: "1.0.0"
+app_staging_http_port: 80
+app_staging_url: https://staging.example.com
+app_staging_locale: uz
+# CIDRs of the TLS-terminating load balancer in front of the host
+app_staging_trusted_proxies: "10.0.0.0/8"
+
+app_staging_s3_endpoint: https://s3.staging.example.internal
+app_staging_s3_bucket: yep-staging-files
+app_staging_s3_region: us-east-1
+app_staging_mail_from: noreply@staging.example.com
+app_staging_kafka_cluster_id: "5L6g3nShT-eMCtK--X86sw"

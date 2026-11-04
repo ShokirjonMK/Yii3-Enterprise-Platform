@@ -1,0 +1,13 @@
+---
+# TEMPLATE ONLY — no real values. Copy to vault.yml, fill in, then:
+#   ansible-vault encrypt inventories/staging/group_vars/all/vault.yml
+# Generate random values with: openssl rand -hex 32
+vault_registry_username: "CHANGE_ME"
+vault_registry_password: "CHANGE_ME"
+vault_app_secret: "CHANGE_ME_64_HEX"
+vault_db_password: "CHANGE_ME"
+vault_redis_password: "CHANGE_ME"
+vault_s3_key: "CHANGE_ME"
+vault_s3_secret: "CHANGE_ME"
+vault_metrics_token: "CHANGE_ME"
+vault_mailer_dsn: "smtp://user:CHANGE_ME@smtp.example.com:587"

@@ -1,0 +1,44 @@
+# Grafana datasources — Yii3 Enterprise Platform. Author: ShokirjonMK
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      timeInterval: 15s
+      httpMethod: POST
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: jaeger
+
+  - name: Alertmanager
+    uid: alertmanager
+    type: alertmanager
+    access: proxy
+    url: http://alertmanager:9093
+    jsonData:
+      implementation: prometheus
+
+  - name: Jaeger
+    uid: jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+
+  # Optional log backend. The app writes JSON logs to stderr (correlation_id field); ship them with
+  # Promtail / Grafana Alloy / Fluent Bit to Loki and uncomment:
+  # - name: Loki
+  #   uid: loki
+  #   type: loki
+  #   access: proxy
+  #   url: http://loki:3100
+  #   jsonData:
+  #     derivedFields:
+  #       - name: correlation_id
+  #         matcherRegex: '"correlation_id":"(\w+)"'
+  #         url: '$${__value.raw}'
+  #         datasourceUid: jaeger

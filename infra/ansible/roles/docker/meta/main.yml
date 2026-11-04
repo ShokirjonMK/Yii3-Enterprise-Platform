@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  role_name: docker
+  namespace: yep
+  author: Platform team
+  description: Yii3 Enterprise Platform - docker role
+  license: proprietary
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Debian
+      versions: [bookworm]
+    - name: Ubuntu
+      versions: [jammy, noble]
+dependencies: []

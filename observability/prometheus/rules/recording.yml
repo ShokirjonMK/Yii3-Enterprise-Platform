@@ -1,0 +1,41 @@
+# Recording rules — Yii3 Enterprise Platform. Author: ShokirjonMK
+# The application exposes one cluster-aggregated series set (job="platform-app"); `max without (instance, pod)`
+# de-duplicates if it is ever scraped through more than one target.
+groups:
+  - name: platform-http.recording
+    interval: 30s
+    rules:
+      - record: platform:http_requests:rate5m
+        expr: sum(max without (instance, pod) (rate(platform_http_requests_total[5m])))
+      - record: platform:http_requests:rate5m_by_route
+        expr: sum by (method, route) (max without (instance, pod) (rate(platform_http_requests_total[5m])))
+      - record: platform:http_errors_5xx:rate5m
+        expr: sum(max without (instance, pod) (rate(platform_http_requests_total{status=~"5.."}[5m])))
+      - record: platform:http_error_ratio:rate5m
+        expr: platform:http_errors_5xx:rate5m / clamp_min(platform:http_requests:rate5m, 1e-9)
+      - record: platform:http_request_duration_seconds:p50
+        expr: histogram_quantile(0.50, sum by (le) (max without (instance, pod) (rate(platform_http_request_duration_seconds_bucket[5m]))))
+      - record: platform:http_request_duration_seconds:p95
+        expr: histogram_quantile(0.95, sum by (le) (max without (instance, pod) (rate(platform_http_request_duration_seconds_bucket[5m]))))
+      - record: platform:http_request_duration_seconds:p99
+        expr: histogram_quantile(0.99, sum by (le) (max without (instance, pod) (rate(platform_http_request_duration_seconds_bucket[5m]))))
+      - record: platform:http_request_duration_seconds:p95_by_route
+        expr: histogram_quantile(0.95, sum by (le, route) (max without (instance, pod) (rate(platform_http_request_duration_seconds_bucket[5m]))))
+      - record: platform:http_request_duration_seconds:p99_by_route
+        expr: histogram_quantile(0.99, sum by (le, route) (max without (instance, pod) (rate(platform_http_request_duration_seconds_bucket[5m]))))
+
+  - name: platform-runtime.recording
+    interval: 30s
+    rules:
+      - record: platform:jobs_processed:rate5m_by_status
+        expr: sum by (queue, status) (max without (instance, pod) (rate(platform_jobs_processed_total[5m])))
+      - record: platform:job_duration_seconds:p95
+        expr: histogram_quantile(0.95, sum by (le, queue) (max without (instance, pod) (rate(platform_job_duration_seconds_bucket[5m]))))
+      - record: platform:queue_pending_jobs
+        expr: sum by (queue) (max without (instance, pod) (platform_queue_jobs{status="pending"}))
+      - record: platform:kafka_consumer_lag:sum
+        expr: sum by (group) (max without (instance, pod) (platform_kafka_consumer_lag))
+      - record: platform:kafka_messages:rate5m
+        expr: sum by (group, result) (max without (instance, pod) (rate(platform_kafka_messages_total[5m])))
+      - record: platform:outbox_published:rate5m
+        expr: sum by (result) (max without (instance, pod) (rate(platform_outbox_published_total[5m])))

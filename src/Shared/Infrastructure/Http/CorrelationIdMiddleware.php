@@ -31,6 +31,15 @@ final class CorrelationIdMiddleware implements MiddlewareInterface
         $this->context->setClient($this->clientIp->resolve($request), $request->getHeaderLine('User-Agent') ?: null);
         $this->context->setChannel(str_starts_with($request->getUri()->getPath(), '/api/') ? 'api' : 'web');
 
+        // TLS terminated at a trusted load balancer/ingress: honour X-Forwarded-Proto so that secure cookies,
+        // HSTS and generated absolute URLs see the original https scheme. Untrusted peers cannot spoof it.
+        $remote = (string) ($request->getServerParams()['REMOTE_ADDR'] ?? '');
+        if ($remote !== '' && $this->clientIp->isTrusted($remote)
+            && strtolower(trim(explode(',', $request->getHeaderLine('X-Forwarded-Proto'))[0])) === 'https'
+            && $request->getUri()->getScheme() !== 'https') {
+            $request = $request->withUri($request->getUri()->withScheme('https')->withPort(null));
+        }
+
         $request = $request->withAttribute('correlationId', $this->context->correlationId());
         return $handler->handle($request)->withHeader('X-Request-Id', $this->context->correlationId());
     }

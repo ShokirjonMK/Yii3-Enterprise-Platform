@@ -1,0 +1,12 @@
+{{/* Telegram (parse_mode HTML) message for the Yii3 Enterprise Platform. Author: ShokirjonMK */}}
+{{ define "telegram.platform.message" -}}
+{{ if eq .Status "firing" }}🔥{{ else }}✅{{ end }} <b>{{ .Status | toUpper }}</b> · {{ .CommonLabels.alertname | html }} ({{ .CommonLabels.severity | html }})
+{{ range .Alerts -}}
+━━━━━━━━━━━━
+<b>{{ .Annotations.summary | html }}</b>
+{{ .Annotations.description | html }}
+{{ if .Labels.namespace }}🗂 ns: <code>{{ .Labels.namespace | html }}</code>{{ end }}{{ if .Labels.instance }} · <code>{{ .Labels.instance | html }}</code>{{ end }}
+🕐 {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}{{ if .Annotations.runbook_url }}
+📘 {{ .Annotations.runbook_url | html }}{{ end }}
+{{ end -}}
+{{- end }}

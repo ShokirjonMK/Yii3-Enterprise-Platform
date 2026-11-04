@@ -1,0 +1,82 @@
+# Schema migration + RBAC catalog sync + reference data seed. Run BEFORE rolling out new pods:
+#
+#   kubectl -n <ns> delete job platform-migrate --ignore-not-found
+#   kubectl apply -k <overlay> -l app.kubernetes.io/component=migrate      (or scripts/ci/deploy.sh)
+#   kubectl -n <ns> wait --for=condition=complete job/platform-migrate --timeout=15m
+#
+# Every step is idempotent. Migrations must be backward compatible with the currently running release
+# (expand/contract — see docs/DEPLOYMENT.md), because old pods keep serving while this Job runs.
+# Concurrent runs are prevented by parallelism: 1, the fixed Job name (a second apply fails while one exists)
+# and the CI resource_group that serialises deployments per environment.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: platform-migrate
+  labels:
+    app.kubernetes.io/name: yii3-platform
+    app.kubernetes.io/component: migrate
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 1800
+  ttlSecondsAfterFinished: 86400
+  parallelism: 1
+  completions: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: yii3-platform
+        app.kubernetes.io/component: migrate
+        tier: app
+    spec:
+      restartPolicy: Never
+      serviceAccountName: platform-app
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 33
+        runAsGroup: 33
+        fsGroup: 33
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: migrate
+          image: yep-php
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              php yii migrate:up --no-interaction
+              php yii rbac:sync
+              php yii platform:seed
+          envFrom:
+            - configMapRef: { name: platform-config }
+            - secretRef: { name: platform-secrets }
+          env:
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: platform-db-app, key: password } }
+            - name: KAFKA_SASL_PASSWORD
+              valueFrom: { secretKeyRef: { name: platform-app, key: password } }
+            # Index builds / backfills may exceed the 30 s statement timeout used by web requests. Lock waits
+            # should still be bounded inside migrations themselves (SET lock_timeout = '5s').
+            - name: DB_STATEMENT_TIMEOUT_MS
+              value: "600000"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          volumeMounts:
+            - { name: runtime, mountPath: /app/runtime }
+            - { name: tmp, mountPath: /tmp }
+            - { name: kafka-ca, mountPath: /etc/kafka-ca, readOnly: true }
+      volumes:
+        - name: runtime
+          emptyDir: { sizeLimit: 256Mi }
+        - name: tmp
+          emptyDir: { sizeLimit: 256Mi }
+        - name: kafka-ca
+          secret:
+            secretName: platform-kafka-cluster-ca-cert
+            items: [{ key: ca.crt, path: ca.crt }]

@@ -1,0 +1,45 @@
+# Queue-depth autoscaling for workers with KEDA (creates and owns the HPA "keda-hpa-worker").
+#
+# platform_queue_jobs is computed at scrape time from the jobs table and is a cluster-wide value
+# (the app exposes one aggregated view; Prometheus scrapes it through the web Service, job="platform-app"),
+# so the query must NOT be summed across pods — max() de-duplicates if several targets are configured.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: worker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: worker
+  minReplicaCount: 2
+  maxReplicaCount: 20
+  pollingInterval: 15
+  cooldownPeriod: 300
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies:
+            - { type: Pods, value: 2, periodSeconds: 60 }
+  triggers:
+    # ~50 runnable jobs per worker replica
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-operated.monitoring.svc:9090
+        query: max(sum by (instance) (platform_queue_jobs{job="platform-app",status="pending"}))
+        threshold: "50"
+        activationThreshold: "1"
+        ignoreNullValues: "true"
+    # Age of the oldest runnable job: scale out when jobs wait longer than 60 s even if the count is low
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-operated.monitoring.svc:9090
+        query: max(platform_queue_oldest_pending_seconds{job="platform-app"})
+        threshold: "60"
+        ignoreNullValues: "true"
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: "75"

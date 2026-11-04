@@ -1,0 +1,65 @@
+# Yii3 Enterprise Platform — minimal GitHub Actions CI (lint + unit tests in the platform PHP image).
+# Author: ShokirjonMK — https://github.com/ShokirjonMK/Yii3-Enterprise-Platform
+#
+# The full pipeline (integration/API/E2E suites, security scans, image build + signing, Kubernetes deploys) is
+# .gitlab-ci.yml — see docs/CI_CD.md. This workflow gives fast feedback on every push / pull request on GitHub.
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      DOCKER_BUILDKIT: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build dev PHP image (same Dockerfile target as local development)
+        run: |
+          docker build -f infra/docker/php/Dockerfile --target dev \
+            --build-arg USER_ID="$(id -u)" --build-arg GROUP_ID="$(id -g)" -t yep-php:ci .
+
+      - name: Cache composer downloads
+        uses: actions/cache@v4
+        with:
+          path: .composer-cache
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Composer validate + install
+        run: |
+          docker run --rm -v "$PWD":/app -w /app -e COMPOSER_CACHE_DIR=/app/.composer-cache yep-php:ci \
+            sh -ec 'composer validate --strict --no-check-publish && composer install --no-interaction --no-progress --prefer-dist'
+
+      - name: PHP syntax lint
+        run: |
+          docker run --rm -v "$PWD":/app -w /app yep-php:ci \
+            sh -ec 'find src config migrations tests -name "*.php" -print0 | xargs -0 -n1 -P4 php -l >/dev/null'
+
+      - name: Code style (php-cs-fixer, dry run)
+        run: docker run --rm -v "$PWD":/app -w /app yep-php:ci php vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --dry-run --diff
+
+      - name: Static analysis (psalm)
+        run: docker run --rm -v "$PWD":/app -w /app yep-php:ci php vendor/bin/psalm --no-cache --output-format=github
+
+      - name: Unit tests (no database)
+        run: |
+          docker run --rm -v "$PWD":/app -w /app \
+            -e APP_ENV=test -e SKIP_TEST_DB_SETUP=1 -e APP_SECRET=ci-not-a-secret-0000000000000000000000000000000000000000000000000 \
+            -e KAFKA_ENABLED=false -e DB_PASSWORD=unused -e REDIS_PASSWORD=unused -e S3_KEY=unused -e S3_SECRET=unused \
+            yep-php:ci php vendor/bin/phpunit --testsuite unit --no-coverage
+
+      - name: Composer audit (known vulnerable dependencies)
+        run: docker run --rm -v "$PWD":/app -w /app -e COMPOSER_CACHE_DIR=/app/.composer-cache yep-php:ci composer audit --locked --no-interaction

@@ -1,0 +1,104 @@
+# Yii3 Enterprise Platform — Kustomize base (HA production topology).
+# Author: ShokirjonMK — https://github.com/ShokirjonMK/Yii3-Enterprise-Platform
+#
+# Required cluster add-ons (installed separately, cluster-scoped):
+#   - ingress-nginx (namespace ingress-nginx), cert-manager (ClusterIssuer "letsencrypt" or your CA)
+#   - external-secrets.io operator + a ClusterSecretStore (name set in overlays, default "platform-secret-store")
+#   - CloudNativePG operator (namespace cnpg-system)        -> data/postgres-cluster.yaml
+#   - Strimzi Kafka operator (watching this namespace)      -> data/kafka.yaml
+#   - prometheus-operator / kube-prometheus-stack (namespace monitoring) -> monitoring/*
+#   - KEDA (namespace keda)                                  -> app/keda-worker.yaml
+#   - an OpenTelemetry collector in namespace "observability" (observability/otel/collector.yaml)
+#
+# Render:  kubectl kustomize infra/kubernetes/overlays/production
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: platform
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: yii3-enterprise-platform
+      app.kubernetes.io/managed-by: kustomize
+    includeSelectors: false
+    includeTemplates: true
+
+commonAnnotations:
+  platform.yii3/author: ShokirjonMK
+  platform.yii3/source: https://github.com/ShokirjonMK/Yii3-Enterprise-Platform
+
+resources:
+  - namespace.yaml
+  - security/serviceaccount.yaml
+  - security/external-secrets.yaml
+  - security/networkpolicies.yaml
+  - app/web.yaml
+  - app/worker.yaml
+  - app/scheduler.yaml
+  - app/relay.yaml
+  - app/consumers.yaml
+  - app/pdb.yaml
+  - app/hpa.yaml
+  - app/keda-worker.yaml
+  - app/ingress.yaml
+  - app/migrate-job.yaml
+  - data/postgres-cluster.yaml
+  - data/redis-sentinel.yaml
+  - data/kafka.yaml
+  - data/kafka-topics.yaml
+  - monitoring/scrape.yaml
+
+# Non-secret runtime configuration (secrets come from ExternalSecrets, see security/external-secrets.yaml).
+# The generated name carries a content hash, so a config change rolls all workloads automatically.
+configMapGenerator:
+  - name: platform-config
+    literals:
+      - APP_ENV=prod
+      - APP_DEBUG=false
+      - APP_NAME=Yii3 Enterprise Platform
+      - APP_URL=https://platform.example.com
+      - APP_LOCALE=uz
+      - TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      # PostgreSQL (CloudNativePG services: -rw = primary, -ro = hot standbys only)
+      - DB_HOST=platform-pg-rw
+      - DB_PORT=5432
+      - DB_NAME=platform
+      - DB_USER=platform
+      - DB_REPLICAS=platform-pg-ro:5432
+      - DB_SSLMODE=require
+      - DB_REPLICA_STICKINESS=5
+      - DB_STATEMENT_TIMEOUT_MS=30000
+      # Redis: Predis talks to Sentinel; REDIS_HOST (HAProxy that always points at the current master) is used by
+      # components that do not speak Sentinel (Prometheus metrics storage adapter).
+      - REDIS_MODE=sentinel
+      - REDIS_SENTINELS=redis-sentinel-0.redis-sentinel-headless:26379,redis-sentinel-1.redis-sentinel-headless:26379,redis-sentinel-2.redis-sentinel-headless:26379
+      - REDIS_SENTINEL_SERVICE=mymaster
+      - REDIS_HOST=redis-master
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      # Kafka (Strimzi, TLS listener + SCRAM-SHA-512)
+      - KAFKA_ENABLED=true
+      - KAFKA_BROKERS=platform-kafka-kafka-bootstrap:9093
+      - KAFKA_CLIENT_ID=yii3-platform
+      - KAFKA_TOPIC_PREFIX=
+      - KAFKA_SECURITY_PROTOCOL=SASL_SSL
+      - KAFKA_SASL_MECHANISM=SCRAM-SHA-512
+      - KAFKA_SASL_USERNAME=platform-app
+      - KAFKA_SSL_CA_LOCATION=/etc/kafka-ca/ca.crt
+      # Object storage (S3 API)
+      - S3_ENDPOINT=https://s3.example.com
+      - S3_REGION=us-east-1
+      - S3_BUCKET=platform-files
+      - S3_PATH_STYLE=true
+      - MAIL_FROM=noreply@platform.example.com
+      # Observability
+      - OTEL_ENABLED=true
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector.observability:4318
+      - OTEL_SERVICE_NAME=yii3-platform
+      - OTEL_TRACES_SAMPLER_ARG=0.2
+      - PROMETHEUS_URL=http://prometheus-operated.monitoring:9090
+      - GRAFANA_URL=https://grafana.example.com
+      - PHP_FPM_MAX_CHILDREN=20
+
+# Images are referenced by the logical names yep-php / yep-nginx and pinned in each overlay
+# (CI: kustomize edit set image yep-php=$CI_REGISTRY_IMAGE/php:$TAG yep-nginx=$CI_REGISTRY_IMAGE/nginx:$TAG).

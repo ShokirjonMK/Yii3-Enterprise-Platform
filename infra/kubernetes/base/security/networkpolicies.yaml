@@ -1,0 +1,202 @@
+# Zero-trust networking for the platform namespace: everything is denied, then only the required flows open.
+#
+#   ingress-nginx ─▶ web:8080          monitoring ─▶ web:8080 (/metrics), exporters
+#   app pods (tier=app) ─▶ postgres:5432, redis:6379/26379, kafka:9093, otel-collector:4317/4318,
+#                          external HTTPS/SMTP (S3, IdP/OIDC, Telegram, mail relay)
+#   data pods talk to each other, to their operators and to the Kubernetes API.
+#
+# Namespaces are matched by the automatic label kubernetes.io/metadata.name. Tighten "external" ipBlocks to the
+# real S3 / SMTP / IdP CIDRs in the overlay when they are known.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+          podSelector:
+            matchLabels: { k8s-app: kube-dns }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-ingress
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/component: web }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: ingress-nginx }
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: monitoring }
+      ports:
+        - { protocol: TCP, port: 8080 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: app-egress
+spec:
+  podSelector:
+    matchLabels: { tier: app }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: { cnpg.io/cluster: platform-pg }
+      ports:
+        - { protocol: TCP, port: 5432 }
+    - to:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: redis }
+      ports:
+        - { protocol: TCP, port: 6379 }
+        - { protocol: TCP, port: 26379 }
+    - to:
+        - podSelector:
+            matchLabels: { strimzi.io/cluster: platform-kafka }
+      ports:
+        - { protocol: TCP, port: 9093 }
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: observability }
+      ports:
+        - { protocol: TCP, port: 4317 }
+        - { protocol: TCP, port: 4318 }
+    # KEDA/Admin UI links do not need egress; Prometheus API for the admin monitoring page does:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: monitoring }
+      ports:
+        - { protocol: TCP, port: 9090 }
+    # External services: S3 object storage, OIDC/OneID IdP, Telegram API (HTTPS) and the mail relay (SMTP submission)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16]
+      ports:
+        - { protocol: TCP, port: 443 }
+        - { protocol: TCP, port: 587 }
+        - { protocol: TCP, port: 465 }
+---
+# ---------------------------------------------------------------- PostgreSQL (CloudNativePG)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres
+spec:
+  podSelector:
+    matchLabels: { cnpg.io/cluster: platform-pg }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { tier: app }
+        - podSelector:
+            matchLabels: { cnpg.io/cluster: platform-pg }
+      ports:
+        - { protocol: TCP, port: 5432 }
+    # Operator -> instance manager (status / switchover), replicas -> primary instance manager
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: cnpg-system }
+        - podSelector:
+            matchLabels: { cnpg.io/cluster: platform-pg }
+      ports:
+        - { protocol: TCP, port: 8000 }
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: monitoring }
+      ports:
+        - { protocol: TCP, port: 9187 }
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: { cnpg.io/cluster: platform-pg }
+      ports:
+        - { protocol: TCP, port: 5432 }
+        - { protocol: TCP, port: 8000 }
+    # Kubernetes API (instance manager / fencing) and S3 (barman WAL archive + base backups)
+    - ports:
+        - { protocol: TCP, port: 443 }
+        - { protocol: TCP, port: 6443 }
+---
+# ---------------------------------------------------------------- Redis + Sentinel + master proxy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: redis }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { tier: app }
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: redis }
+      ports:
+        - { protocol: TCP, port: 6379 }
+        - { protocol: TCP, port: 26379 }
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: monitoring }
+      ports:
+        - { protocol: TCP, port: 9121 }
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: redis }
+      ports:
+        - { protocol: TCP, port: 6379 }
+        - { protocol: TCP, port: 26379 }
+---
+# ---------------------------------------------------------------- Kafka (Strimzi)
+# Strimzi additionally generates its own NetworkPolicies for listeners (networkPolicyPeers in data/kafka.yaml)
+# and for the replication/control-plane ports; these rules add the egress side required by default-deny.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kafka
+spec:
+  podSelector:
+    matchLabels: { strimzi.io/cluster: platform-kafka }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { strimzi.io/cluster: platform-kafka }
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: strimzi }
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: monitoring }
+      ports:
+        - { protocol: TCP, port: 9404 }
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: { strimzi.io/cluster: platform-kafka }
+    # Entity operator -> Kubernetes API
+    - ports:
+        - { protocol: TCP, port: 443 }
+        - { protocol: TCP, port: 6443 }

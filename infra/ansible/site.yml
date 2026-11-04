@@ -1,0 +1,24 @@
+---
+# Yii3 Enterprise Platform — Author: ShokirjonMK — https://github.com/ShokirjonMK/Yii3-Enterprise-Platform
+# Usage:
+#   ansible-galaxy collection install -r requirements.yml
+#   cp inventories/staging/hosts.yml.example inventories/staging/hosts.yml
+#   cp inventories/staging/group_vars/all/vault.yml.example inventories/staging/group_vars/all/vault.yml
+#   ansible-vault encrypt inventories/staging/group_vars/all/vault.yml
+#   ansible-playbook site.yml --ask-vault-pass                       # full run
+#   ansible-playbook site.yml --tags deploy -e app_staging_version=1.2.3     # deploy only
+- name: Harden Docker hosts
+  hosts: docker_hosts
+  become: true
+  roles:
+    - role: common
+      tags: [common]
+    - role: docker
+      tags: [docker]
+
+- name: Deploy compose-based staging
+  hosts: staging_app
+  become: true
+  roles:
+    - role: app_staging
+      tags: [deploy]

@@ -1,0 +1,15 @@
+# Grafana dashboard provider — Yii3 Enterprise Platform. Author: ShokirjonMK
+apiVersion: 1
+
+providers:
+  - name: yii3-enterprise-platform
+    orgId: 1
+    folder: Yii3 Enterprise Platform
+    folderUid: yii3-platform
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 60
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

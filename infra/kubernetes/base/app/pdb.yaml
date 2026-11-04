@@ -1,0 +1,88 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web
+spec:
+  maxUnavailable: 1
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  selector:
+    matchLabels: { app.kubernetes.io/name: yii3-platform, app.kubernetes.io/component: web }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: worker
+spec:
+  maxUnavailable: 1
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  selector:
+    matchLabels: { app.kubernetes.io/name: yii3-platform, app.kubernetes.io/component: worker }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: scheduler
+spec:
+  minAvailable: 1
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  selector:
+    matchLabels: { app.kubernetes.io/name: yii3-platform, app.kubernetes.io/component: scheduler }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: relay
+spec:
+  minAvailable: 1
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  selector:
+    matchLabels: { app.kubernetes.io/name: yii3-platform, app.kubernetes.io/component: relay }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: consumer-platform-default
+spec:
+  maxUnavailable: 1
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  selector:
+    matchLabels: { app.kubernetes.io/component: consumer, platform.yii3/consumer-group: platform-default }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: consumer-platform-retry
+spec:
+  maxUnavailable: 1
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  selector:
+    matchLabels: { app.kubernetes.io/component: consumer, platform.yii3/consumer-group: platform-retry }
+---
+# Redis data nodes and Sentinels: keep quorum (2 of 3) during voluntary disruptions.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: server }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis-sentinel
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: sentinel }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis-master-proxy
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: redis, app.kubernetes.io/component: master-proxy }
+# PostgreSQL (CloudNativePG) and Kafka (Strimzi) PDBs are created by their operators.

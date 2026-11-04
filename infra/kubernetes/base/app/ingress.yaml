@@ -1,0 +1,42 @@
+# ingress-nginx. TLS from cert-manager. HSTS is emitted by the application (SecurityHeadersMiddleware) and,
+# cluster-wide, by the controller ConfigMap (hsts: "true", hsts-max-age: "31536000", hsts-include-subdomains: "true");
+# the controller uses more_set_headers, which REPLACES the header, so there is never a duplicate HSTS header.
+# Recommended controller ConfigMap: use-forwarded-headers "false", compute-full-forwarded-for "true",
+# server-tokens "false", ssl-protocols "TLSv1.2 TLSv1.3", enable-ocsp "true", allow-snippet-annotations "false".
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    # Matches PHP post_max_size (32M) and nginx client_max_body_size in the pod
+    nginx.ingress.kubernetes.io/proxy-body-size: 32m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "65"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "65"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "5"
+    nginx.ingress.kubernetes.io/proxy-next-upstream: "error timeout"
+    nginx.ingress.kubernetes.io/proxy-next-upstream-tries: "2"
+    # Edge rate limit per client IP (pod nginx and the application add stricter per-route / per-identity limits)
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+    nginx.ingress.kubernetes.io/limit-connections: "50"
+    # The controller generates X-Request-ID (generate-request-id: true, default); the pod nginx keeps it as the
+    # correlation id, so ingress logs, nginx logs, app JSON logs and traces share one id.
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [platform.example.com]
+      secretName: platform-tls
+  rules:
+    - host: platform.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port: { name: http }

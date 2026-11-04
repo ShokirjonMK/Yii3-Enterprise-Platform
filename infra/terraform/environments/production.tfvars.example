@@ -1,0 +1,28 @@
+# Copy to production.tfvars (not committed). No credentials here — see versions.tf header.
+environment = "production"
+namespace   = "yep-production"
+
+kube_context = "production"
+
+# AWS S3 (leave endpoints null). For a self-hosted store use the staging example settings instead.
+s3_endpoint             = null
+iam_endpoint            = null
+s3_region               = "eu-central-1"
+s3_force_path_style     = false
+s3_skip_aws_validations = false
+s3_aws_bucket_controls  = true
+create_iam              = true
+# kms_key_arn           = "arn:aws:kms:eu-central-1:111111111111:key/00000000-0000-0000-0000-000000000000"
+
+backup_retention_days           = 35
+files_noncurrent_retention_days = 90
+
+quota = {
+  requests_cpu    = "24"
+  requests_memory = "48Gi"
+  limits_cpu      = "48"
+  limits_memory   = "96Gi"
+  pods            = 150
+  pvcs            = 40
+  storage         = "2Ti"
+}

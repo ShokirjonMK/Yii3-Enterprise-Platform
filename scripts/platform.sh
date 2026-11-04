@@ -14,12 +14,15 @@ cmd_init() {
   if [[ -f .env ]]; then
     echo ".env already exists — leaving it untouched."
   else
-    cp .env.example .env
-    # Replace each __GENERATE__ with an independent random value
-    while grep -q "__GENERATE__" .env; do
-      sed -i.bak "0,/__GENERATE__/s//$(rand_hex 32)/" .env
-    done
-    rm -f .env.bak
+    # Replace each __GENERATE__ with an independent random value (portable: no GNU sed needed)
+    : > .env
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      while [[ "$line" == *__GENERATE__* ]]; do
+        line="${line/__GENERATE__/$(rand_hex 32)}"
+      done
+      printf '%s
+' "$line" >> .env
+    done < .env.example
     echo "Created .env with random local secrets."
   fi
   mkdir -p runtime public/assets tests/_output

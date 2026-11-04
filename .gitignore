@@ -38,3 +38,15 @@ c3.php
 .phpunit.cache
 .php-cs-fixer.cache
 /compose.override.yaml
+
+# infrastructure (local state / secrets)
+infra/terraform/**/.terraform/
+infra/terraform/**/.terraform.lock.hcl.bak
+*.tfvars
+!*.tfvars.example
+*.backend.hcl
+!*.backend.hcl.example
+*.tfstate
+*.tfstate.*
+infra/ansible/inventories/*/hosts.yml
+infra/ansible/**/vault.yml

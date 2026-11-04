@@ -1,0 +1,122 @@
+# KafkaTopic CRs for every topic in App\Platform\Setup\PlatformSeeder::TOPICS (generated from that list; keep in sync).
+# The Topic Operator owns topic creation in Kubernetes (auto.create.topics.enable=false); `php yii kafka:provision`
+# is only used for docker-compose / bare-metal. Replicas 3 + min.insync.replicas 2 everywhere.
+---
+# Security-relevant audit events
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: platform-audit
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  topicName: platform.audit
+  partitions: 6
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+    retention.ms: 2592000000
+    cleanup.policy: delete
+    compression.type: producer
+---
+# User lifecycle events
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: platform-users
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  topicName: platform.users
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+    retention.ms: 604800000
+    cleanup.policy: delete
+    compression.type: producer
+---
+# Notification delivery events
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: platform-notifications
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  topicName: platform.notifications
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+    retention.ms: 604800000
+    cleanup.policy: delete
+    compression.type: producer
+---
+# Dead letters (failed after all retries)
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: platform-dlq
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  topicName: platform.dlq
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+    retention.ms: 2592000000
+    cleanup.policy: delete
+    compression.type: producer
+---
+# Delayed retry topic (1 minute)
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: platform-retry-1m
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  topicName: platform.retry.1m
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+    retention.ms: 259200000
+    cleanup.policy: delete
+    compression.type: producer
+---
+# Delayed retry topic (10 minutes)
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: platform-retry-10m
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  topicName: platform.retry.10m
+  partitions: 3
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+    retention.ms: 259200000
+    cleanup.policy: delete
+    compression.type: producer
+---
+# Projects module domain events
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: projects-events
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  topicName: projects.events
+  partitions: 6
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+    retention.ms: 604800000
+    cleanup.policy: delete
+    compression.type: producer

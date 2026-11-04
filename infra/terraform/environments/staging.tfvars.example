@@ -1,0 +1,27 @@
+# Copy to staging.tfvars (not committed). No credentials here — see versions.tf header.
+environment = "staging"
+namespace   = "yep-staging"
+
+kube_context = "staging"
+
+# Self-hosted S3-compatible store (MinIO/Ceph RGW)
+s3_endpoint             = "https://s3.staging.example.internal"
+iam_endpoint            = "https://s3.staging.example.internal"
+s3_region               = "us-east-1"
+s3_force_path_style     = true
+s3_skip_aws_validations = true
+s3_aws_bucket_controls  = false
+create_iam              = true
+
+backup_retention_days           = 14
+files_noncurrent_retention_days = 30
+
+quota = {
+  requests_cpu    = "8"
+  requests_memory = "16Gi"
+  limits_cpu      = "16"
+  limits_memory   = "32Gi"
+  pods            = 60
+  pvcs            = 20
+  storage         = "300Gi"
+}

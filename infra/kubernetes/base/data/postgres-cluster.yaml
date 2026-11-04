@@ -1,0 +1,128 @@
+# PostgreSQL 17 HA with CloudNativePG: 1 primary + 2 hot standbys, quorum-based synchronous replication.
+#
+# Services created by the operator:
+#   platform-pg-rw  -> current primary          (DB_HOST)
+#   platform-pg-ro  -> hot standbys only        (DB_REPLICAS; read-only, may lag)
+#   platform-pg-r   -> any instance              (not used by the app: it can route reads to the primary too)
+#
+# Failover / split-brain protection: the operator promotes the most advanced standby when the primary is lost and
+# FENCES the old primary (its instance manager shuts PostgreSQL down when it can no longer reach the API server
+# or sees it is no longer the elected primary); the -rw Service selector moves atomically to the new primary.
+# With minSyncReplicas: 1 a commit is acknowledged only after at least one standby has it (RPO = 0 for a single
+# failure); with only the primary alive, synchronous commits wait instead of silently degrading to async.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: platform-pg
+spec:
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.5-standard-bookworm
+  primaryUpdateStrategy: unsupervised
+  primaryUpdateMethod: switchover
+  # Quorum synchronous replication (ANY 1 of the standbys).
+  minSyncReplicas: 1
+  maxSyncReplicas: 1
+  enableSuperuserAccess: false
+  failoverDelay: 0
+  switchoverDelay: 60
+  startDelay: 300
+  stopDelay: 300
+  smartShutdownTimeout: 120
+  replicationSlots:
+    highAvailability:
+      enabled: true
+    updateInterval: 30
+  postgresql:
+    parameters:
+      max_connections: "300"
+      shared_buffers: 1GB
+      effective_cache_size: 3GB
+      work_mem: 16MB
+      maintenance_work_mem: 256MB
+      wal_compression: "on"
+      max_wal_size: 4GB
+      min_wal_size: 1GB
+      checkpoint_completion_target: "0.9"
+      random_page_cost: "1.1"
+      effective_io_concurrency: "200"
+      pg_stat_statements.max: "5000"
+      pg_stat_statements.track: all
+      track_io_timing: "on"
+      log_min_duration_statement: "500"
+      log_lock_waits: "on"
+      log_temp_files: "0"
+      log_autovacuum_min_duration: "1000"
+      idle_in_transaction_session_timeout: "60000"
+      timezone: UTC
+      password_encryption: scram-sha-256
+    pg_hba:
+      # TLS only, SCRAM only (the operator prepends its own streaming-replication rules)
+      - hostssl all all 0.0.0.0/0 scram-sha-256
+  bootstrap:
+    initdb:
+      database: platform
+      owner: platform
+      secret:
+        name: platform-db-app
+      dataChecksums: true
+      encoding: UTF8
+      localeCollate: C.UTF-8
+      localeCType: C.UTF-8
+      postInitApplicationSQL:
+        - CREATE EXTENSION IF NOT EXISTS pgcrypto
+        - CREATE EXTENSION IF NOT EXISTS pg_trgm
+        - CREATE EXTENSION IF NOT EXISTS citext
+        - CREATE EXTENSION IF NOT EXISTS pg_stat_statements
+  storage:
+    size: 100Gi
+    # storageClass: set in the overlay (replicated / zone-local SSD)
+  walStorage:
+    size: 30Gi
+  resources:
+    requests: { cpu: "1", memory: 4Gi }
+    limits: { memory: 4Gi }
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels: { cnpg.io/cluster: platform-pg }
+  # Continuous WAL archiving + base backups to S3 (point-in-time recovery). The backup identity can only write to
+  # the backups bucket (infra/terraform/modules/s3-buckets). NOTE: CNPG >= 1.26 recommends the Barman Cloud
+  # plugin instead of the in-tree barmanObjectStore; the in-tree stanza below is still supported.
+  backup:
+    retentionPolicy: 30d
+    barmanObjectStore:
+      destinationPath: s3://platform-backups/postgres
+      endpointURL: https://s3.example.com
+      s3Credentials:
+        accessKeyId: { name: platform-backup-s3, key: ACCESS_KEY_ID }
+        secretAccessKey: { name: platform-backup-s3, key: ACCESS_SECRET_KEY }
+      wal:
+        compression: gzip
+        maxParallel: 4
+      data:
+        compression: gzip
+        jobs: 2
+  monitoring:
+    # The PodMonitor is defined explicitly in monitoring/scrape.yaml (enablePodMonitor is deprecated).
+    enablePodMonitor: false
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: platform-pg-daily
+spec:
+  # six-field cron (seconds first): every day 02:00 UTC
+  schedule: "0 0 2 * * *"
+  immediate: true
+  backupOwnerReference: self
+  cluster:
+    name: platform-pg
+  method: barmanObjectStore
+  # Take base backups from a standby to keep load off the primary.
+  target: prefer-standby

@@ -1,0 +1,43 @@
+---
+common_timezone: UTC
+common_ssh_allowed_users: []
+common_ssh_port: 22
+common_firewall_tcp_ports: [22, 80, 443]
+common_packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - unattended-upgrades
+  - apt-listchanges
+  - ufw
+  - fail2ban
+  - chrony
+  - jq
+common_sysctl:
+  # Network hardening
+  net.ipv4.conf.all.rp_filter: 1
+  net.ipv4.conf.default.rp_filter: 1
+  net.ipv4.conf.all.accept_redirects: 0
+  net.ipv4.conf.default.accept_redirects: 0
+  net.ipv4.conf.all.send_redirects: 0
+  net.ipv4.conf.all.accept_source_route: 0
+  net.ipv6.conf.all.accept_redirects: 0
+  net.ipv4.icmp_echo_ignore_broadcasts: 1
+  net.ipv4.tcp_syncookies: 1
+  net.ipv4.conf.all.log_martians: 1
+  # Kernel hardening
+  kernel.kptr_restrict: 2
+  kernel.dmesg_restrict: 1
+  kernel.unprivileged_bpf_disabled: 1
+  kernel.yama.ptrace_scope: 1
+  fs.protected_hardlinks: 1
+  fs.protected_symlinks: 1
+  fs.suid_dumpable: 0
+  # Workload tuning (Redis/Kafka/PostgreSQL containers)
+  vm.overcommit_memory: 1
+  vm.swappiness: 10
+  vm.max_map_count: 262144
+  net.core.somaxconn: 4096
+  fs.file-max: 2097152
+  # Docker needs forwarding
+  net.ipv4.ip_forward: 1

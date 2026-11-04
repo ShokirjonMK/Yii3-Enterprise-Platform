@@ -1,0 +1,54 @@
+---
+# Yii3 Enterprise Platform — Author: ShokirjonMK — https://github.com/ShokirjonMK/Yii3-Enterprise-Platform
+# Official Docker CE repository (https://docs.docker.com/engine/install/debian/ and /ubuntu/).
+- name: Remove distribution container packages that conflict with Docker CE
+  ansible.builtin.apt:
+    name: [docker.io, docker-compose, docker-doc, podman-docker, containerd, runc]
+    state: absent
+
+- name: Create apt keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Add Docker CE repository (deb822, signed-by the official key)
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: [deb]
+    uris: "https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}"
+    suites: ["{{ ansible_facts['distribution_release'] }}"]
+    components: [stable]
+    architectures: ["{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64' }}"]
+    signed_by: "https://download.docker.com/linux/{{ ansible_facts['distribution'] | lower }}/gpg"
+    state: present
+
+- name: Install Docker CE and the compose plugin
+  ansible.builtin.apt:
+    name: "{{ docker_packages }}"
+    state: present
+    update_cache: true
+
+- name: Configure Docker daemon (log rotation, live-restore, no-new-privileges)
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart docker
+
+- name: Enable and start Docker
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Allow deploy users to use Docker
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: docker
+    append: true
+  loop: "{{ docker_users }}"

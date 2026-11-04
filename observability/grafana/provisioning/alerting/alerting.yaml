@@ -1,0 +1,3 @@
+# Grafana-managed alerting is not used: alerts are Prometheus rules routed by Alertmanager
+# (observability/prometheus/rules, observability/alertmanager). Author: ShokirjonMK
+apiVersion: 1
