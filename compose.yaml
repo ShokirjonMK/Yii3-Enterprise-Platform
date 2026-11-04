@@ -96,16 +96,7 @@ services:
 
   consumer:
     <<: *php
-    command: ["php", "yii", "kafka:consume", "--group=platform-default"]
-    depends_on:
-      <<: *php-depends
-      kafka:
-        condition: service_healthy
-    stop_grace_period: 40s
-
-  consumer-projects:
-    <<: *php
-    command: ["php", "yii", "kafka:consume", "--group=projects-audit"]
+    command: ["php", "yii", "kafka:consume", "--group=all"]
     depends_on:
       <<: *php-depends
       kafka:

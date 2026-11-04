@@ -377,4 +377,23 @@ fieldset.field { border: 0; padding: 0; margin: 0; }
 .project-members { list-style: none; margin: 0; display: grid; gap: 6px; }
 /* === /api-projects === */
 /* === gii === */
+.gii-errors { margin: 0; padding-left: 18px; }
+.gii-generators { border: 1px solid var(--border, #e3e3e8); border-radius: var(--radius-sm, 6px); padding: 10px 14px; display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+.gii-generators legend { padding: 0 6px; font-weight: 600; }
+.gii-generator { display: flex; gap: 8px; align-items: flex-start; line-height: 1.4; }
+.gii-generator .small { display: block; }
+.gii-files { display: grid; }
+.gii-file { border-top: 1px solid var(--border, #e3e3e8); padding: 6px 14px; }
+.gii-file summary { cursor: pointer; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 4px 0; }
+.gii-status { min-width: 84px; justify-content: center; text-align: center; }
+.gii-status--new { color: var(--ok); border-color: var(--ok); }
+.gii-status--overwrite { color: var(--warn); border-color: var(--warn); }
+.gii-status--skip { color: var(--bad); border-color: var(--bad); }
+.gii-status--unchanged { color: var(--text-3); }
+.gii-overwrite { margin: 6px 0; }
+.gii-code { max-height: 480px; overflow: auto; font-size: 12px; line-height: 1.45; padding: 10px 12px; margin: 6px 0 10px; border-radius: var(--radius-sm, 6px); background: var(--muted-soft, #f4f4f6); white-space: pre; }
+.gii-diff span { display: block; min-height: 1.45em; }
+.gii-diff__add { background: var(--ok-soft); color: var(--ok); }
+.gii-diff__del { background: var(--bad-soft); color: var(--bad); }
+.gii-diff__hunk { color: var(--info); }
 /* === /gii === */

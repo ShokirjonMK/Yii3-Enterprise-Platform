@@ -47,6 +47,7 @@ final class Fixtures
             'password_hash' => $hasher->hash(self::PASSWORD),
             'password_changed_at' => new Expression('now()'),
             'tenant_id' => $tenant,
+            'locale' => 'en', // English UI in tests (assertions use source strings)
         ]);
         foreach ($roles as $role) {
             $access->assignSystem($id, $role);
