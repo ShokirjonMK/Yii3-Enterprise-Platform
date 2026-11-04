@@ -1,41 +1,69 @@
 # Implementation status
 
-Status vocabulary: `IMPLEMENTED` · `TESTED` · `VERIFIED` · `BLOCKED` · `NOT IMPLEMENTED` · `NOT RUN` (see AGENTS.md §6).
-This file is the hand-over log: a new session continues from the "Next steps" list at the bottom.
+Status vocabulary: `IMPLEMENTED` · `TESTED` · `VERIFIED` · `BLOCKED` · `NOT IMPLEMENTED` · `NOT RUN` (AGENTS.md §6).
+Unverified external integrations are listed in [REMAINING_BLOCKERS.md](REMAINING_BLOCKERS.md).
 
-_Last update: 2026-11-04 (session 1)_
+_Last update: 2026-11-04 — Author: ShokirjonMK_
 
-## Foundation (lead)
+## Test results (last full run, local Docker stack)
 
-| Area | Status | Evidence |
+| Suite | Result |
+|---|---|
+| unit + integration (`APP_ENV=test`, real PostgreSQL/Redis/Kafka/SMTP/S3) | **228 tests OK**, 1260 assertions |
+| api + security (HTTP against nginx) | **73 tests OK**, 768 assertions (+ Contracts API 4 OK) |
+| e2e (HTML flows, HTMX, MFA, all admin sections) | **83 tests OK**, 689 assertions |
+| live smoke `scripts/smoke-admin.php` (superadmin, 24 sections + modules + API) | **31/31 OK** |
+| infra validation | kustomize+kubeconform 59/59 per overlay, promtool, amtool, otelcol, terraform validate, ansible-lint — OK |
+| load (k6, dev laptop, bind-mounted dev image) | 0 % errors; latency not representative (Windows bind mount) — production-image load test NOT RUN |
+
+## Platform Control Center — 24 sections
+
+| # | Section | Status |
 |---|---|---|
-| Docker dev stack (nginx, php-fpm 8.3, worker, scheduler, relay, consumer, PG17, Redis 7.4, Kafka 3.9 KRaft, SeaweedFS S3, Mailpit, monitoring profile) | VERIFIED | `docker compose ps` all healthy |
-| PHP image (pdo_pgsql, redis, rdkafka, intl, sodium, apcu, pcov, pg_dump 17) | VERIFIED | `docker run yep-php:dev pg_dump --version` |
-| Composer deps on PHP 8.3 platform, `composer.lock` | VERIFIED | `config.platform.php=8.3.36` |
-| Migrations (identity, config/SSO, partitioned append-only audit, outbox/queue/scheduler, integrations/notifications, workflow/ops) | VERIFIED | `./yii migrate:up` on dev + test DBs |
-| `./yii platform:install` (env checks, DB, migrations, RBAC sync, seed, one-time superadmin, health) | VERIFIED | manual run, idempotent re-run skips bootstrap |
-| RBAC catalog (53 permissions, 8 roles) on yiisoft/rbac + rbac-db | TESTED | `AccessSettingsAuditTest` |
-| Local login, Argon2id, throttling, lockout, MFA (TOTP + recovery, replay protection), forced password change & MFA enrolment gates, session registry, step-up re-auth | TESTED | `tests/E2E/AuthFlowTest` (7), `AccessSettingsAuditTest::testMfaReplayProtection` |
-| OIDC SSO (discovery, PKCE S256, state, nonce, JWKS sig, iss/aud/azp/exp) | TESTED (mock IdP) | `tests/Unit/OidcIdTokenValidationTest` |
-| OneID adapter | IMPLEMENTED · UNVERIFIED | needs operator-issued client_id/secret/scope + endpoint |
-| Settings (typed, env override, scopes, versions, rollback, encrypted secrets, cluster revision invalidation) | TESTED | `AccessSettingsAuditTest` |
-| Feature flags (7 statuses, critical guard, dependency validation, rollout %, tenant override, schedule) | TESTED | `AccessSettingsAuditTest` |
-| Audit log (HMAC-signed, immutable trigger, monthly partitions, verifier) | TESTED | tamper test incl. trigger bypass |
-| Job queue (SKIP LOCKED, idempotency, backoff, dead, retry, cancel, pause, reaper) + worker (signals, timeout, recycle) | TESTED | `QueueAndSchedulerTest` |
-| Scheduler (leader lock + unique tick → exactly once, overlap skip, cron preview) | TESTED | `QueueAndSchedulerTest` |
-| Transactional outbox → relay → Kafka → consumer group with inbox idempotency; Kafka-down keeps events | TESTED (real broker) | `OutboxKafkaRoundTripTest` |
-| Retry topics / DLQ / replay | IMPLEMENTED | admin UI + tests pending (runtime agent) |
-| Notifications core (in-app, e-mail via SMTP, queued delivery, skip tracking) | TESTED (Mailpit) | `NotificationDeliveryTest` |
-| Security headers / CSP / correlation id / JSON logs with redaction | TESTED | `AuthFlowTest::testLoginPageRendersWithSecurityHeaders`, `SecurityPrimitivesTest` |
-| Admin shell (24-section navigation, HTMX partial navigation, light/dark, responsive), dashboard with live KPIs & health | TESTED | `AuthFlowTest::testAdminWithMfaFullFlow` |
-| Prometheus metrics endpoint, health live/ready | IMPLEMENTED | — |
+| 01 | Dashboard | VERIFIED |
+| 02 | Users & Organizations | TESTED · VERIFIED |
+| 03 | Authentication (local, OIDC, OneID, OAuth2) | TESTED (mock IdP) · OneID/real IdP UNVERIFIED |
+| 04 | RBAC & Access Control | TESTED · VERIFIED |
+| 05 | Multi-Tenancy | TESTED · VERIFIED |
+| 06 | API Management | TESTED · VERIFIED |
+| 07 | Integrations (+ webhooks, SSRF guard, circuit breaker) | TESTED · VERIFIED (webhook over HTTP) |
+| 08 | Messaging & Notifications | TESTED (in-app + e-mail via Mailpit VERIFIED; Telegram/SMS/WebPush mocked → UNVERIFIED) |
+| 09 | Workflow & Approvals | TESTED · VERIFIED |
+| 10 | Jobs & Scheduler | TESTED · VERIFIED |
+| 11 | Kafka Management (outbox, lag, DLQ replay) | TESTED · VERIFIED (real broker) |
+| 12 | PostgreSQL Management | TESTED · VERIFIED (replicas: none in dev) |
+| 13 | Redis Management | TESTED · VERIFIED (standalone) |
+| 14 | Storage & Search | TESTED · VERIFIED (S3) |
+| 15 | Infrastructure | TESTED · Kubernetes API UNVERIFIED |
+| 16 | CI/CD & Deployments | TESTED · GitLab API UNVERIFIED |
+| 17 | Monitoring & Observability | TESTED · VERIFIED (built-in metrics; Prometheus profile VERIFIED locally) |
+| 18 | Security Center | TESTED · VERIFIED |
+| 19 | Backup & Recovery | TESTED · VERIFIED (real pg_dump → S3 → restore verification) |
+| 20 | Audit & Compliance | TESTED · VERIFIED (HMAC tamper detection) |
+| 21 | System Settings & Feature Flags | TESTED · VERIFIED |
+| 22 | Developer Tools + Enterprise Gii | TESTED · VERIFIED (non-prod only) |
+| 23 | Business Modules (Projects, Contracts) | TESTED · VERIFIED |
+| 24 | Incident Management | TESTED · Telegram alerts UNVERIFIED |
 
-## Work packages in progress (parallel agents)
-See sections below as they are completed.
+## Platform capabilities
 
-## Next steps
-1. Admin sections 02–24 (agents: identity, runtime, ops, integration/workflow).
-2. REST API v1 + OpenAPI + Projects sample module.
-3. Enterprise Gii generators (after Projects module).
-4. Kubernetes/HA, GitLab CI, observability configs, docs.
-5. Translations uz/ru, final security & performance audit, final report.
+| Area | Status |
+|---|---|
+| Docker stack (nginx, php-fpm, worker, scheduler, relay, consumer (all groups), PG17, Redis, Kafka KRaft, S3, Mailpit) | VERIFIED |
+| `./yii platform:install` (idempotent, one-time superadmin, health) · `./yii platform:demo` | VERIFIED |
+| Login, Argon2id, lockout, throttling, MFA, forced password change/MFA enrolment, sessions, step-up | TESTED · VERIFIED |
+| RBAC default deny, last-superadmin guard, tenant isolation (IDOR → 404), suspended tenants cannot log in | TESTED |
+| REST API v1 (token grants, refresh rotation, scopes, errors, pagination, CORS, rate limits), OpenAPI + Swagger UI | TESTED · Swagger UI visual check NOT RUN |
+| Job queue, scheduler exactly-once, transactional outbox → Kafka → idempotent consumers, retry topics, DLQ | TESTED (real broker) |
+| Settings (versions, rollback, encrypted secrets), feature flags (rollout, dependencies, critical guard) | TESTED |
+| Audit (append-only, HMAC, partitions) | TESTED |
+| Observability: JSON logs + redaction, Prometheus metrics, OpenTelemetry tracing, health endpoints | TESTED · VERIFIED locally |
+| Translations uz/ru (1555 strings, ICU-validated) | VERIFIED |
+| Production image (non-root, read-only, no dev deps), nginx image | VERIFIED (smoke) |
+| Kubernetes HA (CNPG, Redis Sentinel, Strimzi, KEDA, NetworkPolicies), GitLab CI, GitHub Actions | VALIDATED · NOT APPLIED / NOT RUN on a runner |
+
+## Production readiness: GO / NO-GO
+
+**NO-GO for production as-is** until: OneID/IdP credentials are configured and a real login is verified, the
+Kubernetes manifests are applied to a staging cluster, the CI pipeline runs green on a runner, and a load test on
+the production image passes. **GO for development/staging use** (local stack fully working, all suites green).
