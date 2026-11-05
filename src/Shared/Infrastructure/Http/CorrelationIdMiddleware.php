@@ -23,6 +23,7 @@ final class CorrelationIdMiddleware implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+        $entered = microtime(true);
         $id = $request->getHeaderLine('X-Request-Id');
         if ($id === '' && preg_match('/^00-([0-9a-f]{32})-/', $request->getHeaderLine('traceparent'), $m)) {
             $id = $m[1];
@@ -43,7 +44,12 @@ final class CorrelationIdMiddleware implements MiddlewareInterface
         $request = $request->withAttribute('correlationId', $this->context->correlationId());
         $response = $handler->handle($request)->withHeader('X-Request-Id', $this->context->correlationId());
         // Server-Timing: total server-side time incl. bootstrap (visible in browser DevTools → Network → Timing)
-        $started = (float) ($request->getServerParams()['REQUEST_TIME_FLOAT'] ?? microtime(true));
-        return $response->withHeader('Server-Timing', sprintf('app;dur=%.1f', (microtime(true) - $started) * 1000));
+        // boot = PHP-FPM start → first middleware (framework/container bootstrap), app = middleware stack + action
+        $started = (float) ($request->getServerParams()['REQUEST_TIME_FLOAT'] ?? $entered);
+        $now = microtime(true);
+        return $response->withHeader('Server-Timing', sprintf(
+            'boot;dur=%.1f;desc="bootstrap", app;dur=%.1f;desc="request", total;dur=%.1f',
+            ($entered - $started) * 1000, ($now - $entered) * 1000, ($now - $started) * 1000,
+        ));
     }
 }

@@ -13,6 +13,15 @@ use Yiisoft\Db\Pgsql\Dsn;
 /**
  * Builds yiisoft/db-pgsql connections. Statement timeout and application name are set via the
  * libpq "options" DSN parameter so they apply to every pooled/new connection.
+ *
+ * Web requests (PHP-FPM) use persistent connections: opening a PostgreSQL connection with SCRAM
+ * authentication costs ~5 ms, i.e. a third of a typical request. Each FPM worker keeps one connection
+ * (pm.max_children per pod — size max_connections / PgBouncer accordingly). Safe because the web tier holds
+ * no session state: PDO rolls back an open transaction when the request ends, dead connections are
+ * detected and re-opened, and session-level advisory locks are used only by CLI processes (scheduler),
+ * which keep regular connections. Disable with DB_PERSISTENT=false.
+ *
+ * Author: ShokirjonMK
  */
 final class ConnectionFactory
 {
@@ -35,11 +44,17 @@ final class ConnectionFactory
         );
         $driver->charset('UTF8');
         $driver->attributes([
+            PDO::ATTR_PERSISTENT => self::persistent(),
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_EMULATE_PREPARES => false,
             PDO::ATTR_STRINGIFY_FETCHES => false,
         ]);
 
         return new Connection($driver, $schemaCache);
+    }
+
+    private static function persistent(): bool
+    {
+        return PHP_SAPI === 'fpm-fcgi' && filter_var(getenv('DB_PERSISTENT') ?: 'true', FILTER_VALIDATE_BOOLEAN);
     }
 }
