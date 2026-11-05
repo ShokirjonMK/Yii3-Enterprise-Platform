@@ -16,4 +16,6 @@ return [
     Route::get('/health/live')->action([HealthController::class, 'live'])->name('system.health.live'),
     Route::get('/health/ready')->action([HealthController::class, 'ready'])->name('system.health.ready'),
     Route::get('/metrics')->action(MetricsAction::class)->name('system.metrics'),
+    // design theme stylesheets (immutable per ?v=<hash>; built-in from themes/, uploaded from the database)
+    Route::get('/appearance/{code:[a-z0-9][a-z0-9-]{1,39}}.css')->action([\App\Web\Action\System\ThemeCssAction::class, 'css'])->name('system.theme.css'),
 ];

@@ -1,0 +1,93 @@
+/* Gov UZ — Yii3 Enterprise Platform theme pack. Author: ShokirjonMK.
+ * Only design tokens (CSS custom properties) are overridden; see docs/THEMES.md. */
+
+:root {
+  --bg: #f5f7fb;
+  --bg-elev: #ffffff;
+  --bg-sunken: #eef1f6;
+  --bg-hover: #f0f3f9;
+  --text: #1b2333;
+  --text-2: #4a5568;
+  --text-3: #7b8597;
+  --border: #e2e7ef;
+  --border-strong: #cfd6e2;
+  --primary: #0072ce;
+  --primary-hover: #005ba5;
+  --primary-soft: #e5f1fb;
+  --on-primary: #ffffff;
+  --ok: #1eb53a;
+  --ok-soft: #e4f7e8;
+  --warn: #b26b00;
+  --warn-soft: #fff3dc;
+  --bad: #c62b3c;
+  --bad-soft: #fde8ea;
+  --info: #0b7a9e;
+  --info-soft: #e1f3f9;
+  --muted-soft: #edf0f5;
+  --sidebar-bg: #003a70;
+  --sidebar-text: #cfe2f5;
+  --sidebar-text-strong: #ffffff;
+  --sidebar-hover: #004c8f;
+  --sidebar-active: #1eb53a;
+  --focus: 0 0 0 3px rgba(0, 114, 206, .35);
+  --radius: 6px;
+  --radius-sm: 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #061423;
+    --bg-elev: #0b1e33;
+    --bg-sunken: #040e18;
+    --bg-hover: #112a45;
+    --text: #e6eaf2;
+    --text-2: #b4bccb;
+    --text-3: #8590a4;
+    --border: #1a3a5c;
+    --border-strong: #24507d;
+    --primary: #4fa8ff;
+    --primary-hover: #7fc0ff;
+    --primary-soft: #0b2c4d;
+    --on-primary: #0b1020;
+    --ok: #4ade80;
+    --ok-soft: #12301f;
+    --warn: #f0b24a;
+    --warn-soft: #332611;
+    --bad: #ff6b7a;
+    --bad-soft: #3a1820;
+    --info: #4cc3e6;
+    --info-soft: #0f2a35;
+    --muted-soft: #1b2336;
+    --sidebar-bg: #040e18;
+    --sidebar-hover: #0b1e33;
+    --sidebar-active: #0e5a2a;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #061423;
+  --bg-elev: #0b1e33;
+  --bg-sunken: #040e18;
+  --bg-hover: #112a45;
+  --text: #e6eaf2;
+  --text-2: #b4bccb;
+  --text-3: #8590a4;
+  --border: #1a3a5c;
+  --border-strong: #24507d;
+  --primary: #4fa8ff;
+  --primary-hover: #7fc0ff;
+  --primary-soft: #0b2c4d;
+  --on-primary: #0b1020;
+  --ok: #4ade80;
+  --ok-soft: #12301f;
+  --warn: #f0b24a;
+  --warn-soft: #332611;
+  --bad: #ff6b7a;
+  --bad-soft: #3a1820;
+  --info: #4cc3e6;
+  --info-soft: #0f2a35;
+  --muted-soft: #1b2336;
+  --sidebar-bg: #040e18;
+  --sidebar-hover: #0b1e33;
+  --sidebar-active: #0e5a2a;
+}

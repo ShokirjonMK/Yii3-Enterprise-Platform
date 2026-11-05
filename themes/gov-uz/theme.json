@@ -1,0 +1,16 @@
+{
+  "code": "gov-uz",
+  "name": "Gov UZ",
+  "version": "1.0.0",
+  "author": "ShokirjonMK",
+  "description": "Government portal palette: azure blue and green on white (state-flag inspired).",
+  "dark": true,
+  "colors": {
+    "primary": "#0072ce",
+    "sidebar": "#003a70",
+    "background": "#f5f7fb",
+    "surface": "#ffffff",
+    "dark_primary": "#4fa8ff",
+    "dark_background": "#061423"
+  }
+}

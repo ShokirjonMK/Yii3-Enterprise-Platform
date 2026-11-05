@@ -173,6 +173,7 @@ return [
         'injections' => [
             Reference::to(CsrfViewInjection::class),
             Reference::to(App\Shared\Infrastructure\View\PlatformViewInjection::class),
+            Reference::to(App\Platform\Appearance\AppearanceViewInjection::class),
         ],
     ],
 

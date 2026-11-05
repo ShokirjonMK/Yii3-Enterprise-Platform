@@ -17,6 +17,7 @@ use App\Shared\Infrastructure\View\PlatformAsset;
  * @var bool $isHtmx
  * @var array $flashes
  * @var array $platform
+ * @var array|null $theme active design theme (AppearanceViewInjection)
  */
 
 $title = $this->getTitle() ?: $platform['name'];
@@ -40,7 +41,7 @@ $this->addJsFiles($assetManager->getJsFiles());
 $this->beginPage();
 ?>
 <!DOCTYPE html>
-<html lang="<?= $h->e($h->locale()) ?>">
+<html lang="<?= $h->e($h->locale()) ?>" data-theme-pack="<?= $h->e($theme['code'] ?? 'default') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -50,6 +51,7 @@ $this->beginPage();
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <title><?= $h->e($title) ?></title>
     <?php $this->head() ?>
+    <?php if (!empty($theme['href'])): ?><link rel="stylesheet" href="<?= $h->e($theme['href']) ?>"><?php endif /* design theme (Settings → Appearance) */ ?>
 </head>
 <body class="page-sticky" hx-headers='{"X-CSRF-Token":"<?= $h->e($csrf) ?>"}'>
 <?php $this->beginBody() ?>
@@ -63,7 +65,7 @@ $this->beginPage();
             <?php if ($identity): ?>
                 <?php if ($can('projects.view') && $feature('admin.projects')): ?><a href="<?= $h->url('web.projects') ?>"<?= $h->isRoute('web.projects') ? ' aria-current="page"' : '' ?>><?= $h->t('Projects') ?></a><?php endif ?>
                 <a href="<?= $h->url('web.notifications') ?>"<?= $h->isRoute('web.notifications') ? ' aria-current="page"' : '' ?>><?= $h->t('Notifications') ?></a>
-                <a href="<?= $h->url('web.profile') ?>"<?= $h->isRoute('web.profile', 'web.security') ? ' aria-current="page"' : '' ?>><?= $h->t('Profile') ?></a>
+                <a href="<?= $h->url('web.profile') ?>"<?= $h->isRoute('web.profile', 'web.security', 'web.appearance') ? ' aria-current="page"' : '' ?>><?= $h->t('Profile') ?></a>
             <?php endif ?>
             <a href="/api/docs" hx-boost="false"><?= $h->t('API') ?></a>
         </nav>

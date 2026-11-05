@@ -12,6 +12,7 @@ use App\Shared\Infrastructure\View\PlatformAsset;
  * @var Yiisoft\Assets\AssetManager $assetManager
  * @var array $flashes
  * @var array $platform
+ * @var array|null $theme active design theme (AppearanceViewInjection)
  */
 
 $assetManager->register(PlatformAsset::class);
@@ -20,7 +21,7 @@ $this->addJsFiles($assetManager->getJsFiles());
 $this->beginPage();
 ?>
 <!DOCTYPE html>
-<html lang="<?= $h->e($h->locale()) ?>">
+<html lang="<?= $h->e($h->locale()) ?>" data-theme-pack="<?= $h->e($theme['code'] ?? 'default') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -31,6 +32,7 @@ $this->beginPage();
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <title><?= $h->e($this->getTitle()) ?> · <?= $h->e($platform['name']) ?></title>
     <?php $this->head() ?>
+    <?php if (!empty($theme['href'])): ?><link rel="stylesheet" href="<?= $h->e($theme['href']) ?>"><?php endif /* design theme (Settings → Appearance) */ ?>
 </head>
 <body>
 <?php $this->beginBody() ?>

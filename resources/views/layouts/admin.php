@@ -16,6 +16,7 @@ use App\Shared\Infrastructure\View\PlatformAsset;
  * @var bool $isHtmx
  * @var array $flashes
  * @var array $platform
+ * @var array|null $theme active design theme (AppearanceViewInjection)
  */
 
 $title = $this->getTitle() ?: 'Admin';
@@ -59,7 +60,7 @@ $initials = $user ? mb_strtoupper(mb_substr($user->displayName(), 0, 1) . mb_sub
 $this->beginPage();
 ?>
 <!DOCTYPE html>
-<html lang="<?= $h->e($h->locale()) ?>">
+<html lang="<?= $h->e($h->locale()) ?>" data-theme-pack="<?= $h->e($theme['code'] ?? 'default') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -71,6 +72,7 @@ $this->beginPage();
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <title><?= $h->e($title) ?> · Admin</title>
     <?php $this->head() ?>
+    <?php if (!empty($theme['href'])): ?><link rel="stylesheet" href="<?= $h->e($theme['href']) ?>"><?php endif /* design theme (Settings → Appearance) */ ?>
 </head>
 <body hx-headers='{"X-CSRF-Token":"<?= $h->e($csrf) ?>"}'>
 <?php $this->beginBody() ?>
@@ -125,10 +127,16 @@ $this->beginPage();
                     <hr class="divider">
                     <a href="<?= $h->url('web.profile') ?>"><?= $h->icon('user') ?> <?= $h->t('My profile') ?></a>
                     <a href="<?= $h->url('web.security') ?>"><?= $h->icon('shield') ?> <?= $h->t('Security & sessions') ?></a>
+                    <a href="<?= $h->url('web.appearance') ?>"><?= $h->icon('sun') ?> <?= $h->t('Appearance') ?></a>
                     <form method="post" action="<?= $h->url('auth.logout') ?>"><input type="hidden" name="_csrf" value="<?= $h->e($csrf) ?>"><button type="submit"><?= $h->icon('logout') ?> <?= $h->t('Sign out') ?></button></form>
                 </div>
             </details>
         </header>
+        <?php if (!empty($theme['preview'])): ?>
+            <div class="alert alert--info theme-preview-bar"><?= $h->icon('eye') ?> <div><?= $h->t('Previewing theme "{name}" — only you see it.', ['name' => $theme['name']]) ?></div>
+                <form method="post" action="<?= $h->url('admin.appearance.preview.stop') ?>"><input type="hidden" name="_csrf" value="<?= $h->e($csrf) ?>"><button class="btn btn--sm" type="submit"><?= $h->t('Stop preview') ?></button></form>
+            </div>
+        <?php endif ?>
         <?= $renderMain() ?>
         <footer class="web-footer admin-footer">
             <div class="web-footer__inner">

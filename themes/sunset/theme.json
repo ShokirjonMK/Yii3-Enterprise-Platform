@@ -1,0 +1,16 @@
+{
+  "code": "sunset",
+  "name": "Sunset",
+  "version": "1.0.0",
+  "author": "ShokirjonMK",
+  "description": "Warm orange accents with a dark plum sidebar.",
+  "dark": true,
+  "colors": {
+    "primary": "#d9480f",
+    "sidebar": "#2b1631",
+    "background": "#f5f7fb",
+    "surface": "#ffffff",
+    "dark_primary": "#ff8a4c",
+    "dark_background": "#140c12"
+  }
+}

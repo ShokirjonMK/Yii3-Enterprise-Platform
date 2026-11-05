@@ -1,0 +1,16 @@
+{
+  "code": "emerald",
+  "name": "Emerald",
+  "version": "1.0.0",
+  "author": "ShokirjonMK",
+  "description": "Fresh green accents — finance, agriculture, eco projects.",
+  "dark": true,
+  "colors": {
+    "primary": "#0e8a5f",
+    "sidebar": "#0b2a20",
+    "background": "#f5f7fb",
+    "surface": "#ffffff",
+    "dark_primary": "#34d399",
+    "dark_background": "#08130f"
+  }
+}

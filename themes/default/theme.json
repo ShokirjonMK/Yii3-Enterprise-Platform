@@ -1,0 +1,16 @@
+{
+  "code": "default",
+  "name": "Default",
+  "version": "1.0.0",
+  "author": "ShokirjonMK",
+  "description": "The original platform look: calm blue on a navy sidebar.",
+  "dark": true,
+  "colors": {
+    "primary": "#2f5bea",
+    "sidebar": "#0f1729",
+    "background": "#f5f7fb",
+    "surface": "#ffffff",
+    "dark_primary": "#6c8cff",
+    "dark_background": "#0d1220"
+  }
+}

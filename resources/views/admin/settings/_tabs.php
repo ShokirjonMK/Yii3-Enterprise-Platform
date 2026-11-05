@@ -12,4 +12,5 @@ declare(strict_types=1);
 <nav class="tabs" hx-boost="true" hx-target="#main" hx-select="#main" hx-swap="outerHTML">
     <a href="<?= $h->url('admin.settings') ?>"<?= $active === 'settings' ? ' aria-current="page"' : '' ?>><?= $h->t('Settings') ?></a>
     <a href="<?= $h->url('admin.settings.flags') ?>"<?= $active === 'flags' ? ' aria-current="page"' : '' ?>><?= $h->t('Feature flags') ?></a>
+    <a href="<?= $h->url('admin.appearance') ?>"<?= $active === 'appearance' ? ' aria-current="page"' : '' ?>><?= $h->t('Appearance') ?></a>
 </nav>

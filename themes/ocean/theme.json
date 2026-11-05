@@ -1,0 +1,16 @@
+{
+  "code": "ocean",
+  "name": "Ocean Corporate",
+  "version": "1.0.0",
+  "author": "ShokirjonMK",
+  "description": "Deep teal-blue accents for corporate portals.",
+  "dark": true,
+  "colors": {
+    "primary": "#0b6bcb",
+    "sidebar": "#06263f",
+    "background": "#f5f7fb",
+    "surface": "#ffffff",
+    "dark_primary": "#4aa3ff",
+    "dark_background": "#07131f"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "code": "graphite",
+  "name": "Graphite",
+  "version": "1.0.0",
+  "author": "ShokirjonMK",
+  "description": "Neutral monochrome with a violet accent; dark-first.",
+  "dark": true,
+  "colors": {
+    "primary": "#6d4ae0",
+    "sidebar": "#18181b",
+    "background": "#f4f4f6",
+    "surface": "#ffffff",
+    "dark_primary": "#a78bfa",
+    "dark_background": "#0f0f11"
+  }
+}

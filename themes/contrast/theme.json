@@ -1,0 +1,16 @@
+{
+  "code": "contrast",
+  "name": "High Contrast",
+  "version": "1.0.0",
+  "author": "ShokirjonMK",
+  "description": "WCAG AAA-oriented contrast, thicker focus ring — accessibility.",
+  "dark": true,
+  "colors": {
+    "primary": "#0033cc",
+    "sidebar": "#000000",
+    "background": "#ffffff",
+    "surface": "#ffffff",
+    "dark_primary": "#ffd400",
+    "dark_background": "#000000"
+  }
+}
