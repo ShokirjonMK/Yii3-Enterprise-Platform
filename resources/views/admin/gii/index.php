@@ -13,6 +13,7 @@ declare(strict_types=1);
  * @var list<array{id:string, name:string, description:string, requires:list<string>}> $catalog
  * @var App\Platform\Gii\GiiPlan|null $plan
  * @var array<string, list<string>> $errors
+ * @var array|null $nextSteps NextStepsRunner::state() after apply
  */
 
 use App\Platform\Gii\PlannedFile;
@@ -47,6 +48,7 @@ $hidden = static function () use ($h, $values, $selected): string {
         <h1><?= $h->t('Enterprise Gii') ?></h1>
         <p class="page-head__sub"><?= $h->t('Generates fully integrated business modules (Projects structure) on top of yiisoft/yii-gii. Dry run first; nothing is written without confirmation.') ?></p>
     </div>
+    <div class="page-head__actions"><a class="btn" href="<?= $h->url('admin.devtools.gii.steps') ?>"><?= $h->icon('play') ?> <?= $h->t('Next steps') ?></a></div>
 </div>
 
 <?php if ($errors !== []): ?>
@@ -134,9 +136,23 @@ $hidden = static function () use ($h, $values, $selected): string {
                     <button class="btn btn--danger" type="submit"><?= $h->icon('check') ?> <?= $h->t('Apply') ?></button>
                     <span class="small muted"><?= $h->t('New files are created; protected files are kept unless ticked; unchanged files are skipped.') ?></span>
                 </div>
-            <?php else: ?>
-                <div class="card__body small"><?= $h->t('Next steps:') ?> <code>./yii migrate:up</code> · <code>./yii rbac:sync</code> · <code>./yii kafka:provision</code></div>
             <?php endif ?>
         </form>
     </div>
+    <?php if ($plan->applied && $nextSteps !== null): ?>
+        <div class="card mt" id="gii-next-steps">
+            <div class="card__head">
+                <h2><?= $h->t('Next steps') ?></h2>
+                <a class="small" href="<?= $h->url('admin.devtools.gii.steps') ?>"><?= $h->t('History') ?></a>
+            </div>
+            <div class="card__body">
+                <?= $this->render('./_steps-form', [
+                    'state' => $nextSteps,
+                    'module' => $plan->module,
+                    'csrf' => $csrf,
+                    'selected' => array_values(array_filter(['migrate', 'rbac', in_array('event', $plan->generators, true) && $nextSteps['kafka_enabled'] ? 'kafka' : null])),
+                ]) ?>
+            </div>
+        </div>
+    <?php endif ?>
 <?php endif ?>

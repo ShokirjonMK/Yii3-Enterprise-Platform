@@ -9,6 +9,7 @@ use App\Platform\Audit\AuditLogger;
 use App\Platform\FeatureFlags\FeatureFlagService;
 use App\Platform\Gii\EnterpriseGii;
 use App\Platform\Gii\GiiPlan;
+use App\Platform\Gii\NextSteps\NextStepsRunner;
 use App\Platform\Gii\PlannedFile;
 use App\Platform\Gii\Spec\GiiSpecException;
 use App\Shared\Domain\Exception\NotFoundException;
@@ -90,7 +91,7 @@ final class GiiController
         if ($plan->hasErrors()) {
             $this->responder->error('Some files could not be written.');
         } else {
-            $this->responder->success(sprintf('%d file(s) written. Next: ./yii migrate:up && ./yii rbac:sync', count($written)));
+            $this->responder->success(sprintf('%d file(s) written. Run the next steps below.', count($written)));
         }
         return $this->page($gii, $values, $plan);
     }
@@ -102,6 +103,7 @@ final class GiiController
             'catalog' => $gii->catalog(),
             'plan' => $plan,
             'errors' => $errors,
+            'nextSteps' => $plan !== null && $plan->applied ? $this->container->get(NextStepsRunner::class)->state() : null,
         ], status: $status);
     }
 

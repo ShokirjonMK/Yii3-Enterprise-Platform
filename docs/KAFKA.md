@@ -29,6 +29,7 @@ php yii kafka:consume --group=platform-retry  # built-in: retry topics → origi
 php yii kafka:consume --group=G --max=100 --idle-exit=10   # bounded run (tests)
 php yii worker:health --type=kafka
 php yii kafka:provision [-o runtime/kafka-topics.sh] [--replication-factor 3]   # render topic script + show drift
+# Admin → Developer tools → Enterprise Gii → Next steps also creates the missing topics (KafkaTopicCreator, CreateTopics v2)
 php yii kafka:consume --group=all             # one forked process per group (config files + #[KafkaChannel])
 php yii kafka:handlers                        # groups, topics and handlers (incl. discovered ones)
 php yii kafka:publish <topic> '<json>' [--key=K]          # send one JSON message, waits for broker confirmation

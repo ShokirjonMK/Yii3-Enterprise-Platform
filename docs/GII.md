@@ -46,6 +46,29 @@ docker compose exec -T app php yii migrate:up && docker compose exec -T app php 
 docker compose exec -T app php yii kafka:provision      # renders the topic script (contracts.events)
 ```
 
+### Next steps from the admin panel
+
+After **Apply** the result page shows a *Next steps* card (also at **Admin → Developer tools → Enterprise Gii →
+Next steps**, `/admin/devtools/gii/next-steps`):
+
+| Step | What runs |
+|---|---|
+| Apply database migrations | `./yii migrate:up --no-interaction --force-yes` (pending migrations are listed before the run) |
+| Synchronise roles and permissions | `./yii rbac:sync` (panel overrides are kept) |
+| Create Kafka topics | `./yii kafka:provision`, then the missing registry topics are created through the Kafka protocol (CreateTopics v2, `KafkaTopicCreator`; PLAINTEXT / SSL / SASL PLAIN) |
+
+- Each step is the real console command in a child PHP process (fresh configuration — the new module's config files
+  are seen); output is streamed into `devtools_runs.log` and the run page refreshes every second (status, exit code
+  and duration per step, full console output). A failed step skips the remaining ones.
+- Runs go through the job queue (`devtools.gii.next_steps`, one attempt); without a live queue worker the request
+  runs the steps itself. One run at a time; runs without progress for 35 minutes are marked failed.
+- Same availability as Gii (non-production, flag `devtools.gii`, permission `devtools.use`); starting a run requires
+  step-up re-authentication; start and result are audited (`devtools.next_steps.started|finished`). History: last 15 runs.
+- Afterwards restart long-running processes (`docker compose restart worker consumer scheduler`) so that new job
+  handlers and Kafka consumer groups are loaded — the run page reminds about it.
+- Not covered: SCRAM/OAUTHBEARER Kafka (use the rendered script or the Kubernetes Topic Operator); partition increases
+  of existing topics are reported as warnings only.
+
 On Git Bash prefix with `MSYS_NO_PATHCONV=1`. Status column:
 
 | Status | Meaning |

@@ -106,7 +106,8 @@ final class GiiModuleCommand extends Command
         }
         $written = $c['new'] + $c['overwrite'];
         $output->writeln("<info>Written: $written file(s).</info> Next: ./yii migrate:up && ./yii rbac:sync"
-            . (in_array('event', $plan->generators, true) ? ' && ./yii kafka:provision' : ''));
+            . (in_array('event', $plan->generators, true) ? ' && ./yii kafka:provision' : '')
+            . ' (or Admin → Developer tools → Enterprise Gii → Next steps)');
         return ExitCode::OK;
     }
 }
