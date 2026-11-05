@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Web\Action\System;
+namespace App\Web\System;
 
 use App\Shared\Infrastructure\Context\RequestContext;
 use Psr\Http\Message\ResponseFactoryInterface;

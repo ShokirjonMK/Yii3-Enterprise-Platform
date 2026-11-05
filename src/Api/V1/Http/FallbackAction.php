@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Api\V1\Action;
+namespace App\Api\V1\Http;
 
 use App\Api\V1\Http\ApiResponder;
 use Psr\Http\Message\ResponseInterface;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Web\Action\Account;
+namespace App\Web\Account;
 
 use App\Platform\Audit\AuditLogger;
 use App\Platform\Identity\Domain\Identity;

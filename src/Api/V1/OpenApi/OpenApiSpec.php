@@ -8,7 +8,7 @@ use OpenApi\Attributes as OA;
 
 /**
  * Root OpenAPI 3.1 definitions for REST API v1 (info, security, shared schemas and responses).
- * Operations are documented with attributes on the action classes in src/Api/V1/Action.
+ * Operations are documented with attributes on the controllers in src/Api/V1/<Resource>/ and src/Modules/<Name>/Api/.
  */
 #[OA\OpenApi(
     openapi: '3.1.0',

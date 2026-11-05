@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Api\V1\Action\Auth\AuthController;
+use App\Api\V1\Auth\AuthController;
 use App\Api\V1\Middleware\BearerAuthentication;
 use Yiisoft\Router\Group;
 use Yiisoft\Router\Route;

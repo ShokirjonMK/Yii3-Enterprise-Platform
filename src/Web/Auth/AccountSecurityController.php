@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Web\Action\Auth;
+namespace App\Web\Auth;
 
 use App\Platform\Audit\AuditLogger;
 use App\Platform\Identity\Application\AuthenticationService;
@@ -42,7 +42,7 @@ final class AccountSecurityController
 
     public function passwordForm(): ResponseInterface
     {
-        return $this->responder->render('auth/password-change', ['forced' => in_array('password', $this->webAuth->gates(), true)], 'auth');
+        return $this->responder->render('@web/Auth/views/password-change', ['forced' => in_array('password', $this->webAuth->gates(), true)], 'auth');
     }
 
     public function passwordSubmit(ServerRequestInterface $request): ResponseInterface
@@ -50,12 +50,12 @@ final class AccountSecurityController
         $body = (array) $request->getParsedBody();
         $user = $this->user();
         if (($body['new_password'] ?? '') !== ($body['new_password_confirm'] ?? null)) {
-            return $this->responder->render('auth/password-change', ['errors' => ['new_password_confirm' => ['Passwords do not match.']], 'forced' => true], 'auth', 422);
+            return $this->responder->render('@web/Auth/views/password-change', ['errors' => ['new_password_confirm' => ['Passwords do not match.']], 'forced' => true], 'auth', 422);
         }
         try {
             $this->users->changeOwnPassword($user, (string) ($body['current_password'] ?? ''), (string) ($body['new_password'] ?? ''), $this->webAuth->sessionId());
         } catch (ValidationException $e) {
-            return $this->responder->render('auth/password-change', ['errors' => $e->errors(), 'forced' => in_array('password', $this->webAuth->gates(), true)], 'auth', 422);
+            return $this->responder->render('@web/Auth/views/password-change', ['errors' => $e->errors(), 'forced' => in_array('password', $this->webAuth->gates(), true)], 'auth', 422);
         }
         $this->webAuth->clearGate('password');
         $this->responder->success('Your password has been changed.');
@@ -156,7 +156,7 @@ final class AccountSecurityController
                 'extraFields' => '<input type="hidden" name="return" value="' . htmlspecialchars($return, ENT_QUOTES) . '">',
             ];
         }
-        $response = $this->responder->render('auth/confirm', $params, 'auth', $status);
+        $response = $this->responder->render('@web/Auth/views/confirm', $params, 'auth', $status);
         return ($params['selected'] ?? '') === 'eimzo' ? $response->withHeader('X-CSP-Connect', \App\Web\Auth\SecondFactor::EIMZO_CONNECT) : $response;
     }
 

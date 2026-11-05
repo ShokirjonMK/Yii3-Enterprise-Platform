@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Web\Action\Auth;
+namespace App\Web\Auth;
 
 use App\Platform\Identity\Application\MfaService;
 use App\Platform\Identity\Domain\Identity;
@@ -102,7 +102,7 @@ final class MfaSetupController
             $link = $this->session->get('mfa.setup.telegram');
             $params['telegramLink'] = is_array($link) && ($link['at'] ?? 0) > time() - 600 ? $link : null;
         }
-        $response = $this->responder->render('auth/mfa-setup', $params, 'auth');
+        $response = $this->responder->render('@web/Auth/views/mfa-setup', $params, 'auth');
         return $selected === MfaMethodType::EIMZO ? $response->withHeader('X-CSP-Connect', SecondFactor::EIMZO_CONNECT) : $response;
     }
 
@@ -156,9 +156,9 @@ final class MfaSetupController
             $this->afterEnrol($user);
             $this->responder->success('Telegram is connected.');
             $target = $codes !== null ? '/auth/mfa/recovery' : $this->urlNext();
-            return $this->responder->fragment('auth/_telegram-status', ['status' => 'linked'])->withHeader('HX-Redirect', $target);
+            return $this->responder->fragment('@web/Auth/views/_telegram-status', ['status' => 'linked'])->withHeader('HX-Redirect', $target);
         }
-        $response = $this->responder->fragment('auth/_telegram-status', ['status' => $status]);
+        $response = $this->responder->fragment('@web/Auth/views/_telegram-status', ['status' => $status]);
         if ($status === 'expired') {
             $this->session->remove('mfa.setup.telegram');
             return $response->withStatus(286); // htmx: stop polling
@@ -261,7 +261,7 @@ final class MfaSetupController
         if (!is_array($codes)) {
             return $this->responder->redirectToUrl($this->urlNext());
         }
-        return $this->responder->render('auth/recovery-codes', ['codes' => $codes, 'next' => $this->routeNext()], 'auth');
+        return $this->responder->render('@web/Auth/views/recovery-codes', ['codes' => $codes, 'next' => $this->routeNext()], 'auth');
     }
 
     /** @param list<string>|null $codes */
@@ -269,7 +269,7 @@ final class MfaSetupController
     {
         $next = $this->afterEnrol($user);
         if ($codes !== null) {
-            return $this->responder->render('auth/recovery-codes', ['codes' => $codes, 'next' => $next], 'auth');
+            return $this->responder->render('@web/Auth/views/recovery-codes', ['codes' => $codes, 'next' => $next], 'auth');
         }
         $this->responder->success(sprintf('%s is now set up for two-factor sign-in.', MfaMethodType::label($type)));
         return $this->responder->redirect($next);

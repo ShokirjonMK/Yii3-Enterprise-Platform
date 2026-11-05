@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Web\Action\Notifications;
+namespace App\Web\Notifications;
 
 use App\Shared\Infrastructure\Database\Paginator;
 use App\Shared\Infrastructure\Http\Responder;
@@ -34,7 +34,7 @@ final class InboxController
             $query->andWhere(['read_at' => null]);
         }
         $page = Paginator::paginate($query, (int) ($q['page'] ?? 1), 20, '-created_at', ['created_at' => 'created_at']);
-        return $this->responder->render('web/notifications/index', ['page' => $page, 'filter' => $q['filter'] ?? 'all'], 'web');
+        return $this->responder->render('@web/Notifications/views/index', ['page' => $page, 'filter' => $q['filter'] ?? 'all'], 'web');
     }
 
     public function badge(): ResponseInterface

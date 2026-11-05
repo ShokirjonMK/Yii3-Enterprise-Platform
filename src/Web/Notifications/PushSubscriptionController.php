@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Web\Action\Notifications;
+namespace App\Web\Notifications;
 
 use App\Platform\Integrations\Push\PushSubscriptions;
 use App\Platform\Settings\SettingsService;

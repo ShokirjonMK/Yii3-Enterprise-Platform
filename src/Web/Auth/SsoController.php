@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Web\Action\Auth;
+namespace App\Web\Auth;
 
 use App\Platform\FeatureFlags\FeatureFlagService;
 use App\Platform\Identity\Application\AuthenticationService;

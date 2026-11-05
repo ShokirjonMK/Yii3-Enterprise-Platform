@@ -32,7 +32,7 @@ final class SecondFactor
         private readonly SettingsService $settings,
     ) {}
 
-    /** View parameters for resources/views/auth/_second-factor.php */
+    /** View parameters for src/Web/Auth/views/_second-factor.php */
     public function params(User $user, ?string $selected, string $purpose): array
     {
         $usable = $this->mfa->usable($user);

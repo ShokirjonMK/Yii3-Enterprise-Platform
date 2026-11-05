@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Api\V1\Action\Users\UsersController;
+use App\Api\V1\Users\UsersController;
 use App\Api\V1\Middleware\BearerAuthentication;
 use App\Api\V1\Middleware\RequireApiPermission;
 use Yiisoft\Router\Group;

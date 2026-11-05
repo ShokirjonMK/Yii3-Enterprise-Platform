@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Web\Action\Account;
+namespace App\Web\Account;
 
 use App\Platform\Appearance\ThemeService;
 use App\Platform\Identity\Domain\Identity;
@@ -29,7 +29,7 @@ final class AppearanceController
     public function show(): ResponseInterface
     {
         $user = $this->identity()->user;
-        return $this->responder->render('web/account/appearance', [
+        return $this->responder->render('@web/Account/views/appearance', [
             'themes' => $this->themes->registry()->all(),
             'allowed' => $this->themes->userChoiceAllowed(),
             'choice' => $this->themes->userChoice($user->id),

@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use App\Shared\Infrastructure\Http\DomainErrorMiddleware;
-use App\Web\Action\Auth\AccountSecurityController;
-use App\Web\Action\Auth\LoginController;
-use App\Web\Action\Auth\MfaSetupController;
-use App\Web\Action\Auth\TelegramWebhookController;
-use App\Web\Action\Auth\SsoController;
+use App\Web\Auth\AccountSecurityController;
+use App\Web\Auth\LoginController;
+use App\Web\Auth\MfaSetupController;
+use App\Web\Auth\TelegramWebhookController;
+use App\Web\Auth\SsoController;
 use App\Web\Middleware\AuthContextMiddleware;
 use App\Web\Middleware\LocaleMiddleware;
 use App\Web\Middleware\RequireLogin;

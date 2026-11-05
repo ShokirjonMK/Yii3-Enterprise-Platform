@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Web\Action\System;
+namespace App\Web\System;
 
 use App\Platform\Monitoring\MetricsCollector;
 use App\Platform\Monitoring\Metrics;

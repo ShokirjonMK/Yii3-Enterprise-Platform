@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Api\V1\Action\Docs\DocsController;
-use App\Api\V1\Action\FallbackAction;
+use App\Api\V1\System\DocsController;
+use App\Api\V1\Http\FallbackAction;
 use App\Api\V1\Http\JsonBadRequestHandler;
 use App\Api\V1\Middleware\ContentTypeGuard;
 use App\Api\V1\Middleware\CorsMiddleware;
@@ -16,8 +16,8 @@ use Yiisoft\Router\Group;
 use Yiisoft\Router\Route;
 
 /**
- * REST API v1: stateless (no session, no cookies, no CSRF). Resource files live in
- * config/routes/api-v1/*.php (loaded in name order) and inherit this pipeline:
+ * REST API v1: stateless (no session, no cookies, no CSRF). Route files live next to the controllers —
+ * src/Api/V1/<Resource>/routes.php and src/Modules/<Name>/Api/routes.php — and inherit this pipeline:
  *
  *   JSON errors > api.v1 flag (404 when off) > CORS (api.cors_origins, preflight) > rate limit
  *   (X-RateLimit-*, 429) > JSON errors (inner, keeps rate/CORS headers) > 415 guard > JSON body parser
@@ -26,7 +26,7 @@ use Yiisoft\Router\Route;
  * The trailing catch-all turns unmatched paths into JSON 404 / 405 (+Allow) inside the pipeline.
  */
 $resources = \App\Platform\FeatureFlags\FeatureRegistry::loadRoutes('api', [
-    ...(glob(__DIR__ . '/api-v1/*.php') ?: []),
+    ...(glob(dirname(__DIR__, 2) . '/src/Api/V1/*/routes.php') ?: []),
     ...(glob(dirname(__DIR__, 2) . '/src/Modules/*/Api/routes.php') ?: []),
 ]);
 

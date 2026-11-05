@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Web\Action\System;
+namespace App\Web\System;
 
 use App\Environment;
 use Psr\Http\Message\ServerRequestInterface;

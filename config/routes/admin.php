@@ -25,7 +25,6 @@ $src = dirname(__DIR__, 2) . '/src';
 $sections = \App\Platform\FeatureFlags\FeatureRegistry::loadRoutes('admin', [
     ...(glob($src . '/Admin/*/routes.php') ?: []),
     ...(glob($src . '/Modules/*/Admin/routes.php') ?: []),
-    ...(glob(__DIR__ . '/admin/*.php') ?: []),
 ]);
 
 return [

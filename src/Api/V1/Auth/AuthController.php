@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Api\V1\Action\Auth;
+namespace App\Api\V1\Auth;
 
 use App\Api\V1\Http\ApiException;
 use App\Api\V1\Http\ApiRequest;

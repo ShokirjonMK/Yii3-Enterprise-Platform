@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Api\V1\Action\Users;
+namespace App\Api\V1\Users;
 
 use App\Api\V1\Http\ApiRequest;
 use App\Api\V1\Http\ApiResponder;

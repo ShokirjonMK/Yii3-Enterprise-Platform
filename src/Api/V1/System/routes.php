@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Api\V1\Action\Auth\AuthController;
-use App\Api\V1\Action\Docs\DocsController;
+use App\Api\V1\Auth\AuthController;
+use App\Api\V1\System\DocsController;
 use Yiisoft\Router\Route;
 
 /** Public system endpoints of API v1. */

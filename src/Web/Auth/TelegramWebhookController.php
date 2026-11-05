@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Web\Action\Auth;
+namespace App\Web\Auth;
 
 use App\Platform\Identity\Mfa\TelegramLink;
 use App\Platform\Settings\SettingsService;

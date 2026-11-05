@@ -7,7 +7,7 @@ use App\Shared\Infrastructure\Http\ClientIp;
 use App\Shared\Infrastructure\Http\CorrelationIdMiddleware;
 use App\Shared\Infrastructure\Http\SecurityHeadersMiddleware;
 use App\Platform\Monitoring\Http\MetricsMiddleware;
-use App\Web\Action\System\NotFoundHandler;
+use App\Web\System\NotFoundHandler;
 use App\Web\Middleware\LocaleMiddleware;
 use App\Web\Middleware\RequireRecentAuth;
 use Yiisoft\Definitions\DynamicReference;

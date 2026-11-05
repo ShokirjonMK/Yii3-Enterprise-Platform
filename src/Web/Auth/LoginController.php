@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Web\Action\Auth;
+namespace App\Web\Auth;
 
 use App\Platform\FeatureFlags\FeatureFlagService;
 use App\Platform\Identity\Application\AuthenticationService;
@@ -186,7 +186,7 @@ final class LoginController
             'rememberDays' => $this->mfa->policy($user)->rememberDays,
             'routes' => ['submit' => 'auth.mfa.submit', 'send' => 'auth.mfa.send', 'self' => 'auth.mfa', 'passkey' => 'auth.mfa.passkey', 'eimzo' => 'auth.mfa.eimzo', 'cancel' => 'auth.login'],
         ];
-        $response = $this->responder->render('auth/mfa', $extra + $params, 'auth', $status);
+        $response = $this->responder->render('@web/Auth/views/mfa', $extra + $params, 'auth', $status);
         return $params['selected'] === 'eimzo' ? $response->withHeader('X-CSP-Connect', SecondFactor::EIMZO_CONNECT) : $response;
     }
 
@@ -204,7 +204,7 @@ final class LoginController
 
     private function page(array $params = [], int $status = 200): ResponseInterface
     {
-        return $this->responder->render('auth/login', $params + [
+        return $this->responder->render('@web/Auth/views/login', $params + [
             'localEnabled' => $this->flags->isEnabled('auth.local_login'),
             'providers' => $this->flags->isEnabled('auth.sso') ? $this->sso->enabledForLogin() : [],
         ], 'auth', $status);

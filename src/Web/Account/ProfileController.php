@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Web\Action\Account;
+namespace App\Web\Account;
 
 use App\Platform\Audit\AuditLogger;
 use App\Platform\Identity\Application\ApiTokenService;
@@ -44,7 +44,7 @@ final class ProfileController
     public function show(): ResponseInterface
     {
         $user = $this->user();
-        return $this->responder->render('web/account/profile', ['user' => $user, 'roles' => $this->access->rolesOf($user->id)], 'web');
+        return $this->responder->render('@web/Account/views/profile', ['user' => $user, 'roles' => $this->access->rolesOf($user->id)], 'web');
     }
 
     public function update(ServerRequestInterface $request): ResponseInterface
@@ -65,7 +65,7 @@ final class ProfileController
             $errors['locale'][] = 'Unsupported language.';
         }
         if ($errors !== []) {
-            return $this->responder->render('web/account/profile', ['user' => $user, 'roles' => $this->access->rolesOf($user->id), 'errors' => $errors], 'web', 422);
+            return $this->responder->render('@web/Account/views/profile', ['user' => $user, 'roles' => $this->access->rolesOf($user->id), 'errors' => $errors], 'web', 422);
         }
         $this->users->update($user->id, ['full_name' => $fullName, 'phone' => $phone === '' ? null : $phone, 'locale' => $locale]);
         $this->session->set('locale', $locale);
@@ -79,7 +79,7 @@ final class ProfileController
         $user = $this->user();
         $newToken = $this->session->get('new_token');
         $this->session->remove('new_token');
-        return $this->responder->render('web/account/security', [
+        return $this->responder->render('@web/Account/views/security', [
             'user' => $user,
             'sessions' => $this->sessions->activeForUser($user->id),
             'currentSession' => SessionRegistry::hash((string) $this->webAuth->sessionId()),
@@ -153,7 +153,7 @@ final class ProfileController
         }
         $codes = $this->mfa->regenerateRecoveryCodes($user->id);
         $this->audit->security('auth.mfa.codes_regenerated', 'success', [], 'notice', $user->id);
-        return $this->responder->render('auth/recovery-codes', ['codes' => $codes, 'next' => 'web.security'], 'auth');
+        return $this->responder->render('@web/Auth/views/recovery-codes', ['codes' => $codes, 'next' => 'web.security'], 'auth');
     }
 
     public function disableMfa(): ResponseInterface

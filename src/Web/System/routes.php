@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Web\Action\System\HealthController;
-use App\Web\Action\System\MetricsAction;
+use App\Web\System\HealthController;
+use App\Web\System\MetricsAction;
 use Yiisoft\Router\Route;
 
 /**
@@ -17,5 +17,5 @@ return [
     Route::get('/health/ready')->action([HealthController::class, 'ready'])->name('system.health.ready'),
     Route::get('/metrics')->action(MetricsAction::class)->name('system.metrics'),
     // design theme stylesheets (immutable per ?v=<hash>; built-in from themes/, uploaded from the database)
-    Route::get('/appearance/{code:[a-z0-9][a-z0-9-]{1,39}}.css')->action([\App\Web\Action\System\ThemeCssAction::class, 'css'])->name('system.theme.css'),
+    Route::get('/appearance/{code:[a-z0-9][a-z0-9-]{1,39}}.css')->action([\App\Web\System\ThemeCssAction::class, 'css'])->name('system.theme.css'),
 ];

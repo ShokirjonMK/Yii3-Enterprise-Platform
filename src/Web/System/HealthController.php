@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Web\Action\System;
+namespace App\Web\System;
 
 use App\Platform\Monitoring\HealthChecker;
 use App\Shared\Infrastructure\Http\Responder;

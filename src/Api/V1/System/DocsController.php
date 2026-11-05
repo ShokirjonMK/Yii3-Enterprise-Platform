@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Api\V1\Action\Docs;
+namespace App\Api\V1\System;
 
 use App\Api\V1\OpenApi\OpenApiGenerator;
 use App\Environment;
@@ -49,7 +49,7 @@ final class DocsController
     {
         $specUrl = '/api/v1/openapi.json';
         ob_start();
-        require $this->aliases->get('@views/api/docs.php');
+        require $this->aliases->get('@api/V1/System/views/docs.php');
         $html = (string) ob_get_clean();
         $r = $this->responses->createResponse(200)
             ->withHeader('Content-Type', 'text/html; charset=utf-8')

@@ -74,7 +74,7 @@ final class SecurityPosture
 
         $token = (string) ($this->platform['metricsToken'] ?? '');
         $add('metrics_token', 'Metrics endpoint protected', $token !== '' ? (strlen($token) >= 24 ? 'pass' : 'warn') : ($prod ? 'fail' : 'warn'),
-            $token === '' ? 'METRICS_TOKEN is not set: /metrics relies on network policy only.' : 'METRICS_TOKEN is set (' . strlen($token) . ' characters).', 'src/Web/Action/System/MetricsAuth.php');
+            $token === '' ? 'METRICS_TOKEN is not set: /metrics relies on network policy only.' : 'METRICS_TOKEN is set (' . strlen($token) . ' characters).', 'src/Web/System/MetricsAuth.php');
 
         $secret = (string) $this->platform['secret'];
         $strong = strlen($secret) >= 64 && ctype_xdigit($secret) || strlen($secret) >= 44;

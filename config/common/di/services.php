@@ -57,7 +57,7 @@ return [
     Metrics::class => [
         '__construct()' => ['redisConfig' => $platform['redis']],
     ],
-    App\Web\Action\System\MetricsAuth::class => [
+    App\Web\System\MetricsAuth::class => [
         '__construct()' => ['token' => $platform['observability']['metricsToken']],
     ],
     HealthChecker::class => [
