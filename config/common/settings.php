@@ -98,7 +98,7 @@ return [
     'retention.audit_months' => ['type' => 'int', 'default' => 84, 'min' => 12, 'max' => 240, 'group' => 'Retention', 'label' => 'Audit log retention (months)', 'critical' => true],
     'retention.integration_logs_days' => ['type' => 'int', 'default' => 30, 'min' => 1, 'max' => 365, 'group' => 'Retention', 'label' => 'Integration log retention (days)'],
     'retention.jobs_days' => ['type' => 'int', 'default' => 14, 'min' => 1, 'max' => 365, 'group' => 'Retention', 'label' => 'Finished job retention (days)'],
-    'retention.login_attempts_days' => ['type' => 'int', 'default' => 90, 'min' => 7, 'max' => 730, 'group' => 'Retention', 'label' => 'Login attempt retention (days)'],
+    'retention.login_attempts_days' => ['type' => 'int', 'default' => 90, 'min' => 7, 'max' => 3650, 'group' => 'Retention', 'label' => 'Login history retention (days)'],
     'retention.activity_days' => ['type' => 'int', 'default' => 90, 'min' => 1, 'max' => 3650, 'group' => 'Retention', 'label' => 'User activity log retention (days)'],
     'retention.app_logs_days' => ['type' => 'int', 'default' => 30, 'min' => 1, 'max' => 3650, 'group' => 'Retention', 'label' => 'Application log retention (days)'],
     'retention.backups_days' => ['type' => 'int', 'default' => 30, 'min' => 1, 'max' => 3650, 'group' => 'Retention', 'label' => 'Backup retention (days)'],

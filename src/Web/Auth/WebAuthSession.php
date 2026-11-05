@@ -46,7 +46,7 @@ final class WebAuthSession
         if ($result->mfaRequired && $trustedDevice) {
             // "remember this device" (policy remember_days > 0): the second factor was proven on this browser recently
             $this->audit->security('auth.mfa.trusted_device', 'success', [], 'info', $result->user->id, $result->user->username);
-            $this->complete($result->user, $result->method, true, $result->mustChangePassword, $result->mfaSetupRequired);
+            $this->complete($result->user, $result->method, true, $result->mustChangePassword, $result->mfaSetupRequired, 'trusted_device');
             return $this->nextRoute();
         }
         if ($result->mfaRequired) {
@@ -91,18 +91,19 @@ final class WebAuthSession
         return 5 - $p['attempts'];
     }
 
-    public function completePending(): string
+    /** @param string|null $mfaMethod the second factor that was verified (for the sign-in history) */
+    public function completePending(?string $mfaMethod = null): string
     {
         $p = (array) $this->session->get(self::PENDING);
         $this->session->remove(self::PENDING);
         $user = $this->users->find((string) $p['user_id']);
         $result = $this->auth->result($user, (string) $p['method']);
         // mfa_setup gate: the role policy may require a method the user has not enrolled yet
-        $this->complete($user, (string) $p['method'], true, (bool) ($p['must_change'] ?? false), $result->mfaSetupRequired);
+        $this->complete($user, (string) $p['method'], true, (bool) ($p['must_change'] ?? false), $result->mfaSetupRequired, $mfaMethod);
         return $this->nextRoute();
     }
 
-    public function complete(User $user, string $method, bool $mfaVerified, bool $mustChange, bool $mfaSetup): void
+    public function complete(User $user, string $method, bool $mfaVerified, bool $mustChange, bool $mfaSetup, ?string $mfaMethod = null): void
     {
         $this->session->regenerateID();
         $this->currentUser->login(new Identity($user));
@@ -118,7 +119,7 @@ final class WebAuthSession
         $this->session->set('auth.method', $method);
         $this->context->setUserId($user->id);
         $this->context->setTenantId($user->tenantId);
-        $this->auth->recordSuccess($user, $method);
+        $this->auth->recordSuccess($user, $method, $mfaMethod);
     }
 
     /** @return list<string> */

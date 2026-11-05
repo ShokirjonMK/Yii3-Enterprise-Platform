@@ -57,6 +57,9 @@ _Last update: 2026-11-05 — Author: ShokirjonMK_
 | 2FA Telegram (one-button linking, polling/webhook) | TESTED update handling; live bot NOT RUN (no bot token in dev) |
 | 2FA SMS, voice call (Twilio / HTTPS gateway), E-IMZO (E-IMZO-SERVER) | IMPLEMENTED · UNVERIFIED — need provider credentials / E-IMZO-SERVER |
 | Dynamic RBAC (roles/permissions from the admin panel, overrides kept by sync, escalation guards) — see [RBAC.md](RBAC.md) | TESTED (DynamicRbacTest, RbacManageTest) |
+| Login history: every user sees the own sign-ins (Account → Login history, failed attempts on the account included); `users.login_history` (auditor, security/platform admin, superadmin) sees everybody (Admin → Users → Login history, tenant-scoped without `tenants.cross`); IP, device, method, second factor, reason | TESTED (LoginHistoryTest, LoginHistoryFlowTest) |
+| Module-first project structure (folder = feature; admin sections, web areas, API resources, business modules) — see [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) | TESTED (all suites in chunks) |
+| Break-glass 2FA reset `./yii user:mfa-reset` (audited, critical) | TESTED (UserMfaResetCommandTest) |
 | Design themes (7 built-in packs, upload/activate, per-tenant/user) — see [THEMES.md](THEMES.md) | TESTED (ThemeServiceTest, AppearanceTest) |
 | Gii "Next steps" from the admin panel (migrate:up, rbac:sync, Kafka topic creation via CreateTopics; live log, history, audit) — see [GII.md](GII.md) | TESTED (GiiNextStepsTest incl. real broker, GiiNextStepsFlowTest via queue worker) · SASL PLAIN path UNVERIFIED (no SASL broker in dev) |
 | RBAC default deny, last-superadmin guard, tenant isolation (IDOR → 404), suspended tenants cannot log in | TESTED |

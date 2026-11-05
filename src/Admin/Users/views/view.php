@@ -36,6 +36,7 @@ $canManage = $can('users.manage') && $mayAdminister;
     </div>
     <?php if ($canManage && !$isSelf): ?>
     <div class="page-head__actions">
+        <?php if ($can('users.login_history')): ?><a class="btn" href="<?= $h->url('admin.users.login_history', [], ['user' => $user->id]) ?>"><?= $h->icon('clock') ?> <?= $h->t('Login history') ?></a><?php endif ?>
         <a class="btn" href="<?= $h->url('admin.users.edit', ['id' => $user->id]) ?>"><?= $h->icon('edit') ?> <?= $h->t('Edit') ?></a>
         <?php if ($user->status === 'active'): ?>
             <form method="post" action="<?= $h->url('admin.users.block', ['id' => $user->id]) ?>" data-confirm="<?= $h->t('Block this user? All sessions and API tokens will be revoked.') ?>"><?= $csrfInput ?><button class="btn btn--danger" type="submit"><?= $h->icon('lock') ?> <?= $h->t('Block') ?></button></form>

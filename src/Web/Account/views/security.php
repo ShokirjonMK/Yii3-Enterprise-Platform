@@ -25,6 +25,7 @@ $csrfField = '<input type="hidden" name="_csrf" value="' . $h->e($csrf) . '">';
 <div class="page-head">
     <div class="page-head__titles"><h1><?= $h->t('Security & sessions') ?></h1></div>
     <div class="page-head__actions">
+        <a class="btn" href="<?= $h->url('web.login_history') ?>"><?= $h->icon('clock') ?> <?= $h->t('Login history') ?></a>
         <?php if ($user->canUsePassword()): ?><a class="btn" href="<?= $h->url('auth.password.change') ?>"><?= $h->icon('lock') ?> <?= $h->t('Change password') ?></a><?php endif ?>
     </div>
 </div>

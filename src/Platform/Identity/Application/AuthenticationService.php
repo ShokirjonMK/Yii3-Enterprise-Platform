@@ -43,7 +43,7 @@ final class AuthenticationService
 
         $wait = $this->throttle->check($login, $ip);
         if ($wait !== null) {
-            $this->throttle->record($login, $ip, false, 'throttled');
+            $this->throttle->record($login, $ip, false, 'throttled', userAgent: $this->context->userAgent());
             $this->audit->security('auth.login.throttled', 'denied', ['login' => $login], 'warning');
             throw new TooManyRequestsException('Too many login attempts. Please try again later.', $wait);
         }
@@ -55,7 +55,7 @@ final class AuthenticationService
         }
 
         if ($user->isLocked()) {
-            $this->throttle->record($login, $ip, false, 'locked');
+            $this->throttle->record($login, $ip, false, 'locked', user: $user, userAgent: $this->context->userAgent());
             $this->audit->security('auth.login.locked', 'denied', ['login' => $login], 'warning', $user->id, $user->username);
             throw new TooManyRequestsException('The account is temporarily locked after repeated failed attempts.', max(60, $user->lockedUntil->getTimestamp() - time()));
         }
@@ -100,11 +100,12 @@ final class AuthenticationService
         );
     }
 
-    public function recordSuccess(User $user, string $method): void
+    /** @param string|null $mfaMethod second factor used (totp, webauthn, email, …, trusted_device), null = none */
+    public function recordSuccess(User $user, string $method, ?string $mfaMethod = null): void
     {
         $this->throttle->registerSuccess($user->id, $this->context->ip());
-        $this->throttle->record($user->username, $this->context->ip(), true, 'ok', $method);
-        $this->audit->security('auth.login.success', 'success', ['method' => $method], 'info', $user->id, $user->username);
+        $this->throttle->record($user->username, $this->context->ip(), true, 'ok', $method, $user, $this->context->userAgent(), $mfaMethod);
+        $this->audit->security('auth.login.success', 'success', array_filter(['method' => $method, 'mfa' => $mfaMethod]), 'info', $user->id, $user->username);
     }
 
     public function findForBreakGlass(string $login): ?User
@@ -112,9 +113,9 @@ final class AuthenticationService
         return $this->users->findByLogin($login);
     }
 
-    public function recordMfaFailure(User $user): void
+    public function recordMfaFailure(User $user, ?string $mfaMethod = null): void
     {
-        $this->throttle->record($user->username, $this->context->ip(), false, 'bad_mfa', 'mfa');
+        $this->throttle->record($user->username, $this->context->ip(), false, 'bad_mfa', 'mfa', $user, $this->context->userAgent(), $mfaMethod);
         $this->audit->security('auth.mfa.failure', 'failure', [], 'notice', $user->id, $user->username);
     }
 
@@ -125,7 +126,7 @@ final class AuthenticationService
 
     private function fail(string $login, ?User $user, string $reason): never
     {
-        $this->throttle->record($login, $this->context->ip(), false, $reason);
+        $this->throttle->record($login, $this->context->ip(), false, $reason, user: $user, userAgent: $this->context->userAgent());
         $this->audit->security('auth.login.failure', 'failure', ['login' => $login, 'reason' => $reason], 'notice', $user?->id, $user?->username);
         throw ValidationException::single('login', self::GENERIC_ERROR);
     }

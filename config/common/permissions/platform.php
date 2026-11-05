@@ -20,6 +20,7 @@ return [
         'users.view' => 'View users and organizations',
         'users.manage' => 'Create, update, block users and organizations',
         'users.impersonate' => 'Sign in as another user (audited, MFA re-auth)',
+        'users.login_history' => 'View the sign-in history of all users (own history is always visible)',
         'sessions.revoke' => 'Terminate other users\' sessions',
 
         'auth.view' => 'View authentication settings and SSO providers',
@@ -101,7 +102,7 @@ return [
             'description' => 'Read-only access to all administration data and the audit log',
             'children' => ['user'],
             'permissions' => [
-                'admin.access', 'users.view', 'auth.view', 'rbac.view', 'tenants.view', 'api.view', 'integrations.view',
+                'admin.access', 'users.view', 'users.login_history', 'auth.view', 'rbac.view', 'tenants.view', 'api.view', 'integrations.view',
                 'notifications.view', 'workflow.view', 'jobs.view', 'kafka.view', 'db.view', 'redis.view', 'storage.view',
                 'infra.view', 'deploy.view', 'monitoring.view', 'security.view', 'backup.view', 'audit.view', 'audit.export',
                 'settings.view', 'modules.view', 'incidents.view',

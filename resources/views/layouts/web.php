@@ -65,7 +65,7 @@ $this->beginPage();
             <?php if ($identity): ?>
                 <?php if ($can('projects.view') && $feature('admin.projects')): ?><a href="<?= $h->url('web.projects') ?>"<?= $h->isRoute('web.projects') ? ' aria-current="page"' : '' ?>><?= $h->t('Projects') ?></a><?php endif ?>
                 <a href="<?= $h->url('web.notifications') ?>"<?= $h->isRoute('web.notifications') ? ' aria-current="page"' : '' ?>><?= $h->t('Notifications') ?></a>
-                <a href="<?= $h->url('web.profile') ?>"<?= $h->isRoute('web.profile', 'web.security', 'web.appearance') ? ' aria-current="page"' : '' ?>><?= $h->t('Profile') ?></a>
+                <a href="<?= $h->url('web.profile') ?>"<?= $h->isRoute('web.profile', 'web.security', 'web.appearance', 'web.login_history') ? ' aria-current="page"' : '' ?>><?= $h->t('Profile') ?></a>
             <?php endif ?>
             <a href="/api/docs" hx-boost="false"><?= $h->t('API') ?></a>
         </nav>

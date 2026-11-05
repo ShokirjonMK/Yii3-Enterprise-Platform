@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Web\Account\AppearanceController;
+use App\Web\Account\LoginHistoryController;
 use App\Web\Account\MfaMethodsController;
 use App\Web\Account\ProfileController;
 use App\Web\Middleware\RequireRecentAuth;
@@ -26,6 +27,7 @@ return [
     Route::post('/account/mfa/preferred')->action([MfaMethodsController::class, 'preferred'])->name('web.security.mfa.preferred'),
     Route::post('/account/mfa/devices/{id:[0-9a-f-]{36}}/revoke')->action([MfaMethodsController::class, 'revokeDevice'])->name('web.security.mfa.device.revoke'),
     Route::post('/account/mfa/devices/revoke-all')->action([MfaMethodsController::class, 'revokeAllDevices'])->name('web.security.mfa.devices.revoke_all'),
+    Route::get('/account/login-history')->action([LoginHistoryController::class, 'index'])->name('web.login_history'),
     Route::get('/account/appearance')->action([AppearanceController::class, 'show'])->name('web.appearance'),
     Route::post('/account/appearance')->action([AppearanceController::class, 'save'])->name('web.appearance.save'),
 ];

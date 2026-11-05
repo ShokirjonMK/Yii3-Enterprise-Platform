@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Admin\Users\LoginHistoryController;
 use App\Admin\Users\OrganizationsController;
 use App\Admin\Users\UsersController;
 use App\Web\Middleware\RequirePermission;
@@ -16,6 +17,7 @@ $manage = RequirePermission::for('users.manage');
 return [
     Group::create('/users')->middleware(RequirePermission::for('users.view'))->routes(
         Route::get('')->action([UsersController::class, 'index'])->name('admin.users'),
+        Route::get('/login-history')->middleware(RequirePermission::for('users.login_history'))->action([LoginHistoryController::class, 'index'])->name('admin.users.login_history'),
         Route::get('/create')->middleware($manage)->action([UsersController::class, 'createForm'])->name('admin.users.create'),
         Route::post('/create')->middleware($manage)->action([UsersController::class, 'store'])->name('admin.users.store'),
         Route::get("/$uuid")->action([UsersController::class, 'view'])->name('admin.users.view'),

@@ -144,9 +144,10 @@ final class LoginController
             return $this->responder->redirect('auth.login');
         }
         $body = (array) $request->getParsedBody();
+        $factor = self::factor($body);
         if (!$this->secondFactor->verify($user, $request, 'login')) {
             $left = $this->webAuth->registerMfaFailure();
-            $this->auth->recordMfaFailure($user);
+            $this->auth->recordMfaFailure($user, $factor);
             if ($left === 0) {
                 $this->responder->error('Too many invalid codes. Please sign in again.');
                 return $this->responder->redirect('auth.login');
@@ -155,7 +156,7 @@ final class LoginController
             return $this->mfaPage($user, $method !== '' ? $method : null, ['error' => 'Invalid verification code.', 'left' => $left], 422);
         }
         $remember = !empty($body['remember']) ? $this->mfa->policy($user)->rememberDays : 0;
-        $response = $this->continue($this->webAuth->completePending());
+        $response = $this->continue($this->webAuth->completePending($factor));
         if ($remember > 0) {
             $token = $this->devices->issue($user->id, $remember, (string) $this->context->userAgent(), $this->context->ip());
             $response = $response->withAddedHeader('Set-Cookie', sprintf('%s=%s; Path=/; Max-Age=%d; HttpOnly; SameSite=Lax%s',
@@ -208,5 +209,15 @@ final class LoginController
             'localEnabled' => $this->flags->isEnabled('auth.local_login'),
             'providers' => $this->flags->isEnabled('auth.sso') ? $this->sso->enabledForLogin() : [],
         ], 'auth', $status);
+    }
+
+    /** Second factor named by the 2FA form (legacy form without "method": 6 digits = authenticator, else recovery code). */
+    private static function factor(array $body): string
+    {
+        $method = is_string($body['method'] ?? null) ? $body['method'] : '';
+        if ($method !== '' && preg_match('/^[a-z_]{2,32}$/', $method) === 1) {
+            return $method;
+        }
+        return preg_match('/^\s*\d{6}\s*$/', is_string($body['code'] ?? null) ? $body['code'] : '') === 1 ? 'totp' : 'recovery';
     }
 }

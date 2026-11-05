@@ -70,3 +70,16 @@ an environment variable with the same purpose overrides the field and is marked 
 credentials yet — configure it in **21 System Settings** or the section itself; nothing is simulated.
 
 — Author: ShokirjonMK
+
+## Login history
+
+- **Every user** — Account → *Login history* (`/account/login-history`, also linked from *Security & sessions*): own
+  successful sign-ins and failed attempts on the account (wrong password, wrong 2FA code, locked, …) with time, IP,
+  device, method (password / SSO / API) and the second factor used. Unknown entries → change the password and end
+  the other sessions.
+- **Administrators** — Admin → 02 Users & Organizations → *Login history* (`/admin/users/login-history`, also the
+  *Login history* button on a user): every attempt, filters by user, IP prefix, result, method / second factor and
+  period. Permission `users.login_history` (role `auditor`, inherited by `security_admin`, `devops_sre`,
+  `platform_admin`; `superadmin` always). Without `tenants.cross` only the own tenant is shown.
+- Retention: System Settings → Retention → *Login history retention (days)* (default 90).
+

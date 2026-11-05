@@ -6,6 +6,7 @@ namespace App\Platform\Identity\Application;
 
 use App\Shared\Infrastructure\RateLimit\RedisRateLimiter;
 use DateTimeImmutable;
+use App\Platform\Identity\Domain\User;
 use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Db\Expression\Expression;
 use Yiisoft\Db\Query\Query;
@@ -50,14 +51,30 @@ final class LoginThrottle
         return null;
     }
 
-    public function record(string $username, ?string $ip, bool $success, string $reason, string $method = 'password'): void
-    {
+    /**
+     * One row per sign-in attempt = the sign-in history (Account → Login history, Admin → Users → Login history).
+     * $user links the row to the account (failed attempts on an existing account included).
+     */
+    public function record(
+        string $username,
+        ?string $ip,
+        bool $success,
+        string $reason,
+        string $method = 'password',
+        ?User $user = null,
+        ?string $userAgent = null,
+        ?string $mfaMethod = null,
+    ): void {
         $this->db->createCommand()->insert('login_attempts', [
             'username' => mb_substr($username, 0, 254),
             'ip' => $ip,
             'success' => $success,
             'reason' => $reason,
-            'method' => $method,
+            'method' => mb_substr($method, 0, 32),
+            'user_id' => $user?->id,
+            'tenant_id' => $user?->tenantId,
+            'user_agent' => $userAgent === null ? null : mb_substr($userAgent, 0, 500),
+            'mfa_method' => $mfaMethod === null ? null : mb_substr($mfaMethod, 0, 32),
         ])->execute();
     }
 

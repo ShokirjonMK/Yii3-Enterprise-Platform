@@ -241,8 +241,9 @@ final class AuthController
             if ($code === '') {
                 throw new ApiException(401, 'mfa_required', 'This account uses multi-factor authentication: send mfa_code (TOTP or recovery code).');
             }
+            $factor = preg_match('/^\d{6}$/', (string) $code) === 1 ? 'totp' : 'recovery';
             if (!$this->mfa->verifyForUser($user, (string) $code)) {
-                $this->auth->recordMfaFailure($user);
+                $this->auth->recordMfaFailure($user, $factor);
                 throw new ApiException(401, 'invalid_mfa_code', 'The MFA code is invalid or has already been used.');
             }
         } elseif ($result->mfaSetupRequired) {
@@ -252,7 +253,7 @@ final class AuthController
             throw new ApiException(403, 'password_change_required', 'The password must be changed in the web application before API access is granted.');
         }
 
-        $this->auth->recordSuccess($user, 'api_password');
+        $this->auth->recordSuccess($user, 'api_password', $factor ?? null);
         $pair = $this->tokens->issuePair($user, $scopes);
         $this->audit->security('api.token.issued', 'success', ['grant' => 'password', 'scope' => $pair['scope']], 'info', $user->id, $user->username);
         return $this->responder->data($pair);
