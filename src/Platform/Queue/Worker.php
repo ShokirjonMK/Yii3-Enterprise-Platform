@@ -47,13 +47,14 @@ final class Worker
 
     /**
      * @param list<string> $queues
-     * @return int processed jobs
+     * @return int jobs handled by this run (the worker object may be reused, e.g. in tests: counters are per run)
      */
     public function run(array $queues, float $sleep = 1.0, int $maxJobs = 1000, int $memoryLimitMb = 256, bool $once = false): int
     {
         $this->installSignals();
         $this->register($queues);
         $this->logger->info('Worker {id} started for queues {queues}', ['id' => $this->id, 'queues' => implode(',', $queues)]);
+        $before = $this->processed + $this->failed;
 
         try {
             while (!$this->stop) {
@@ -67,15 +68,15 @@ final class Worker
                     continue;
                 }
                 $this->execute($job);
-                if ($once || $this->processed + $this->failed >= $maxJobs || memory_get_usage(true) > $memoryLimitMb * 1024 * 1024) {
+                if ($once || $this->processed + $this->failed - $before >= $maxJobs || memory_get_usage(true) > $memoryLimitMb * 1024 * 1024) {
                     break;
                 }
             }
         } finally {
             $this->db->createCommand()->update('workers', ['status' => 'stopped', 'current_job_id' => null, 'heartbeat_at' => new Expression('now()')], ['id' => $this->id])->execute();
-            $this->logger->info('Worker {id} stopped after {n} jobs', ['id' => $this->id, 'n' => $this->processed + $this->failed]);
+            $this->logger->info('Worker {id} stopped after {n} jobs', ['id' => $this->id, 'n' => $this->processed + $this->failed - $before]);
         }
-        return $this->processed + $this->failed;
+        return $this->processed + $this->failed - $before;
     }
 
     public function execute(array $job): void

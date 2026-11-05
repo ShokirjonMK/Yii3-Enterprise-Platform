@@ -51,10 +51,12 @@ final class ApiAuthTest extends ApiTestCase
         $base = ['grant_type' => 'password', 'username' => $u['username'], 'password' => $u['password']];
         $this->assertError($this->api('POST', '/api/v1/auth/token', null, $base), 401, 'mfa_required');
         $this->assertError($this->api('POST', '/api/v1/auth/token', null, $base + ['mfa_code' => '000000']), 401, 'invalid_mfa_code');
-        $r = $this->api('POST', '/api/v1/auth/token', null, $base + ['mfa_code' => Fixtures::totp((string) $u['mfa_secret'])]);
+        $code = Fixtures::totp((string) $u['mfa_secret']);
+        $r = $this->api('POST', '/api/v1/auth/token', null, $base + ['mfa_code' => $code]);
         self::assertSame(200, $r->getStatusCode(), $this->http->body());
-        // TOTP replay protection: the same code cannot be used twice
-        $this->assertError($this->api('POST', '/api/v1/auth/token', null, $base + ['mfa_code' => Fixtures::totp((string) $u['mfa_secret'])]), 401, 'invalid_mfa_code');
+        // TOTP replay protection: the same code cannot be used twice (reuse the exact code — a fresh one could
+        // belong to the next 30 s step and be valid)
+        $this->assertError($this->api('POST', '/api/v1/auth/token', null, $base + ['mfa_code' => $code]), 401, 'invalid_mfa_code');
     }
 
     public function testMandatoryMfaWithoutEnrolmentIsRefused(): void

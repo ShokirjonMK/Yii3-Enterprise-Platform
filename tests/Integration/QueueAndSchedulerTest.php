@@ -79,10 +79,12 @@ final class QueueAndSchedulerTest extends IntegrationTestCase
 
     public function testWorkerExecutesRealHandler(): void
     {
-        $id = $this->queue->push('platform.maintenance.cleanup', [], ['queue' => 'test-e']);
+        // own queue per run: leftovers of earlier (aborted) runs in a shared queue must not change the job count
+        $queue = 'test-e-' . bin2hex(random_bytes(4));
+        $id = $this->queue->push('platform.maintenance.cleanup', [], ['queue' => $queue]);
         /** @var Worker $worker */
         $worker = $this->get(Worker::class);
-        self::assertSame(1, $worker->run(['test-e'], 0.1, 10, 512, true));
+        self::assertSame(1, $worker->run([$queue], 0.1, 10, 512, true));
         self::assertSame('succeeded', $this->queue->find($id)['status']);
         self::assertSame('stopped', (new Query($this->db))->select('status')->from('workers')->where(['id' => $worker->id()])->scalar());
     }
