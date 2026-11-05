@@ -30,7 +30,34 @@ final class AccessService
         private readonly UserRepository $users,
         private readonly AuditLogger $audit,
         private readonly RbacCatalog $catalog,
+        private readonly \Yiisoft\Db\Connection\ConnectionInterface $db,
     ) {}
+
+    /**
+     * Administrative role = a catalog admin role, a role flagged "administrative" in the admin panel
+     * (rbac_role_meta.is_admin), or any role whose effective permissions (incl. inherited roles) contain a
+     * privileged permission (RbacCatalog::PRIVILEGED_PERMISSIONS). Only a superadmin may grant/revoke/edit such roles.
+     */
+    public function isAdminRole(string $role): bool
+    {
+        if (in_array($role, RbacCatalog::ADMIN_ROLES, true)) {
+            return true;
+        }
+        try {
+            $flag = (new \Yiisoft\Db\Query\Query($this->db))->select('is_admin')->from('rbac_role_meta')->where(['name' => $role])->scalar();
+            if ($flag === true || $flag === 't' || $flag === 1) {
+                return true;
+            }
+            foreach (array_keys($this->rbac->getChildRoles($role)) as $child) {
+                if (in_array($child, RbacCatalog::ADMIN_ROLES, true)) {
+                    return true;
+                }
+            }
+            return array_intersect(array_keys($this->rbac->getPermissionsByRoleName($role)), RbacCatalog::PRIVILEGED_PERMISSIONS) !== [];
+        } catch (\Throwable) {
+            return true; // fail closed
+        }
+    }
 
     /** @var array<string, array{at: float, perms: array<string, true>}> effective permissions per user (short-lived) */
     private array $permissionCache = [];
@@ -107,9 +134,8 @@ final class AccessService
         if ($this->users->find($userId) === null) {
             throw new NotFoundException('User not found.');
         }
-        $known = array_keys($this->catalog->roles());
         foreach ($roles as $role) {
-            if (!in_array($role, $known, true) && $this->items->getRole($role) === null) {
+            if ($this->items->getRole($role) === null) {
                 throw ValidationException::single('roles', "Unknown role \"$role\".");
             }
         }
@@ -120,7 +146,7 @@ final class AccessService
 
         $actorIsSuper = $this->isSuperadmin($actorId);
         foreach ([...$add, ...$remove] as $role) {
-            if (in_array($role, RbacCatalog::ADMIN_ROLES, true) && !$actorIsSuper) {
+            if (!$actorIsSuper && $this->isAdminRole($role)) {
                 throw new AccessDeniedException("Only a superadmin can grant or revoke the \"$role\" role.");
             }
         }
@@ -139,7 +165,7 @@ final class AccessService
 
         if ($add !== [] || $remove !== []) {
             $this->audit->record('rbac.roles.changed', 'user', $userId, ['roles' => $current], ['roles' => $roles],
-                ['added' => $add, 'removed' => $remove], category: 'access', severity: ($add !== [] && array_intersect($add, RbacCatalog::ADMIN_ROLES) !== []) ? 'warning' : 'notice');
+                ['added' => $add, 'removed' => $remove], category: 'access', severity: array_filter($add, fn(string $r) => $this->isAdminRole($r)) !== [] ? 'warning' : 'notice');
         }
     }
 

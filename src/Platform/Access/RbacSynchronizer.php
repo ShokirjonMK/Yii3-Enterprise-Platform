@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Platform\Access;
 
+use Yiisoft\Db\Connection\ConnectionInterface;
+use Yiisoft\Db\Query\Query;
 use Yiisoft\Rbac\ItemsStorageInterface;
 use Yiisoft\Rbac\ManagerInterface;
 use Yiisoft\Rbac\Permission;
@@ -20,6 +22,7 @@ final class RbacSynchronizer
         private readonly RbacCatalog $catalog,
         private readonly ManagerInterface $manager,
         private readonly ItemsStorageInterface $items,
+        private readonly ConnectionInterface $db,
     ) {}
 
     /**
@@ -51,10 +54,21 @@ final class RbacSynchronizer
             }
         }
 
+        $overrides = $this->overrides();
+        $allPermissions = array_keys($this->items->getPermissions()); // catalog + custom (admin panel)
         foreach ($roles as $name => $def) {
-            // superadmin's "*" is expanded to every permission
-            $wanted = in_array('*', $def['permissions'], true) ? array_keys($permissions) : $def['permissions'];
+            // superadmin's "*" is expanded to every stored permission (custom permissions included)
+            $wanted = in_array('*', $def['permissions'], true) ? $allPermissions : $def['permissions'];
             $wanted = array_merge($wanted, $def['children']);
+            // Admin-panel edits of catalog roles are preserved: catalog ∪ add − remove
+            foreach ($overrides[$name] ?? [] as $child => $op) {
+                if ($op === 'add' && $this->items->exists($child)) {
+                    $wanted[] = $child;
+                } elseif ($op === 'remove') {
+                    $wanted = array_values(array_diff($wanted, [$child]));
+                }
+            }
+            $wanted = array_values(array_unique($wanted));
             $current = array_keys($this->items->getDirectChildren($name));
 
             foreach (array_diff($wanted, $current) as $child) {
@@ -70,5 +84,18 @@ final class RbacSynchronizer
         }
 
         return $stats;
+    }
+
+    /** @return array<string, array<string, string>> parent => [child => op] */
+    private function overrides(): array
+    {
+        if ($this->db->getTableSchema('rbac_link_overrides', true) === null) {
+            return []; // table not migrated yet
+        }
+        $out = [];
+        foreach ((new Query($this->db))->select(['parent', 'child', 'op'])->from('rbac_link_overrides')->all() as $r) {
+            $out[(string) $r['parent']][(string) $r['child']] = (string) $r['op'];
+        }
+        return $out;
     }
 }

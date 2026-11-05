@@ -16,6 +16,27 @@ final class RbacCatalog
     /** Roles that only a superadmin may grant or revoke. */
     public const ADMIN_ROLES = ['superadmin', 'platform_admin', 'security_admin', 'devops_sre'];
 
+    /**
+     * Permissions that make any role holding them (directly or by inheritance) administrative: they allow changing
+     * who may do what (rbac.*, auth.manage, security.manage, settings.manage), crossing tenant boundaries,
+     * impersonation, or destructive operations on data stores/infrastructure/backups and production deployments.
+     */
+    public const PRIVILEGED_PERMISSIONS = [
+        'rbac.manage', 'rbac.grant_admin', 'auth.manage', 'security.manage', 'settings.manage', 'tenants.cross',
+        'users.impersonate', 'db.manage', 'infra.manage', 'backup.manage', 'deploy.approve',
+    ];
+
+    /** Roles and permissions declared in the catalog files are "system" items (cannot be deleted in the panel). */
+    public function isSystemRole(string $name): bool
+    {
+        return isset($this->roles()[$name]);
+    }
+
+    public function isSystemPermission(string $name): bool
+    {
+        return isset($this->permissions()[$name]);
+    }
+
     private ?array $merged = null;
 
     public function __construct(private readonly string $directory) {}

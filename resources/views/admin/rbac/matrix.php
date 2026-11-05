@@ -17,7 +17,7 @@ $this->setParameter('breadcrumbs', [$h->tr('RBAC & Access Control') => $h->url('
 ?>
 <div class="page-head"><div class="page-head__titles">
     <h1><?= $h->t('Permission matrix') ?></h1>
-    <p class="page-head__sub"><?= $h->t('Effective permissions per role (read-only; edit the catalog files and run "Sync catalog").') ?></p>
+    <p class="page-head__sub"><?= $h->t('Effective permissions per role, including inheritance. Edit a role to change its permissions.') ?></p>
 </div></div>
 
 <?= $this->render('./_tabs', ['active' => 'matrix']) ?>
