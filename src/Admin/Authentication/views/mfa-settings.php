@@ -9,23 +9,28 @@ declare(strict_types=1);
  * @var array<string, list<string>> $errors
  * @var string $csrf
  * @var callable(string):bool $can
+ * @var string|null $page   'sessions' = Sessions & sign-in page (same form, other settings)
  */
 
-$this->setTitle($h->tr('Two-factor settings'));
-$this->setParameter('breadcrumbs', [$h->tr('Authentication') => $h->url('admin.auth'), $h->tr('Two-factor') => $h->url('admin.auth.mfa'), $h->tr('Settings')]);
+$page ??= null;
+$isSessions = $page === 'sessions';
+$this->setTitle($h->tr($isSessions ? 'Sessions & sign-in' : 'Two-factor settings'));
+$this->setParameter('breadcrumbs', $isSessions
+    ? [$h->tr('Authentication') => $h->url('admin.auth'), $h->tr('Sessions & sign-in')]
+    : [$h->tr('Authentication') => $h->url('admin.auth'), $h->tr('Two-factor') => $h->url('admin.auth.mfa'), $h->tr('Settings')]);
 $manage = $can('auth.manage');
 $optionLabels = ['' => '— none —', 'twilio' => 'Twilio Programmable Voice', 'http' => 'HTTPS voice gateway (JSON)', 'polling' => 'Polling (no public URL needed)', 'webhook' => 'Webhook (public HTTPS)'];
 ?>
 <div class="page-head">
     <div class="page-head__titles">
         <h1><?= $h->t('Authentication') ?></h1>
-        <p class="page-head__sub"><?= $h->t('One-time codes, voice calls, E-IMZO and passkeys. Telegram bot token, SMTP and SMS gateway are set in Notifications.') ?></p>
+        <p class="page-head__sub"><?= $isSessions ? $h->t('How long a sign-in lasts, how often critical actions ask for the password again, and the lockout after failed passwords. Changes apply to the next request.') : $h->t('One-time codes, voice calls, E-IMZO and passkeys. Telegram bot token, SMTP and SMS gateway are set in Notifications.') ?></p>
     </div>
 </div>
-<?= $this->render('./_tabs', ['active' => 'admin.auth.mfa.settings']) ?>
+<?= $this->render('./_tabs', ['active' => $isSessions ? 'admin.auth.sessions' : 'admin.auth.mfa.settings']) ?>
 <?php if ($errors !== []): ?><div class="alert alert--error"><?= $h->icon('alert') ?> <div><?= $h->t('Some values were not saved — see the highlighted fields.') ?></div></div><?php endif ?>
 
-<form method="post" action="<?= $h->url('admin.auth.mfa.settings.save') ?>" autocomplete="off">
+<form method="post" action="<?= $h->url($isSessions ? 'admin.auth.sessions.save' : 'admin.auth.mfa.settings.save') ?>" autocomplete="off">
     <input type="hidden" name="_csrf" value="<?= $h->e($csrf) ?>">
     <?php foreach ($sections as $title => $fields): ?>
     <div class="card mb">

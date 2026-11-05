@@ -166,6 +166,23 @@ services:
     networks: [backend]
     restart: unless-stopped
 
+  # Evictable application cache (allkeys-lfu, no persistence) — separate from the state instance above so that a
+  # full cache can never evict sessions or locks. The app uses it when REDIS_CACHE_HOST is set (docs/REDIS.md).
+  redis-cache:
+    image: redis:7.4-alpine
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env}"]
+    volumes:
+      - ./infra/docker/redis/redis-cache.conf:/usr/local/etc/redis/redis.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    networks: [backend]
+    restart: unless-stopped
+
   kafka:
     image: apache/kafka:3.9.1
     environment:
@@ -221,6 +238,94 @@ services:
     image: axllent/mailpit:v1.27
     ports:
       - "${MAILPIT_UI_PORT:-8025}:8025"
+    networks: [backend]
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------ databases profile
+  # Extra databases for the multi-database feature (docs/DATABASES.md): two more PostgreSQL servers, MongoDB,
+  # ClickHouse and MariaDB. Start with `./scripts/platform.sh up databases`; the app reaches them through the named
+  # connections in .env (DB_CONNECTIONS / DB_CONN_<NAME>_URL). Nothing in the platform requires them.
+  postgres-analytics:
+    image: postgres:17-alpine
+    profiles: [databases]
+    environment:
+      POSTGRES_DB: analytics
+      POSTGRES_USER: ${DB_USER:-platform}
+      POSTGRES_PASSWORD: ${EXTRA_DB_PASSWORD:-}
+    volumes: [pg_analytics_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d analytics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+    restart: unless-stopped
+
+  postgres-archive:
+    image: postgres:17-alpine
+    profiles: [databases]
+    environment:
+      POSTGRES_DB: archive
+      POSTGRES_USER: ${DB_USER:-platform}
+      POSTGRES_PASSWORD: ${EXTRA_DB_PASSWORD:-}
+    volumes: [pg_archive_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d archive"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:8.0
+    profiles: [databases]
+    command: ["--wiredTigerCacheSizeGB", "0.25"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DB_USER:-platform}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-}
+    volumes: [mongo_data:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks: [backend]
+    restart: unless-stopped
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.3
+    profiles: [databases]
+    environment:
+      CLICKHOUSE_DB: events
+      CLICKHOUSE_USER: ${DB_USER:-platform}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    ulimits:
+      nofile: {soft: 262144, hard: 262144}
+    volumes: [clickhouse_data:/var/lib/clickhouse]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8123/ping | grep -q Ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks: [backend]
+    restart: unless-stopped
+
+  mariadb:
+    image: mariadb:11.4
+    profiles: [databases]
+    environment:
+      MARIADB_DATABASE: shop
+      MARIADB_USER: ${DB_USER:-platform}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_PASSWORD}
+    volumes: [mariadb_data:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
     networks: [backend]
     restart: unless-stopped
 
@@ -336,3 +441,8 @@ volumes:
   s3_data:
   prometheus_data:
   grafana_data:
+  pg_analytics_data:
+  pg_archive_data:
+  mongo_data:
+  clickhouse_data:
+  mariadb_data:

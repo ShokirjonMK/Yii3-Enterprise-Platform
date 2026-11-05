@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Admin\Authentication\AuthenticationController;
 use App\Admin\Authentication\MfaAdminController;
+use App\Admin\Authentication\SessionSettingsController;
 use App\Web\Middleware\RequirePermission;
 use App\Web\Middleware\RequireRecentAuth;
 use Yiisoft\Router\Group;
@@ -23,6 +24,8 @@ return [
         Route::post('/mfa/policies')->middleware($authManage, RequireRecentAuth::class)->action([MfaAdminController::class, 'savePolicy'])->name('admin.auth.mfa.policy'),
         Route::post('/mfa/policies/{subject:[a-z][a-z0-9_]{1,63}}/delete')->middleware($authManage, RequireRecentAuth::class)->action([MfaAdminController::class, 'deletePolicy'])->name('admin.auth.mfa.policy.delete'),
         Route::get('/mfa/settings')->action([MfaAdminController::class, 'settingsForm'])->name('admin.auth.mfa.settings'),
+        Route::get('/sessions')->action([SessionSettingsController::class, 'index'])->name('admin.auth.sessions'),
+        Route::post('/sessions')->middleware($authManage, RequireRecentAuth::class)->action([SessionSettingsController::class, 'save'])->name('admin.auth.sessions.save'),
         Route::post('/mfa/settings')->middleware($authManage, RequireRecentAuth::class)->action([MfaAdminController::class, 'saveSettings'])->name('admin.auth.mfa.settings.save'),
         Route::post('/mfa/telegram')->middleware($authManage, RequireRecentAuth::class)->action([MfaAdminController::class, 'telegramWebhook'])->name('admin.auth.mfa.telegram'),
         Route::post('/methods/{method:auth\.(?:local_login|sso)}')->middleware($authManage, RequireRecentAuth::class)

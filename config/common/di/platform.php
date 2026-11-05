@@ -9,6 +9,7 @@ use App\Platform\Identity\Application\AuthenticationService;
 use App\Platform\Identity\Application\LoginThrottle;
 use App\Platform\Identity\Application\MfaService;
 use App\Platform\Identity\Application\PasswordPolicy;
+use App\Platform\Identity\Application\SecurityPolicy;
 use App\Platform\Identity\Application\SessionRegistry;
 use App\Platform\Identity\Application\UserService;
 use App\Platform\Identity\Infrastructure\IdentityRepository;
@@ -54,6 +55,17 @@ return [
 
     MfaService::class => [
         '__construct()' => ['issuer' => $security['mfa']['issuer']],
+    ],
+
+    // session / sign-in limits: admin settings (Admin → Authentication → Sessions & sign-in), params are the defaults
+    SecurityPolicy::class => [
+        '__construct()' => [
+            'idleSeconds' => $security['session']['idleTimeout'],
+            'absoluteSeconds' => $security['session']['absoluteTimeout'],
+            'reauthSeconds' => $security['session']['reauthWindow'],
+            'maxAttempts' => $security['login']['maxAttemptsPerUser'],
+            'lockoutSeconds' => $security['login']['lockoutSeconds'],
+        ],
     ],
 
     SessionRegistry::class => [

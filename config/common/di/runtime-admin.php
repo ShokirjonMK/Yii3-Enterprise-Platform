@@ -14,7 +14,7 @@ use App\Platform\Storage\UploadValidator;
 
 return [
     RedisInspector::class => [
-        '__construct()' => ['config' => $params['platform']['redis']],
+        '__construct()' => ['config' => $params['platform']['redis'], 'cacheConfig' => $params['platform']['redisCache']],
     ],
     UploadValidator::class => [
         // Hard upper bound is also enforced by php.ini (upload_max_filesize) and nginx (client_max_body_size).

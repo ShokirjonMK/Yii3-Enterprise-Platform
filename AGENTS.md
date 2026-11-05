@@ -103,7 +103,8 @@ return [
 `Scheduler`, `Outbox` (`record($topic, $eventType, $aggregateType, $aggregateId, $payload)` — call inside the business
 transaction), `KafkaAdmin`, `KafkaConsumerRunner::replay`, `Notifier` (`notify($userId, $templateCode, $params, $channels, $category)`),
 `HealthChecker`, `Metrics` (`inc/observe/gauge`), `ObjectStorage` (Flysystem S3), `Encrypter`, `RedisRateLimiter`,
-`LockInterface` (Redis) / `PostgresAdvisoryLock`, `DatabaseRouter` (`read()` replica / `primary()`), `RequestContext`.
+`LockInterface` (Redis) / `PostgresAdvisoryLock`, `DatabaseRouter` (`read()` replica / `primary()`), `RequestContext`,
+`DatabaseManager` (other named databases of any engine: `sql('analytics')`, `mongo('docs')`, `clickhouse('events')` — [docs/DATABASES.md](docs/DATABASES.md)).
 
 ## 5. Tests
 - `tests/Integration/*Test.php` extend `IntegrationTestCase` (APP_ENV=test, DB `platform_test` auto-migrated+seeded).

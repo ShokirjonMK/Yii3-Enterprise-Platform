@@ -83,3 +83,25 @@ credentials yet — configure it in **21 System Settings** or the section itself
   `platform_admin`; `superadmin` always). Without `tenants.cross` only the own tenant is shown.
 - Retention: System Settings → Retention → *Login history retention (days)* (default 90).
 
+
+## Sessions & sign-in limits
+
+Admin → 03 Authentication → *Sessions & sign-in* (`/admin/auth/sessions`, permission `auth.manage`, step-up to save;
+every change is versioned and audited). Applied at runtime by `SecurityPolicy` — the next request uses the new value,
+no restart:
+
+| Setting | Default | Effect |
+|---|---|---|
+| Sign out after inactivity (minutes) | 30 | idle session timeout (CurrentUser + session registry) |
+| Maximum session length (hours) | 12 | absolute session lifetime (also the Redis session TTL) |
+| Step-up confirmation valid for (minutes) | 5 | how long a password + 2FA confirmation covers critical actions |
+| Failed logins before lockout / lockout (minutes) | 5 / 15 | per-account lockout |
+| Login history retention (days) | 90 | Maintenance cleanup of `login_attempts` |
+
+## Why can't a user switch 2FA off?
+
+2FA is mandatory when **the user's own flag** "Require two-factor authentication" is set (Admin → Users → edit; the
+installer sets it for the first superadmin) **or** a **role policy** requires it (Admin → Authentication → Two-factor
+→ Policies by role; seeded: superadmin, platform_admin, security_admin, devops_sre; the general `admin` role has no policy and follows `*`, i.e. optional). Account → Security shows which one
+applies, with links for administrators. To make 2FA optional for a superadmin: untick the flag on the user and set the
+superadmin policy to *not required* (only a superadmin can edit policies of administrative roles; audited).

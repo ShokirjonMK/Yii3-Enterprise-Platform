@@ -133,7 +133,14 @@ final class RuntimeInspectorsTest extends IntegrationTestCase
 
     private function redis(): ClientInterface
     {
-        return $this->get(ClientInterface::class); // prefixed client (application prefix)
+        return $this->get(ClientInterface::class); // prefixed client (application prefix), "state" role
+    }
+
+    /** Prefixed client of the "cache" role (a separate instance when REDIS_CACHE_HOST is set). */
+    private function cacheRedis(): ClientInterface
+    {
+        $params = $this->get(\Yiisoft\Config\ConfigInterface::class)->get('params-console');
+        return \App\Shared\Infrastructure\Redis\RedisClientFactory::create(['role' => 'cache-test'] + $params['platform']['redisCache']);
     }
 
     public function testRedisInfoSlowlogLatencyAndTopology(): void
@@ -142,7 +149,7 @@ final class RuntimeInspectorsTest extends IntegrationTestCase
         self::assertTrue($r->ping()['ok']);
         $info = $r->info();
         self::assertNotNull($info['derived']['version']);
-        self::assertSame('allkeys-lru', $info['derived']['maxmemory_policy']);
+        self::assertSame('noeviction', $info['derived']['maxmemory_policy'], 'the state instance (sessions, locks) never evicts');
         self::assertArrayHasKey('Memory', $info['sections']);
         self::assertIsArray($r->slowlog(5));
         self::assertIsArray($r->latency());
@@ -179,16 +186,17 @@ final class RuntimeInspectorsTest extends IntegrationTestCase
     {
         $r = $this->get(RedisInspector::class);
         $redis = $this->redis();
+        $cache = $this->cacheRedis();
         $tag = bin2hex(random_bytes(4));
         $redis->set("sess:cc-$tag", 's');
         $redis->set("lock:cc-$tag", 'l');
-        $redis->set("cache:cc-$tag:a", '1');
-        $redis->set("cache:cc-$tag:b", '2');
-        $redis->set("cache:other-$tag", '3');
+        $cache->set("cache:cc-$tag:a", '1');
+        $cache->set("cache:cc-$tag:b", '2');
+        $cache->set("cache:other-$tag", '3');
 
-        self::assertSame(2, $r->clearCache("cc-$tag", null));
-        self::assertSame(0, (int) $redis->exists("cache:cc-$tag:a"));
-        self::assertSame(1, (int) $redis->exists("cache:other-$tag"), 'sub-namespace clear is scoped');
+        self::assertSame(2, $r->clearCache("cc-$tag", null), 'cleared on the cache instance');
+        self::assertSame(0, (int) $cache->exists("cache:cc-$tag:a"));
+        self::assertSame(1, (int) $cache->exists("cache:other-$tag"), 'sub-namespace clear is scoped');
         self::assertSame(1, (int) $redis->exists("sess:cc-$tag"));
         self::assertSame(1, (int) $redis->exists("lock:cc-$tag"));
 

@@ -52,7 +52,7 @@ Usage: scripts/platform.sh <command> [args]
 
   init            Create .env with random secrets (idempotent)
   build           Build PHP images
-  up [profile..]  Start the stack in DEV mode (live code reload; e.g. "up monitoring")
+  up [profile..]  Start the stack in DEV mode (live code reload; e.g. "up monitoring", "up databases")
   fast            Build production images and run the stack in FAST mode (5-15 ms/request)
   down            Stop the stack
   install         Install composer deps, run ./yii platform:install (interactive)
@@ -88,7 +88,7 @@ case "${1:-}" in
     docker build -f infra/docker/nginx/Dockerfile --build-arg PHP_IMAGE=yep-php:prod -t yep-nginx:prod .
     $COMPOSE -f compose.yaml -f compose.fast.yaml up -d --remove-orphans
     ;;
-  down) $COMPOSE --profile monitoring --profile pooling down --remove-orphans ;;
+  down) $COMPOSE --profile monitoring --profile pooling --profile databases down --remove-orphans ;;
   fix-perms) cmd_fix_perms ;;
   install)
     cmd_init

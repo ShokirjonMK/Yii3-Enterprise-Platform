@@ -48,8 +48,32 @@ final class RedisInspector
         private readonly array $config,
         private readonly AuditLogger $audit,
         ?ClientInterface $client = null,
+        private readonly ?array $cacheConfig = null,
     ) {
         $this->client = $client;
+    }
+
+    /** Is the cache a separate Redis instance (REDIS_CACHE_HOST / REDIS_CACHE_URL)? */
+    public function cacheSeparate(): bool
+    {
+        return (bool) ($this->cacheConfig['separate'] ?? false);
+    }
+
+    /**
+     * Inspector of one role: "state" (sessions, locks, rate limits — this instance) or "cache". When the cache shares
+     * the state instance both names return the same inspector.
+     */
+    public function instance(string $role): self
+    {
+        if ($role === 'cache' && $this->cacheSeparate()) {
+            return new self($this->cacheConfig, $this->audit, null, null);
+        }
+        return $this;
+    }
+
+    public function role(): string
+    {
+        return (string) ($this->config['role'] ?? 'state');
     }
 
     public function prefix(): string
@@ -73,6 +97,10 @@ final class RedisInspector
             'prefix' => $this->prefix(),
             'service' => $mode === 'sentinel' ? (string) $this->config['sentinelService'] : null,
             'auth' => ($this->config['password'] ?? null) !== null && $this->config['password'] !== '',
+            'acl_user' => ($this->config['username'] ?? null) ?: null,
+            'tls' => (bool) ($this->config['tls'] ?? false),
+            'persistent' => (bool) ($this->config['persistent'] ?? false),
+            'role' => $this->role(),
         ];
     }
 
@@ -287,6 +315,9 @@ final class RedisInspector
      */
     public function clearCache(string $subPrefix, ?string $actorId): int
     {
+        if ($this->cacheSeparate()) {
+            return $this->instance('cache')->clearCache($subPrefix, $actorId);
+        }
         $this->assertFragment($subPrefix);
         $pattern = $this->cachePrefix() . $subPrefix . '*';
         if (!str_starts_with($pattern, $this->cachePrefix())) {
@@ -317,6 +348,9 @@ final class RedisInspector
     {
         $out = [];
         foreach (self::NAMESPACES as $ns => $label) {
+            if (($ns === 'cache:') !== ($this->role() === 'cache') && ($this->cacheSeparate() || $this->role() === 'cache')) {
+                continue; // the namespace lives on the other instance
+            }
             $count = 0;
             $cursor = '0';
             do {

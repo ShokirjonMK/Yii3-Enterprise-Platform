@@ -22,6 +22,9 @@ final class QueueAndSchedulerTest extends IntegrationTestCase
         $this->queue = $this->get(JobQueue::class);
         $this->db->createCommand("DELETE FROM jobs WHERE queue LIKE 'test-%'")->execute();
         $this->db->createCommand("DELETE FROM queue_state WHERE queue LIKE 'test-%'")->execute();
+        // schedules left behind by an aborted run would be ticked again and enqueue extra jobs
+        $this->db->createCommand("DELETE FROM schedule_runs WHERE schedule_id IN (SELECT id FROM schedules WHERE code LIKE 'test.sched.%')")->execute();
+        $this->db->createCommand("DELETE FROM schedules WHERE code LIKE 'test.sched.%'")->execute();
     }
 
     public function testPushReserveCompleteAndIdempotency(): void
@@ -92,9 +95,10 @@ final class QueueAndSchedulerTest extends IntegrationTestCase
     public function testSchedulerEnqueuesExactlyOncePerTick(): void
     {
         $code = 'test.sched.' . uniqid();
+        $queue = 'test-f-' . bin2hex(random_bytes(4)); // own queue: leftovers of aborted runs must not change the count
         $this->db->createCommand()->insert('schedules', [
             'code' => $code, 'name' => 'test', 'cron_expression' => '* * * * *', 'job_type' => 'platform.queue.reap',
-            'queue' => 'test-f', 'enabled' => true, 'next_run_at' => (new DateTimeImmutable('-10 seconds'))->format(DATE_ATOM),
+            'queue' => $queue, 'enabled' => true, 'next_run_at' => (new DateTimeImmutable('-10 seconds'))->format(DATE_ATOM),
         ])->execute();
         $sid = (new Query($this->db))->select('id')->from('schedules')->where(['code' => $code])->scalar();
         $nextRun = (new Query($this->db))->select('next_run_at')->from('schedules')->where(['id' => $sid])->scalar();
@@ -107,7 +111,7 @@ final class QueueAndSchedulerTest extends IntegrationTestCase
         $s->tick();
 
         self::assertSame(1, (int) (new Query($this->db))->from('schedule_runs')->where(['schedule_id' => $sid])->count());
-        self::assertSame(1, (int) (new Query($this->db))->from('jobs')->where(['queue' => 'test-f'])->count());
+        self::assertSame(1, (int) (new Query($this->db))->from('jobs')->where(['queue' => $queue])->count());
         self::assertGreaterThan(new DateTimeImmutable(), new DateTimeImmutable((string) (new Query($this->db))->select('next_run_at')->from('schedules')->where(['id' => $sid])->scalar()));
         $this->db->createCommand()->delete('schedules', ['id' => $sid])->execute();
     }

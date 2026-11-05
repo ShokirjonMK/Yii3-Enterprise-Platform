@@ -14,6 +14,9 @@ use Throwable;
  *  - any backend error is logged and treated as a cache miss / failed write (fail-open),
  *  - after an error the backend is bypassed for {@see $cooldownSeconds} to avoid adding latency to every call.
  *
+ *  - entries written without a TTL get {@see $defaultTtl} (0 = forever), so the cache cannot grow without bound
+ *    even when it shares a Redis instance that never evicts (noeviction).
+ *
  * Only use for data that can be recomputed from PostgreSQL. Sessions, locks and rate limits have their own policies.
  */
 final class FailSafeCache implements CacheInterface
@@ -24,6 +27,7 @@ final class FailSafeCache implements CacheInterface
         private readonly CacheInterface $inner,
         private readonly ?LoggerInterface $logger = null,
         private readonly int $cooldownSeconds = 10,
+        private readonly int $defaultTtl = 0,
     ) {}
 
     public static function isDegraded(): bool
@@ -43,7 +47,7 @@ final class FailSafeCache implements CacheInterface
 
     public function set(string $key, mixed $value, null|int|DateInterval $ttl = null): bool
     {
-        return $this->guard(fn() => $this->inner->set($key, $value, $ttl), false);
+        return $this->guard(fn() => $this->inner->set($key, $value, $this->ttl($ttl)), false);
     }
 
     public function delete(string $key): bool
@@ -67,7 +71,7 @@ final class FailSafeCache implements CacheInterface
 
     public function setMultiple(iterable $values, null|int|DateInterval $ttl = null): bool
     {
-        return $this->guard(fn() => $this->inner->setMultiple($values, $ttl), false);
+        return $this->guard(fn() => $this->inner->setMultiple($values, $this->ttl($ttl)), false);
     }
 
     public function deleteMultiple(iterable $keys): bool
@@ -103,5 +107,10 @@ final class FailSafeCache implements CacheInterface
             ]);
             return $fallback;
         }
+    }
+
+    private function ttl(null|int|DateInterval $ttl): null|int|DateInterval
+    {
+        return $ttl === null && $this->defaultTtl > 0 ? $this->defaultTtl : $ttl;
     }
 }

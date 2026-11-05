@@ -34,7 +34,7 @@ $csrfField = '<input type="hidden" name="_csrf" value="' . $h->e($csrf) . '">';
     <div class="card">
         <div class="card__head">
             <h2><?= $h->t('Two-factor authentication') ?></h2>
-            <span><?= $h->badge($user->mfaEnabled ? 'enabled' : 'disabled') ?><?= $mfaPolicy->required ? ' ' . $h->badge('warning', $h->tr('required by your role')) : '' ?></span>
+            <span><?= $h->badge($user->mfaEnabled ? 'enabled' : 'disabled') ?><?= $mfaPolicy->required ? ' ' . $h->badge('warning', $h->tr('mandatory')) : '' ?></span>
         </div>
         <div class="card__body">
             <?php if ($mfaMethods !== []): ?>
@@ -65,6 +65,22 @@ $csrfField = '<input type="hidden" name="_csrf" value="' . $h->e($csrf) . '">';
                     <?php endif ?>
                 <?php endif ?>
             </div>
+            <?php if ($mfaPolicy->required): ?>
+                <?php $byRoles = array_values(array_filter($mfaPolicy->requiredBy, static fn($s) => $s !== 'account')); ?>
+                <div class="alert alert--info mt small"><?= $h->icon('info') ?>
+                    <div>
+                        <strong><?= $h->t('Two-factor authentication is mandatory, so it cannot be switched off here.') ?></strong>
+                        <?php if (in_array('account', $mfaPolicy->requiredBy, true)): ?>
+                            <div><?= $h->t('Required for your account (setting "Require two-factor authentication" of the user).') ?>
+                                <?php if ($can('users.manage')): ?><a href="<?= $h->url('admin.users.edit', ['id' => $user->id]) ?>"><?= $h->t('Change in Admin → Users') ?></a><?php endif ?></div>
+                        <?php endif ?>
+                        <?php if ($byRoles !== []): ?>
+                            <div><?= $h->t('Required by the two-factor policy of the role(s): {roles}.', ['roles' => implode(', ', $byRoles)]) ?>
+                                <?php if ($can('auth.manage')): ?><a href="<?= $h->url('admin.auth.mfa') ?>#policies"><?= $h->t('Change in Admin → Authentication → Two-factor') ?></a><?php endif ?></div>
+                        <?php endif ?>
+                    </div>
+                </div>
+            <?php endif ?>
             <?php if ($trustedDevices !== []): ?>
                 <h3 class="mt"><?= $h->t('Remembered devices') ?></h3>
                 <table class="table table--compact"><tbody>

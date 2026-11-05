@@ -71,18 +71,32 @@ return [
         return new DatabaseRouter($primary, $factories, $platform['db']['replicaStickiness'], $logger);
     },
 
+    // Named connections to other databases (PostgreSQL, MySQL/MariaDB, SQLite, SQL Server, Oracle, MongoDB, ClickHouse):
+    // .env (DB_CONNECTIONS) + Admin → Databases. Use App\Platform\Database\Connections\DatabaseManager.
+    App\Platform\Database\Connections\ConnectionStore::class => [
+        'class' => App\Platform\Database\Connections\ConnectionStore::class,
+        '__construct()' => [
+            'platformDb' => $platform['db'],
+            'envConnections' => $platform['databases'],
+            'sqliteDirectory' => dirname(__DIR__, 3) . '/runtime/databases',
+        ],
+    ],
+
     // ----------------------------------------------------------------- Redis
     ClientInterface::class => static fn(): ClientInterface => RedisClientFactory::create($platform['redis']),
 
     Psr\SimpleCache\CacheInterface::class => static fn(LoggerInterface $logger): Psr\SimpleCache\CacheInterface
         => new FailSafeCache(
-            new RedisCache(RedisClientFactory::create(['prefix' => $platform['redis']['prefix'] . 'cache:'] + $platform['redis'])),
+            // "cache" role (REDIS_CACHE_* = separate, evictable instance); entries without TTL expire after REDIS_CACHE_DEFAULT_TTL
+            new RedisCache(RedisClientFactory::create(['prefix' => $platform['redisCache']['prefix'] . 'cache:'] + $platform['redisCache'])),
             $logger,
+            defaultTtl: (int) $platform['redisCache']['defaultTtl'],
         ),
 
     RedisSessionHandler::class => [
         '__construct()' => [
-            'ttl' => $platform['security']['session']['absoluteTimeout'],
+            // Redis entry lives as long as the longest allowed session (admin setting security.session_absolute_hours)
+            'ttl' => \Yiisoft\Definitions\DynamicReference::to(static fn(\App\Platform\Identity\Application\SecurityPolicy $p): int => $p->sessionAbsoluteSeconds()),
         ],
     ],
 

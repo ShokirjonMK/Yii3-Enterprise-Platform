@@ -32,7 +32,7 @@ _Last update: 2026-11-05 — Author: ShokirjonMK_
 | 10 | Jobs & Scheduler | TESTED · VERIFIED |
 | 11 | Kafka Management (outbox, lag, DLQ replay) | TESTED · VERIFIED (real broker) |
 | 12 | PostgreSQL Management | TESTED · VERIFIED (replicas: none in dev) |
-| 13 | Redis Management | TESTED · VERIFIED (standalone) |
+| 13 | Redis Management (state + separate cache instance) | TESTED · VERIFIED (standalone ×2; Sentinel/Cluster/TLS IMPLEMENTED · UNVERIFIED) |
 | 14 | Storage & Search | TESTED · VERIFIED (S3) |
 | 15 | Infrastructure | TESTED · Kubernetes API UNVERIFIED |
 | 16 | CI/CD & Deployments | TESTED · GitLab API UNVERIFIED |
@@ -44,6 +44,7 @@ _Last update: 2026-11-05 — Author: ShokirjonMK_
 | 22 | Developer Tools + Enterprise Gii | TESTED · VERIFIED (non-prod only) |
 | 23 | Business Modules (Projects, Contracts) | TESTED · VERIFIED |
 | 24 | Incident Management | TESTED · Telegram alerts UNVERIFIED |
+| 25 | Databases (named connections, any engine; console) — [DATABASES.md](DATABASES.md) | TESTED · VERIFIED: PostgreSQL ×3, MongoDB 8, ClickHouse 25.3, MariaDB 11.4, SQLite; SQL Server / Oracle IMPLEMENTED · UNVERIFIED (no server in dev) |
 
 ## Platform capabilities
 
@@ -56,6 +57,8 @@ _Last update: 2026-11-05 — Author: ShokirjonMK_
 | 2FA passkeys (WebAuthn ES256/EdDSA/RS256) | TESTED server-side with real P-256 signatures; browser ceremony NOT RUN by automation |
 | 2FA Telegram (one-button linking, polling/webhook) | TESTED update handling; live bot NOT RUN (no bot token in dev) |
 | 2FA SMS, voice call (Twilio / HTTPS gateway), E-IMZO (E-IMZO-SERVER) | IMPLEMENTED · UNVERIFIED — need provider credentials / E-IMZO-SERVER |
+| Redis roles ([REDIS.md](REDIS.md)): state instance `noeviction` (sessions, locks, OTP never evicted), cache instance `allkeys-lfu` + default TTL, URL/TLS/ACL/Sentinel password, FPM persistent sockets per role/db, health `redis_cache` | TESTED (RedisRolesTest, RuntimeInspectorsTest) · VERIFIED (dev) |
+| General `admin` role: every admin section except break-glass (`rbac.grant_admin`, `users.impersonate`); 2FA follows the `*` policy | TESTED (SecurityPolicyTest) |
 | Dynamic RBAC (roles/permissions from the admin panel, overrides kept by sync, escalation guards) — see [RBAC.md](RBAC.md) | TESTED (DynamicRbacTest, RbacManageTest) |
 | Login history: every user sees the own sign-ins (Account → Login history, failed attempts on the account included); `users.login_history` (auditor, security/platform admin, superadmin) sees everybody (Admin → Users → Login history, tenant-scoped without `tenants.cross`); IP, device, method, second factor, reason | TESTED (LoginHistoryTest, LoginHistoryFlowTest) |
 | Module-first project structure (folder = feature; admin sections, web areas, API resources, business modules) — see [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) | TESTED (all suites in chunks) |

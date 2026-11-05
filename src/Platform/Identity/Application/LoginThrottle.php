@@ -26,6 +26,7 @@ final class LoginThrottle
         private readonly int $maxAttemptsPerIp = 30,
         private readonly int $windowSeconds = 900,
         private readonly int $lockoutSeconds = 900,
+        private readonly ?SecurityPolicy $policy = null,   // admin-managed limits (settings) override the defaults
     ) {}
 
     /**
@@ -89,7 +90,7 @@ final class LoginThrottle
             'UPDATE users SET failed_logins = failed_logins + 1,
                 locked_until = CASE WHEN failed_logins + 1 >= :max THEN now() + make_interval(secs => :lock) ELSE locked_until END
              WHERE id = :id RETURNING failed_logins, locked_until',
-            [':max' => $this->maxAttemptsPerUser, ':lock' => $this->lockoutSeconds, ':id' => $userId],
+            [':max' => $this->policy?->loginMaxAttempts() ?? $this->maxAttemptsPerUser, ':lock' => $this->policy?->lockoutSeconds() ?? $this->lockoutSeconds, ':id' => $userId],
         )->queryOne();
         return $row !== null && $row['locked_until'] !== null && new DateTimeImmutable((string) $row['locked_until']) > new DateTimeImmutable();
     }

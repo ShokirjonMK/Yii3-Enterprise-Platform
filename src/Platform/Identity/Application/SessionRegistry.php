@@ -20,7 +20,18 @@ final class SessionRegistry
         private readonly ConnectionInterface $db,
         private readonly int $idleTimeout = 1800,
         private readonly int $absoluteTimeout = 43200,
+        private readonly ?SecurityPolicy $policy = null,   // admin-managed timeouts (settings) override the defaults
     ) {}
+
+    public function idle(): int
+    {
+        return $this->policy?->sessionIdleSeconds() ?? $this->idleTimeout;
+    }
+
+    public function absolute(): int
+    {
+        return $this->policy?->sessionAbsoluteSeconds() ?? $this->absoluteTimeout;
+    }
 
     public static function hash(string $sessionId): string
     {
@@ -35,7 +46,7 @@ final class SessionRegistry
             'auth_method' => $method,
             'ip' => $ip,
             'user_agent' => $ua === null ? null : mb_substr($ua, 0, 500),
-            'expires_at' => (new DateTimeImmutable("+{$this->absoluteTimeout} seconds"))->format(DATE_ATOM),
+            'expires_at' => (new DateTimeImmutable("+{$this->absolute()} seconds"))->format(DATE_ATOM),
             'mfa_verified_at' => $mfaVerified ? new Expression('now()') : null,
             'reauth_at' => new Expression('now()'),
         ])->execute();
@@ -57,7 +68,7 @@ final class SessionRegistry
         if (new DateTimeImmutable((string) $row['expires_at']) < $now) {
             return ['valid' => false, 'reason' => 'absolute_timeout', 'row' => $row];
         }
-        if ((new DateTimeImmutable((string) $row['last_seen_at']))->getTimestamp() + $this->idleTimeout < $now->getTimestamp()) {
+        if ((new DateTimeImmutable((string) $row['last_seen_at']))->getTimestamp() + $this->idle() < $now->getTimestamp()) {
             return ['valid' => false, 'reason' => 'idle_timeout', 'row' => $row];
         }
         return ['valid' => true, 'reason' => null, 'row' => $row];

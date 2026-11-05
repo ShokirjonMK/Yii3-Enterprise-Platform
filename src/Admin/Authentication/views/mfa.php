@@ -91,7 +91,7 @@ $policyForm = static function (string $subject, array $p, bool $editable, bool $
     </table></div>
 </div>
 
-<div class="card mb">
+<div class="card mb" id="policies">
     <div class="card__head"><h2><?= $h->t('Policies by role') ?></h2></div>
     <div class="card__body">
         <p class="small muted"><?= $h->t('A user with several roles must satisfy all of them: required if any role requires it, only methods allowed by every role, the shortest remember-device period. "*" applies to users whose roles have no policy. Policies of administrative roles can be changed only by a superadmin.') ?></p>

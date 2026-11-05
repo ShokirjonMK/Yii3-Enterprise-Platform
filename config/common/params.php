@@ -26,6 +26,57 @@ $replicas = array_map(
     Env::list('DB_REPLICAS'),
 );
 
+// Additional named databases (any engine): DB_CONNECTIONS=analytics,docs,events + DB_CONN_<NAME>_URL=<driver>://...
+// and optional DB_CONN_<NAME>_DESCRIPTION. See docs/DATABASES.md. More can be added by a superadmin in Admin -> Databases.
+$databases = [];
+foreach (Env::list('DB_CONNECTIONS') as $connectionName) {
+    $connectionName = strtolower($connectionName);
+    // ${VAR} is replaced by another variable (URL-encoded), so a password is defined once: ...://app:${MONGO_PASSWORD}@mongo/docs
+    $url = (string) preg_replace_callback(
+        '/\$\{([A-Z][A-Z0-9_]*)\}/',
+        static fn(array $m): string => rawurlencode(Env::string($m[1])),
+        Env::string('DB_CONN_' . strtoupper($connectionName) . '_URL'),
+    );
+    if (preg_match('/^[a-z][a-z0-9_]{1,63}$/', $connectionName) && $connectionName !== 'platform' && $url !== '') {
+        $databases[] = ['name' => $connectionName, 'url' => $url, 'description' => Env::string('DB_CONN_' . strtoupper($connectionName) . '_DESCRIPTION')];
+    }
+}
+
+// Redis — see docs/REDIS.md. REDIS_URL (redis:// | rediss:// = TLS) overrides the discrete REDIS_* values.
+$redis = App\Shared\Infrastructure\Redis\RedisClientFactory::fromUrl(Env::nullableString('REDIS_URL'), [
+    'role' => 'state',
+    'mode' => Env::string('REDIS_MODE', 'standalone'),
+    'host' => Env::string('REDIS_HOST', 'redis'),
+    'port' => Env::int('REDIS_PORT', 6379),
+    'username' => Env::nullableString('REDIS_USERNAME'),
+    'password' => Env::nullableString('REDIS_PASSWORD'),
+    'database' => Env::isTest() ? Env::int('REDIS_TEST_DB', 15) : Env::int('REDIS_DB', 0),
+    'sentinels' => Env::list('REDIS_SENTINELS'),
+    'sentinelService' => Env::string('REDIS_SENTINEL_SERVICE', 'mymaster'),
+    'sentinelPassword' => Env::nullableString('REDIS_SENTINEL_PASSWORD'),
+    'prefix' => Env::string('REDIS_PREFIX', 'yep:') . (Env::isTest() ? 'test:' : ''),
+    'tls' => Env::bool('REDIS_TLS', false),
+    'tlsCa' => Env::nullableString('REDIS_TLS_CA'),
+    'timeout' => (float) Env::string('REDIS_CONNECT_TIMEOUT', '1.5'),
+    'readTimeout' => (float) Env::string('REDIS_READ_TIMEOUT', '3'),
+    'persistent' => Env::bool('REDIS_PERSISTENT', true),
+]);
+$cacheSeparate = Env::nullableString('REDIS_CACHE_HOST') !== null || Env::nullableString('REDIS_CACHE_URL') !== null;
+$redisCache = $cacheSeparate
+    ? App\Shared\Infrastructure\Redis\RedisClientFactory::fromUrl(Env::nullableString('REDIS_CACHE_URL'), array_merge($redis, [
+        'role' => 'cache',
+        'mode' => Env::string('REDIS_CACHE_MODE', 'standalone'),
+        'host' => Env::string('REDIS_CACHE_HOST', $redis['host']),
+        'port' => Env::int('REDIS_CACHE_PORT', 6379),
+        'username' => Env::nullableString('REDIS_CACHE_USERNAME'),
+        'password' => Env::nullableString('REDIS_CACHE_PASSWORD') ?? $redis['password'],
+        'database' => Env::isTest() ? Env::int('REDIS_CACHE_TEST_DB', 15) : Env::int('REDIS_CACHE_DB', 0),
+        'sentinels' => Env::list('REDIS_CACHE_SENTINELS'),
+        'tls' => Env::bool('REDIS_CACHE_TLS', $redis['tls']),
+    ])) + ['separate' => true]
+    : ['role' => 'cache', 'separate' => false] + $redis;
+$redisCache['defaultTtl'] = Env::int('REDIS_CACHE_DEFAULT_TTL', 86400);
+
 return [
     'application' => require __DIR__ . '/application.php',
 
@@ -54,17 +105,13 @@ return [
             'statementTimeoutMs' => Env::int('DB_STATEMENT_TIMEOUT_MS', 30000),
         ],
 
-        'redis' => [
-            'mode' => Env::string('REDIS_MODE', 'standalone'),
-            'host' => Env::string('REDIS_HOST', 'redis'),
-            'port' => Env::int('REDIS_PORT', 6379),
-            'password' => Env::nullableString('REDIS_PASSWORD'),
-            'database' => Env::isTest() ? Env::int('REDIS_TEST_DB', 15) : Env::int('REDIS_DB', 0),
-            'sentinels' => Env::list('REDIS_SENTINELS'),
-            'sentinelService' => Env::string('REDIS_SENTINEL_SERVICE', 'mymaster'),
-            'prefix' => Env::string('REDIS_PREFIX', 'yep:') . (Env::isTest() ? 'test:' : ''),
-            'timeout' => 1.5,
-        ],
+        // named connections declared in .env (Admin -> Databases shows them read-only)
+        'databases' => $databases,
+
+        // Redis "state" role: sessions, locks, rate limits, OTP codes — must never be evicted (redis.conf: noeviction)
+        'redis' => $redis,
+        // Redis "cache" role: PSR-16 cache — evictable; a separate instance when REDIS_CACHE_HOST / REDIS_CACHE_URL is set
+        'redisCache' => $redisCache,
 
         'kafka' => [
             'enabled' => Env::bool('KAFKA_ENABLED', true),

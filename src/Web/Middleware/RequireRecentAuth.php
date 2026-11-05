@@ -23,6 +23,7 @@ final class RequireRecentAuth implements MiddlewareInterface
         private readonly UrlGeneratorInterface $urls,
         private readonly ResponseFactoryInterface $responses,
         private readonly int $maxAgeSeconds = 300,
+        private readonly ?\App\Platform\Identity\Application\SecurityPolicy $policy = null,
     ) {}
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
@@ -31,7 +32,7 @@ final class RequireRecentAuth implements MiddlewareInterface
             return $handler->handle($request);
         }
         $age = $this->auth->reauthAge();
-        if ($age !== null && $age <= $this->maxAgeSeconds) {
+        if ($age !== null && $age <= ($this->policy?->reauthWindowSeconds() ?? $this->maxAgeSeconds)) {
             return $handler->handle($request);
         }
         $return = (string) ($request->getHeaderLine('HX-Current-URL') ?: $request->getHeaderLine('Referer'));

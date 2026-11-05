@@ -30,7 +30,8 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends unzip git postgresql-client-17 libfcgi-bin procps \
  && rm -rf /var/lib/apt/lists/* \
  && install-php-extensions \
-      opcache intl mbstring pdo_pgsql pgsql redis rdkafka zip gd bcmath pcntl sockets sodium apcu
+      opcache intl mbstring pdo_pgsql pgsql redis rdkafka zip gd bcmath pcntl sockets sodium apcu \
+      mongodb pdo_mysql pdo_sqlite pdo_sqlsrv pdo_oci
 
 COPY infra/docker/php/conf.d/platform.ini /usr/local/etc/php/conf.d/zz-platform.ini
 COPY infra/docker/php/fpm/www.conf /usr/local/etc/php-fpm.d/zz-www.conf

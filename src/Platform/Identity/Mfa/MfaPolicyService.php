@@ -93,11 +93,15 @@ final class MfaPolicyService
             $applicable = [self::DEFAULT];
         }
         $required = $user->mfaRequired;
+        $requiredBy = $user->mfaRequired ? ['account'] : [];
         $allowed = null;
         $remember = PHP_INT_MAX;
         foreach ($applicable as $subject) {
             $p = $policies[$subject] ?? ['required' => false, 'allowed' => MfaMethodType::ALL, 'remember_days' => 0];
             $required = $required || $p['required'];
+            if ($p['required']) {
+                $requiredBy[] = $subject;
+            }
             $allowed = $allowed === null ? $p['allowed'] : array_values(array_intersect($allowed, $p['allowed']));
             $remember = min($remember, $p['remember_days']);
         }
@@ -106,7 +110,7 @@ final class MfaPolicyService
         }
         $available = $this->available();
         $allowed = array_values(array_filter(MfaMethodType::ALL, fn(string $t) => in_array($t, (array) $allowed, true) && in_array($t, $available, true)));
-        return new MfaPolicy($required, $allowed, $remember === PHP_INT_MAX ? 0 : $remember, $applicable);
+        return new MfaPolicy($required, $allowed, $remember === PHP_INT_MAX ? 0 : $remember, $applicable, $requiredBy);
     }
 
     /** @return array<string, array{required:bool, allowed:list<string>, remember_days:int, updated_at?:string}> */

@@ -26,17 +26,19 @@ final class RedisController
         private readonly CurrentUser $currentUser,
     ) {}
 
-    public function index(): ResponseInterface
+    public function index(ServerRequestInterface $request): ResponseInterface
     {
-        $ping = $this->redis->ping();
-        $data = ['ping' => $ping, 'topology' => $this->redis->topology(), 'degraded' => $this->redis->isCacheDegraded(), 'error' => $ping['error']];
+        [$role, $redis] = $this->instance($request);
+        $ping = $redis->ping();
+        $data = ['ping' => $ping, 'topology' => $redis->topology(), 'degraded' => $redis->isCacheDegraded(), 'error' => $ping['error'],
+            'role' => $role, 'cacheSeparate' => $this->redis->cacheSeparate()];
         if ($ping['ok']) {
             try {
                 $data += [
-                    'info' => $this->redis->info(),
-                    'slowlog' => $this->redis->slowlog(25),
-                    'latency' => $this->redis->latency(),
-                    'namespaces' => $this->redis->namespaceCounts(),
+                    'info' => $redis->info(),
+                    'slowlog' => $redis->slowlog(25),
+                    'latency' => $redis->latency(),
+                    'namespaces' => $redis->namespaceCounts(),
                 ];
             } catch (Throwable $e) {
                 $data['error'] = Redactor::redactString($e->getMessage());
@@ -48,12 +50,13 @@ final class RedisController
     public function keys(ServerRequestInterface $request): ResponseInterface
     {
         $qp = $request->getQueryParams();
+        [$role, $redis] = $this->instance($request);
         $prefix = trim((string) ($qp['prefix'] ?? ''));
         $cursor = (string) ($qp['cursor'] ?? '0');
         $result = ['keys' => [], 'cursor' => '0', 'scanned_batches' => 0];
         $error = null;
         try {
-            $result = $this->redis->scan($prefix, $cursor, 100);
+            $result = $redis->scan($prefix, $cursor, 100);
         } catch (ValidationException $e) {
             $error = $e->getMessage();
         } catch (Throwable $e) {
@@ -64,8 +67,10 @@ final class RedisController
             'cursor' => $cursor,
             'result' => $result,
             'error' => $error,
-            'appPrefix' => $this->redis->prefix(),
+            'appPrefix' => $redis->prefix(),
             'namespaces' => RedisInspector::NAMESPACES,
+            'role' => $role,
+            'cacheSeparate' => $this->redis->cacheSeparate(),
         ]);
     }
 
@@ -73,7 +78,7 @@ final class RedisController
     public function key(ServerRequestInterface $request): ResponseInterface
     {
         $key = (string) ($request->getQueryParams()['key'] ?? '');
-        $info = $this->redis->inspect($key) ?? throw new NotFoundException('Key not found (it may have expired).');
+        $info = $this->instance($request)[1]->inspect($key) ?? throw new NotFoundException('Key not found (it may have expired).');
         return $this->responder->fragment('@admin/Redis/views/_key', ['k' => $info]);
     }
 
@@ -86,6 +91,13 @@ final class RedisController
         } catch (ValidationException $e) {
             $this->responder->error($e->getMessage());
         }
-        return $this->responder->redirect('admin.redis.keys', [], ['prefix' => 'cache:']);
+        return $this->responder->redirect('admin.redis.keys', [], ['prefix' => 'cache:'] + ($this->redis->cacheSeparate() ? ['instance' => 'cache'] : []));
+    }
+
+    /** ?instance=state|cache → [role, inspector]; "cache" equals "state" when the cache shares the instance. */
+    private function instance(ServerRequestInterface $request): array
+    {
+        $role = ($request->getQueryParams()['instance'] ?? 'state') === 'cache' && $this->redis->cacheSeparate() ? 'cache' : 'state';
+        return [$role, $this->redis->instance($role)];
     }
 }

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Environment;
+use App\Platform\Identity\Application\SecurityPolicy;
 use App\Shared\Infrastructure\Http\ClientIp;
 use App\Shared\Infrastructure\Http\CorrelationIdMiddleware;
 use App\Shared\Infrastructure\Http\SecurityHeadersMiddleware;
@@ -65,8 +66,9 @@ return [
     CurrentUser::class => [
         'withSession()' => [Reference::to(SessionInterface::class)],
         'withAccessChecker()' => [Reference::to(ManagerInterface::class)],
-        'withAuthTimeout()' => [$platform['security']['session']['idleTimeout']],
-        'withAbsoluteAuthTimeout()' => [$platform['security']['session']['absoluteTimeout']],
+        // admin-managed (Admin → Authentication → Sessions & sign-in), evaluated when the request's container is built
+        'withAuthTimeout()' => [DynamicReference::to(static fn(SecurityPolicy $p): int => $p->sessionIdleSeconds())],
+        'withAbsoluteAuthTimeout()' => [DynamicReference::to(static fn(SecurityPolicy $p): int => $p->sessionAbsoluteSeconds())],
         'reset' => function () {
             $this->clear();
         },

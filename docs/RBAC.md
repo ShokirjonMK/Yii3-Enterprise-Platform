@@ -33,6 +33,7 @@ Role `superadmin` has `*` and so gets every permission declared in any catalog f
 | `security_admin` * | SSO, sessions, security center, role assignment | auditor |
 | `devops_sre` * | Infrastructure, data stores, jobs, deployments, backups | auditor |
 | `platform_admin` * | All tenants (`tenants.cross`), users, auth, RBAC, API, settings | auditor, business_admin |
+| `admin` * | General administrator: every admin section (users, auth, RBAC, settings, operations, deployments, developer tools) except break-glass (`rbac.grant_admin`, `users.impersonate`). Permissions are listed directly, so the 2FA policies of the other admin roles do not apply — it follows the `*` policy | auditor, business_admin, developer |
 | `superadmin` * | Break-glass owner, every permission | platform_admin, devops_sre, security_admin, developer |
 
 \* administrative roles (`RbacCatalog::ADMIN_ROLES`).

@@ -57,6 +57,11 @@ return [
         'db.view' => 'View PostgreSQL health and statistics',
         'db.manage' => 'Run PostgreSQL maintenance operations',
 
+        'databases.view' => 'View all database connections (any engine), their status and objects',
+        'databases.manage' => 'Add, edit, enable/disable and delete database connections',
+        'databases.query' => 'Run read-only queries in the database console',
+        'databases.write' => 'Run data-changing statements in the database console (superadmin only by default)',
+
         'redis.view' => 'View Redis health and statistics',
         'redis.manage' => 'Flush caches and manage Redis keys',
 
@@ -135,7 +140,7 @@ return [
             'description' => 'Operations: infrastructure, data stores, jobs, deployments, backups, incidents',
             'children' => ['auditor'],
             'permissions' => [
-                'jobs.manage', 'kafka.manage', 'db.manage', 'redis.manage', 'storage.manage', 'infra.manage',
+                'jobs.manage', 'kafka.manage', 'db.manage', 'redis.manage', 'storage.manage', 'infra.manage', 'databases.view',
                 'deploy.request', 'backup.manage', 'incidents.manage', 'devtools.use',
             ],
         ],
@@ -146,6 +151,20 @@ return [
                 'users.manage', 'sessions.revoke', 'auth.manage', 'rbac.manage', 'tenants.manage', 'tenants.cross',
                 'api.manage', 'integrations.manage', 'notifications.manage', 'jobs.manage', 'settings.manage',
                 'modules.manage', 'incidents.manage', 'deploy.request', 'deploy.approve', 'backup.manage', 'storage.manage',
+            ],
+        ],
+        // General administrator: everything platform_admin + security_admin + devops_sre + developer can do, but
+        // without the break-glass rights (granting admin roles, impersonation) and without module permissions
+        // that are not assigned to a role. Permissions are listed directly (not via the admin child roles) so that
+        // the two-factor policies of those roles do not apply: the role follows the "*" policy unless one is set.
+        'admin' => [
+            'description' => 'General administrator: all administration sections, without break-glass operations',
+            'children' => ['auditor', 'business_admin', 'developer'],
+            'permissions' => [
+                'users.manage', 'sessions.revoke', 'auth.manage', 'rbac.manage', 'tenants.manage', 'tenants.cross',
+                'api.manage', 'integrations.manage', 'notifications.manage', 'jobs.manage', 'settings.manage',
+                'modules.manage', 'incidents.manage', 'deploy.request', 'deploy.approve', 'backup.manage', 'storage.manage',
+                'security.manage', 'kafka.manage', 'db.manage', 'redis.manage', 'infra.manage', 'devtools.use', 'databases.view',
             ],
         ],
         'superadmin' => [

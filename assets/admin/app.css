@@ -416,6 +416,9 @@ pre.code { white-space: pre; }
 
 /* ---- two-factor */
 .tabs--wrap { flex-wrap: wrap; }
+.tabs--sub { border-bottom: 0; margin-top: -8px; gap: 6px; }
+.tabs--sub a { padding: 5px 12px; border: 1px solid var(--border); border-radius: 999px; font-size: .85em; }
+.tabs--sub a[aria-current="page"] { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }
 .mfa-methods { display: grid; gap: 8px; }
 .mfa-method { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; }
 .mfa-method__main { flex: 1; min-width: 0; }

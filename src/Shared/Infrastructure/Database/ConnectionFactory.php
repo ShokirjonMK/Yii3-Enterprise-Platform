@@ -33,7 +33,12 @@ final class ConnectionFactory
         $options = [
             'sslmode' => $config['sslmode'] ?? 'disable',
             'application_name' => $applicationName,
-            'options' => sprintf("'-c statement_timeout=%d -c lock_timeout=10000 -c idle_in_transaction_session_timeout=60000'", $config['statementTimeoutMs'] ?? 30000),
+            // readOnly: every transaction of the session is READ ONLY, enforced by PostgreSQL (read-only named connections)
+            'options' => sprintf(
+                "'-c statement_timeout=%d -c lock_timeout=10000 -c idle_in_transaction_session_timeout=60000%s'",
+                $config['statementTimeoutMs'] ?? 30000,
+                ($config['readOnly'] ?? false) ? ' -c default_transaction_read_only=on' : '',
+            ),
             'connect_timeout' => '5',
         ];
 

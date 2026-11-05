@@ -13,6 +13,8 @@ declare(strict_types=1);
  * @var list<array<string,mixed>> $slowlog
  * @var list<array<string,mixed>> $latency
  * @var array<string, array{label:string, keys:int, truncated:bool}> $namespaces
+ * @var string $role
+ * @var bool $cacheSeparate
  */
 
 $this->setTitle($h->tr('Redis Management'));
@@ -28,7 +30,14 @@ $showSections = ['Server', 'Clients', 'Memory', 'Persistence', 'Stats', 'Replica
         <p class="page-head__sub"><?= $h->t('Cache, sessions, locks and rate limits. Redis is never the system of record.') ?></p>
     </div>
 </div>
-<?= $this->render('./_tabs', ['active' => 'admin.redis']) ?>
+<?= $this->render('./_tabs', ['active' => 'admin.redis', 'role' => $role, 'cacheSeparate' => $cacheSeparate]) ?>
+<?php $policy = (string) ($d['maxmemory_policy'] ?? ''); ?>
+<?php if ($d !== null && $role === 'state' && $policy !== 'noeviction'): ?>
+    <div class="alert alert--warning" data-redis-warning="eviction"><?= $h->icon('alert') ?> <div><strong><?= $h->t('Sessions and locks can be evicted') ?></strong> —
+        <?= $h->t('this instance uses maxmemory-policy {p}. When memory is full Redis deletes sessions (users are signed out), locks and one-time codes. Use noeviction here and a separate cache instance (REDIS_CACHE_HOST, allkeys-lfu).', ['p' => $policy]) ?></div></div>
+<?php elseif ($d !== null && $role === 'state' && !$cacheSeparate): ?>
+    <div class="alert alert--info"><?= $h->icon('info') ?> <div><?= $h->t('The cache shares this instance. Cache entries expire (REDIS_CACHE_DEFAULT_TTL), but a separate cache instance (REDIS_CACHE_HOST) is recommended for production.') ?></div></div>
+<?php endif ?>
 
 <?php if (!$ping['ok'] || $error !== null): ?>
     <div class="alert alert--error"><?= $h->icon('alert') ?> <div><strong><?= $h->t('Redis unreachable') ?></strong> — <span class="mono small"><?= $h->e($error) ?></span>
@@ -96,7 +105,10 @@ $showSections = ['Server', 'Clients', 'Memory', 'Persistence', 'Stats', 'Replica
                 <?php if ($topology['service']): ?><dt><?= $h->t('Sentinel service') ?></dt><dd class="mono small"><?= $h->e($topology['service']) ?></dd><?php endif ?>
                 <dt><?= $h->t('Database') ?></dt><dd><?= (int) $topology['database'] ?></dd>
                 <dt><?= $h->t('Key prefix') ?></dt><dd class="mono small"><?= $h->e($topology['prefix']) ?></dd>
-                <dt><?= $h->t('AUTH') ?></dt><dd><?= $topology['auth'] ? $h->t('password set') : $h->t('none') ?></dd>
+                <dt><?= $h->t('AUTH') ?></dt><dd><?= $topology['auth'] ? $h->t('password set') : $h->t('none') ?><?= ($topology['acl_user'] ?? null) ? ' · ' . $h->t('ACL user {u}', ['u' => $topology['acl_user']]) : '' ?></dd>
+                <dt><?= $h->t('Role') ?></dt><dd><span class="tag"><?= $h->e($role === 'cache' ? $h->tr('cache (evictable)') : ($cacheSeparate ? $h->tr('state: sessions, locks, rate limits') : $h->tr('state + cache (shared instance)'))) ?></span></dd>
+                <dt><?= $h->t('TLS') ?></dt><dd><?= ($topology['tls'] ?? false) ? $h->badge('ok', $h->tr('on')) : $h->t('off') ?></dd>
+                <dt><?= $h->t('Persistent connections') ?></dt><dd><?= ($topology['persistent'] ?? false) ? $h->t('on (PHP-FPM)') : $h->t('off') ?></dd>
                 <?php if ($d !== null): ?>
                 <dt><?= $h->t('Role') ?></dt><dd><?= $h->e($d['role']) ?> · <?= $h->t('{n} replicas', ['n' => $d['connected_slaves']]) ?></dd>
                 <dt><?= $h->t('Uptime') ?></dt><dd><?= $h->e(sprintf('%dd %02dh', intdiv($uptime, 86400), intdiv($uptime % 86400, 3600))) ?></dd>

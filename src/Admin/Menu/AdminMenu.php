@@ -35,6 +35,7 @@ final class AdminMenu
                 ['n' => 10, 'label' => 'Jobs & Scheduler', 'route' => 'admin.jobs', 'icon' => 'clock', 'permission' => 'jobs.view'],
                 ['n' => 11, 'label' => 'Kafka Management', 'route' => 'admin.kafka', 'icon' => 'stream', 'permission' => 'kafka.view'],
                 ['n' => 12, 'label' => 'PostgreSQL Management', 'route' => 'admin.postgres', 'icon' => 'database', 'permission' => 'db.view'],
+                ['n' => 25, 'label' => 'Databases', 'route' => 'admin.databases', 'icon' => 'database', 'permission' => 'databases.view'],
                 ['n' => 13, 'label' => 'Redis Management', 'route' => 'admin.redis', 'icon' => 'bolt', 'permission' => 'redis.view'],
                 ['n' => 14, 'label' => 'Storage & Search', 'route' => 'admin.storage', 'icon' => 'box', 'permission' => 'storage.view'],
             ]],

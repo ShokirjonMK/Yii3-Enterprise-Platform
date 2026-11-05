@@ -160,7 +160,7 @@ final class ProfileController
     {
         $user = $this->user();
         if ($this->mfaManager->policy($user)->required) {
-            $this->responder->error('Two-factor authentication is mandatory for your account.');
+            $this->responder->error('Two-factor authentication is mandatory for your account — see the explanation under "Two-factor authentication".');
             return $this->responder->redirect('web.security');
         }
         $this->mfa->disable($user->id);

@@ -11,6 +11,7 @@ $tabs = [
     'admin.auth' => 'Login methods & SSO',
     'admin.auth.mfa' => 'Two-factor (2FA)',
     'admin.auth.mfa.settings' => '2FA settings',
+    'admin.auth.sessions' => 'Sessions & sign-in',
 ];
 ?>
 <nav class="tabs" hx-boost="true" hx-target="#main" hx-select="#main" hx-swap="outerHTML" aria-label="<?= $h->t('Authentication') ?>">

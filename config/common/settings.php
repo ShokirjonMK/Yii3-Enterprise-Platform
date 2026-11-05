@@ -19,7 +19,10 @@ return [
     'app.maintenance_message' => ['type' => 'text', 'default' => '', 'group' => 'General', 'label' => 'Maintenance banner text'],
 
     // ---------------------------------------------------------------- Security
-    'security.session_idle_minutes' => ['type' => 'int', 'default' => 30, 'min' => 5, 'max' => 480, 'group' => 'Security', 'label' => 'Session idle timeout (minutes)', 'critical' => true],
+    'security.session_idle_minutes' => ['type' => 'int', 'default' => 30, 'min' => 5, 'max' => 1440, 'group' => 'Security', 'label' => 'Sign out after inactivity (minutes)', 'critical' => true],
+    'security.session_absolute_hours' => ['type' => 'int', 'default' => 12, 'min' => 1, 'max' => 720, 'group' => 'Security', 'label' => 'Maximum session length (hours)', 'critical' => true],
+    'security.reauth_minutes' => ['type' => 'int', 'default' => 5, 'min' => 1, 'max' => 120, 'group' => 'Security', 'label' => 'Step-up confirmation valid for (minutes)', 'critical' => true],
+    'security.lockout_minutes' => ['type' => 'int', 'default' => 15, 'min' => 1, 'max' => 1440, 'group' => 'Security', 'label' => 'Account lockout after failed passwords (minutes)', 'critical' => true],
     'security.password_max_age_days' => ['type' => 'int', 'default' => 180, 'min' => 0, 'max' => 3650, 'group' => 'Security', 'label' => 'Password maximum age (days, 0 = never)'],
     'security.login_max_attempts' => ['type' => 'int', 'default' => 5, 'min' => 3, 'max' => 20, 'group' => 'Security', 'label' => 'Failed logins before lockout', 'critical' => true],
     'security.allowed_admin_networks' => ['type' => 'json', 'default' => [], 'group' => 'Security', 'label' => 'Admin panel IP allowlist (CIDR list, empty = any)', 'critical' => true],

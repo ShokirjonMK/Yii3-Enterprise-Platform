@@ -14,7 +14,7 @@ final class RbacCatalog
     public const SUPERADMIN = 'superadmin';
 
     /** Roles that only a superadmin may grant or revoke. */
-    public const ADMIN_ROLES = ['superadmin', 'platform_admin', 'security_admin', 'devops_sre'];
+    public const ADMIN_ROLES = ['superadmin', 'admin', 'platform_admin', 'security_admin', 'devops_sre'];
 
     /**
      * Permissions that make any role holding them (directly or by inheritance) administrative: they allow changing
@@ -24,6 +24,7 @@ final class RbacCatalog
     public const PRIVILEGED_PERMISSIONS = [
         'rbac.manage', 'rbac.grant_admin', 'auth.manage', 'security.manage', 'settings.manage', 'tenants.cross',
         'users.impersonate', 'db.manage', 'infra.manage', 'backup.manage', 'deploy.approve',
+        'databases.manage', 'databases.query', 'databases.write',
     ];
 
     /** Roles and permissions declared in the catalog files are "system" items (cannot be deleted in the panel). */

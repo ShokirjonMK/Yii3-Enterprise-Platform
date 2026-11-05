@@ -25,7 +25,8 @@ $url = $h->url('admin.redis.keys');
         <p class="page-head__sub"><?= $h->t('Browse keys under {p} with SCAN (never KEYS). Values of sessions, locks, rate limits and secret-looking keys are never shown.', ['p' => $appPrefix]) ?></p>
     </div>
 </div>
-<?= $this->render('./_tabs', ['active' => 'admin.redis.keys']) ?>
+<?= $this->render('./_tabs', ['active' => 'admin.redis.keys', 'role' => $role ?? 'state', 'cacheSeparate' => $cacheSeparate ?? false]) ?>
+<?php $iq = ($role ?? 'state') === 'cache' ? ['instance' => 'cache'] : []; ?>
 
 <?php if ($can('redis.manage')): ?>
 <form class="card mb" method="post" action="<?= $h->url('admin.redis.cache.clear') ?>" data-confirm="<?= $h->t('Delete the matching cache keys? Values are recomputed on demand. Requires re-authentication.') ?>">
@@ -44,10 +45,11 @@ $url = $h->url('admin.redis.keys');
 <div class="grid grid--sidebar">
 <div class="card">
     <form class="toolbar" method="get" action="<?= $h->e($url) ?>" hx-get="<?= $h->e($url) ?>" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true" hx-trigger="keyup changed delay:500ms from:find input[type=search], submit">
+        <?php if ($iq !== []): ?><input type="hidden" name="instance" value="cache"><?php endif ?>
         <span class="mono small"><?= $h->e($appPrefix) ?></span>
         <input type="search" name="prefix" value="<?= $h->e($prefix) ?>" class="mono" placeholder="cache:" pattern="[A-Za-z0-9:_.,\-]{0,160}" aria-label="<?= $h->t('Key prefix') ?>">
         <button class="btn btn--sm" type="submit"><?= $h->icon('search') ?> <?= $h->t('Scan') ?></button>
-        <?php foreach (array_keys($namespaces) as $ns): ?><a class="tag" href="<?= $h->url('admin.redis.keys', [], ['prefix' => $ns]) ?>"><?= $h->e($ns) ?></a><?php endforeach ?>
+        <?php foreach (array_keys($namespaces) as $ns): ?><a class="tag" href="<?= $h->url('admin.redis.keys', [], ['prefix' => $ns] + $iq) ?>"><?= $h->e($ns) ?></a><?php endforeach ?>
     </form>
     <?php if ($error !== null): ?>
         <div class="alert alert--error"><?= $h->e($error) ?></div>
@@ -63,7 +65,7 @@ $url = $h->url('admin.redis.keys');
                 <td><span class="tag"><?= $h->e($k['type']) ?></span></td>
                 <td class="num small"><?= $k['ttl'] === -1 ? '∞' : ($k['ttl'] < 0 ? '—' : (int) $k['ttl'] . ' s') ?></td>
                 <td class="num small"><?= $k['size'] === null ? '—' : $h->e($h->bytes($k['size'])) ?></td>
-                <td class="actions"><button type="button" class="btn btn--sm btn--ghost" hx-get="<?= $h->url('admin.redis.key', [], ['key' => $k['key']]) ?>" hx-target="#key-detail" hx-swap="innerHTML"><?= $h->icon('eye') ?></button></td>
+                <td class="actions"><button type="button" class="btn btn--sm btn--ghost" hx-get="<?= $h->url('admin.redis.key', [], ['key' => $k['key']] + $iq) ?>" hx-target="#key-detail" hx-swap="innerHTML"><?= $h->icon('eye') ?></button></td>
             </tr>
         <?php endforeach ?>
         </tbody>
@@ -71,7 +73,7 @@ $url = $h->url('admin.redis.keys');
     <div class="pager">
         <span><?= $h->t('{n} keys shown · {b} SCAN batches', ['n' => count($result['keys']), 'b' => $result['scanned_batches']]) ?></span>
         <?php if ($result['cursor'] !== '0'): ?>
-            <a class="btn btn--sm" href="<?= $h->url('admin.redis.keys', [], ['prefix' => $prefix, 'cursor' => $result['cursor']]) ?>" hx-get="<?= $h->url('admin.redis.keys', [], ['prefix' => $prefix, 'cursor' => $result['cursor']]) ?>" hx-target="#main" hx-select="#main" hx-swap="outerHTML"><?= $h->t('Next batch') ?> ›</a>
+            <a class="btn btn--sm" href="<?= $h->url('admin.redis.keys', [], ['prefix' => $prefix, 'cursor' => $result['cursor']] + $iq) ?>" hx-get="<?= $h->url('admin.redis.keys', [], ['prefix' => $prefix, 'cursor' => $result['cursor']] + $iq) ?>" hx-target="#main" hx-select="#main" hx-swap="outerHTML"><?= $h->t('Next batch') ?> ›</a>
         <?php endif ?>
     </div>
     <?php endif ?>

@@ -27,6 +27,7 @@ final class HealthChecker
         private readonly KafkaConfig $kafka,
         private readonly ObjectStorage $storage,
         private readonly array $mailer,
+        private readonly ?\App\Platform\Redis\RedisInspector $redisInspector = null,
     ) {}
 
     /**
@@ -38,6 +39,7 @@ final class HealthChecker
         $checks = [
             'postgres' => fn() => $this->postgres(),
             'redis' => fn() => $this->redis(),
+            'redis_cache' => fn() => $this->redisCache(),
             'kafka' => fn() => $this->kafkaCheck(),
             'storage' => fn() => $this->storage->health(),
             'mailer' => fn() => $this->mailerCheck(),
@@ -92,10 +94,24 @@ final class HealthChecker
         $pong = (string) $this->redis->ping();
         $info = $this->redis->info('memory');
         $mem = $info['Memory'] ?? $info;
-        return [str_contains(strtoupper($pong), 'PONG') ? self::UP : self::DOWN, [
+        $policy = $mem['maxmemory_policy'] ?? null;
+        return [str_contains(strtoupper($pong), 'PONG') ? self::UP : self::DOWN, array_filter([
             'used_memory' => $mem['used_memory_human'] ?? null,
             'maxmemory' => $mem['maxmemory_human'] ?? null,
-        ]];
+            'maxmemory_policy' => $policy,
+            // sessions/locks/OTP live here: an evicting policy signs users out when memory is full
+            'warning' => $policy !== null && $policy !== 'noeviction' ? 'maxmemory-policy evicts sessions and locks; use noeviction and a separate cache instance' : null,
+        ], static fn($v) => $v !== null)];
+    }
+
+    /** Separate cache instance (REDIS_CACHE_HOST). Not critical: the cache is fail-open. */
+    private function redisCache(): array
+    {
+        if ($this->redisInspector === null || !$this->redisInspector->cacheSeparate()) {
+            return [self::NOT_CONFIGURED, ['reason' => 'cache shares the state instance (REDIS_CACHE_HOST empty)']];
+        }
+        $ping = $this->redisInspector->instance('cache')->ping();
+        return [$ping['ok'] ? self::UP : self::DOWN, $ping['ok'] ? ['latency_ms' => $ping['latency_ms']] : ['error' => $ping['error'], 'impact' => 'cache bypassed (fail-open), application keeps working']];
     }
 
     private function kafkaCheck(): array
