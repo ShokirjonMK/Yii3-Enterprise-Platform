@@ -43,7 +43,7 @@ final class RequireFeature implements MiddlewareInterface
     {
         if (!$this->flags->isEnabled($this->flag, $this->context->tenantId(), $this->context->userId())) {
             if ($this->explain && $request->getMethod() === 'GET') {
-                return $this->container->get(Responder::class)->render('admin/feature-disabled', [
+                return $this->container->get(Responder::class)->render('components/feature-disabled', [
                     'flag' => $this->flags->get($this->flag),
                     'returnPath' => $request->getUri()->getPath(),
                 ]);

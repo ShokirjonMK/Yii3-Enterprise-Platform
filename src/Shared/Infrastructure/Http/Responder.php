@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Shared\Infrastructure\Http;
 
 use Psr\Http\Message\ResponseFactoryInterface;
+use Yiisoft\Aliases\Aliases;
 use Psr\Http\Message\ResponseInterface;
 use Yiisoft\RequestProvider\RequestProviderInterface;
 use Yiisoft\Router\UrlGeneratorInterface;
@@ -24,20 +25,30 @@ final class Responder
         private readonly UrlGeneratorInterface $urls,
         private readonly FlashInterface $flash,
         private readonly RequestProviderInterface $requestProvider,
+        private readonly Aliases $aliases,
     ) {}
 
+    /**
+     * @param string $view '@admin/Users/views/index' (views next to the controller: @admin, @web, @api, @modules)
+     *                     or a path relative to resources/views ('components/…', 'errors/…')
+     */
     public function render(string $view, array $params = [], string $layout = 'admin', int $status = 200): ResponseInterface
     {
         return $this->views
             ->withLayout('@views/layouts/' . $layout . '.php')
-            ->render($view, $params)
+            ->render($this->resolve($view), $params)
             ->withStatus($status);
     }
 
     /** Fragment without layout (HTMX targets such as table bodies, KPI tiles). */
     public function fragment(string $view, array $params = []): ResponseInterface
     {
-        return $this->views->renderPartial($view, $params);
+        return $this->views->renderPartial($this->resolve($view), $params);
+    }
+
+    private function resolve(string $view): string
+    {
+        return str_starts_with($view, '@') ? $this->aliases->get($view) : $view;
     }
 
     public function redirect(string $route, array $arguments = [], array $query = [], int $status = 303): ResponseInterface

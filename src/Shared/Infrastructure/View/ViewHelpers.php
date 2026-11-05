@@ -22,7 +22,17 @@ final class ViewHelpers
         private readonly TranslatorInterface $translator,
         private readonly UrlGeneratorInterface $urlGenerator,
         private readonly CurrentRoute $currentRoute,
+        private readonly ?\Yiisoft\Aliases\Aliases $aliases = null,
     ) {}
+
+    /**
+     * Absolute path of a view that lives in another folder, for `$this->render($h->view('@admin/Users/views/_field'), …)`.
+     * Aliases: @admin (src/Admin), @web (src/Web), @api (src/Api), @modules (src/Modules), @views (resources/views).
+     */
+    public function view(string $alias): string
+    {
+        return $this->aliases?->get($alias) ?? $alias;
+    }
 
     /** Encode for HTML text/attribute context. */
     public function e(mixed $value): string

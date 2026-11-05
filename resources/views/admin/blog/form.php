@@ -38,7 +38,7 @@ $action = $editing ? $h->url('admin.blog.update', ['id' => $entity->id]) : $h->u
             <?= $this->render('./_fields', ['values' => $values, 'errors' => $errors]) ?>
             <div class="row span-2">
                 <button class="btn btn--primary" type="submit"><?= $h->icon('check') ?> <?= $editing ? $h->t('Save') : $h->t('Create') ?></button>
-                <a class="btn btn--ghost" href="<?= $editing ? $h->url('admin.blog.view', ['id' => $entity->id]) : $h->url('admin.blog') ?>"><?= $h->t('Cancel') ?></a>
+                <a class="btn btn--ghost" data-back href="<?= $editing ? $h->url('admin.blog.view', ['id' => $entity->id]) : $h->url('admin.blog') ?>"><?= $h->t('Cancel') ?></a>
             </div>
         </form>
     </div>

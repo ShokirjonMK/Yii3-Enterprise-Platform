@@ -25,7 +25,13 @@ final class FeatureRegistry
     /** Flag that gates the given route file of a kind (admin|web|api|system), or null. */
     public static function flagForFile(string $kind, string $file): ?string
     {
-        $base = basename($file);
+        $path = str_replace('\\', '/', $file);
+        // Business module area: src/Modules/<Name>/{Admin|Web|Api}/routes.php → module.<code>
+        if (preg_match('~/src/Modules/([A-Za-z0-9]+)/(?:Admin|Web|Api)/routes\.php$~', $path, $m)) {
+            return 'module.' . self::moduleCode($m[1], dirname($path, 2));
+        }
+        // Section folder (src/Admin/<Section>/routes.php → "<Section>") or legacy route file name
+        $base = basename($path) === 'routes.php' ? basename(dirname($path)) : basename($path);
         foreach (self::all() as $flag => $def) {
             if (in_array($base, (array) ($def[$kind] ?? []), true)) {
                 return $flag;
@@ -36,6 +42,17 @@ final class FeatureRegistry
             return 'module.' . $m[1];
         }
         return null;
+    }
+
+    /** Module code from its manifest (module.php 'code'), default = lower-case folder name. */
+    private static function moduleCode(string $dir, string $moduleDir): string
+    {
+        static $codes = [];
+        if (!isset($codes[$moduleDir])) {
+            $manifest = is_file($moduleDir . '/module.php') ? (require $moduleDir . '/module.php') : [];
+            $codes[$moduleDir] = is_array($manifest) && is_string($manifest['code'] ?? null) ? $manifest['code'] : strtolower($dir);
+        }
+        return $codes[$moduleDir];
     }
 
     /** Flag that hides the given admin menu route, or null (core section). */

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
-use App\Admin\Action\Audit\AuditSearch;
+use App\Admin\Audit\AuditSearch;
 use App\Platform\Monitoring\AlertmanagerClient;
 use App\Platform\Monitoring\AsvsChecklist;
 use App\Platform\Monitoring\ObservabilityService;

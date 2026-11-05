@@ -93,6 +93,37 @@
     });
   }
 
+  // ---- List state memory: filters / sort / page of a list survive "back" style links.
+  // Every visited page's query string is kept per path (sessionStorage, this tab only). Breadcrumb links and links
+  // marked `data-back` (Cancel, "back to list") that point at a bare list URL get the last query of that list, so
+  // filter → open record → Cancel / breadcrumb returns to the same filtered list. Visiting the bare URL itself
+  // (sidebar, "Reset") clears the remembered state. Links without data-back / breadcrumbs are never touched.
+  var LIST_KEY = 'yep:list-state', LIST_MAX = 60;
+  function readLists() {
+    try { return JSON.parse(sessionStorage.getItem(LIST_KEY) || '{}') || {}; } catch (e) { return {}; }
+  }
+  function syncLists() {
+    var lists = readLists(), path = location.pathname;
+    if (location.search) {
+      delete lists[path]; // re-insert → newest last
+      lists[path] = location.search;
+      var keys = Object.keys(lists);
+      while (keys.length > LIST_MAX) { delete lists[keys.shift()]; }
+    } else {
+      delete lists[path];
+    }
+    try { sessionStorage.setItem(LIST_KEY, JSON.stringify(lists)); } catch (e) { /* storage blocked */ }
+    document.querySelectorAll('.breadcrumbs a[href], a[data-back][href]').forEach(function (a) {
+      var u;
+      try { u = new URL(a.getAttribute('href'), location.href); } catch (e) { return; }
+      if (u.origin !== location.origin || u.search || u.hash || !lists[u.pathname] || u.pathname === path) { return; }
+      a.setAttribute('href', u.pathname + lists[u.pathname]);
+    });
+  }
+  document.addEventListener('htmx:pushedIntoHistory', syncLists);
+  document.addEventListener('htmx:afterSettle', syncLists);
+  window.addEventListener('pageshow', syncLists);
+
   // ---- HTMX integration
   document.addEventListener('htmx:afterSwap', function (e) {
     promoteFlashes(e.target);
@@ -124,6 +155,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     promoteFlashes(document);
+    syncLists();
     var i18n = document.getElementById('yep-i18n');
     if (i18n) { try { window.YEP_I18N = JSON.parse(i18n.textContent); } catch (e) { /* ignore */ } }
   });

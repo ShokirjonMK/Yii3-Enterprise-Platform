@@ -57,7 +57,7 @@ final class PlatformViewInjection implements CommonParametersInjectionInterface,
             'feature' => function (string $route) use ($identity): bool {
                 if (str_starts_with($route, 'admin.devtools')) {
                     // Developer Tools never exist in production (APP_ENV=prod, e.g. fast mode): no dead menu link
-                    return \App\Admin\Action\DevTools\DevToolsController::available($this->flags);
+                    return \App\Admin\DevTools\DevToolsController::available($this->flags);
                 }
                 $flag = \App\Platform\FeatureFlags\FeatureRegistry::flagForMenu($route);
                 return $flag === null || $this->flags->isEnabled($flag, $identity?->user->tenantId, $identity?->user->id);

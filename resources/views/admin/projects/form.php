@@ -33,7 +33,7 @@ $action = $editing ? $h->url('admin.projects.update', ['id' => $project->id]) : 
             <?= $this->render('./_fields', ['values' => $values, 'errors' => $errors, 'priorities' => $priorities, 'showOwner' => true]) ?>
             <div class="row span-2">
                 <button class="btn btn--primary" type="submit"><?= $h->icon('check') ?> <?= $editing ? $h->t('Save') : $h->t('Create project') ?></button>
-                <a class="btn btn--ghost" href="<?= $editing ? $h->url('admin.projects.view', ['id' => $project->id]) : $h->url('admin.projects') ?>"><?= $h->t('Cancel') ?></a>
+                <a class="btn btn--ghost" data-back href="<?= $editing ? $h->url('admin.projects.view', ['id' => $project->id]) : $h->url('admin.projects') ?>"><?= $h->t('Cancel') ?></a>
             </div>
         </form>
     </div>
