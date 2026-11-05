@@ -3,7 +3,7 @@
 Status vocabulary: `IMPLEMENTED` · `TESTED` · `VERIFIED` · `BLOCKED` · `NOT IMPLEMENTED` · `NOT RUN` (AGENTS.md §6).
 Unverified external integrations are listed in [REMAINING_BLOCKERS.md](REMAINING_BLOCKERS.md).
 
-_Last update: 2026-11-04 — Author: ShokirjonMK_
+_Last update: 2026-11-05 — Author: ShokirjonMK_
 
 ## Test results (last full run, local Docker stack)
 
@@ -14,7 +14,7 @@ _Last update: 2026-11-04 — Author: ShokirjonMK_
 | e2e (HTML flows, HTMX, MFA, all admin sections) | **83 tests OK**, 689 assertions |
 | live smoke `scripts/smoke-admin.php` (superadmin, 24 sections + modules + API) | **31/31 OK** |
 | infra validation | kustomize+kubeconform 59/59 per overlay, promtool, amtool, otelcol, terraform validate, ansible-lint — OK |
-| load (k6, dev laptop, bind-mounted dev image) | 0 % errors; latency not representative (Windows bind mount) — production-image load test NOT RUN |
+| load (k6, 30 VUs, 30 s, production image / fast mode, dev laptop) | **1845 req/s, p95 24.6 ms, 0 % errors** (persistent DB connections; before: 900 req/s, p95 56 ms) · server time: /login 7.4 ms, /api/v1/health 10.4 ms (`Server-Timing` header: boot / app / total) |
 
 ## Platform Control Center — 24 sections
 
@@ -52,6 +52,13 @@ _Last update: 2026-11-04 — Author: ShokirjonMK_
 | Docker stack (nginx, php-fpm, worker, scheduler, relay, consumer (all groups), PG17, Redis, Kafka KRaft, S3, Mailpit) | VERIFIED |
 | `./yii platform:install` (idempotent, one-time superadmin, health) · `./yii platform:demo` | VERIFIED |
 | Login, Argon2id, lockout, throttling, MFA, forced password change/MFA enrolment, sessions, step-up | TESTED · VERIFIED |
+| Multi-method 2FA ([MFA.md](MFA.md)): TOTP, e-mail, recovery codes, trusted device, per-role policies, admin reset, step-up with any method | TESTED (MfaMethodsTest 7, MfaMethodsFlowTest 3 via Mailpit) |
+| 2FA passkeys (WebAuthn ES256/EdDSA/RS256) | TESTED server-side with real P-256 signatures; browser ceremony NOT RUN by automation |
+| 2FA Telegram (one-button linking, polling/webhook) | TESTED update handling; live bot NOT RUN (no bot token in dev) |
+| 2FA SMS, voice call (Twilio / HTTPS gateway), E-IMZO (E-IMZO-SERVER) | IMPLEMENTED · UNVERIFIED — need provider credentials / E-IMZO-SERVER |
+| Dynamic RBAC (roles/permissions from the admin panel, overrides kept by sync, escalation guards) — see [RBAC.md](RBAC.md) | TESTED (DynamicRbacTest, RbacManageTest) |
+| Design themes (7 built-in packs, upload/activate, per-tenant/user) — see [THEMES.md](THEMES.md) | TESTED (ThemeServiceTest, AppearanceTest) |
+| Gii "Next steps" from the admin panel (migrate:up, rbac:sync, Kafka topic creation via CreateTopics; live log, history, audit) — see [GII.md](GII.md) | TESTED (GiiNextStepsTest incl. real broker, GiiNextStepsFlowTest via queue worker) · SASL PLAIN path UNVERIFIED (no SASL broker in dev) |
 | RBAC default deny, last-superadmin guard, tenant isolation (IDOR → 404), suspended tenants cannot log in | TESTED |
 | REST API v1 (token grants, refresh rotation, scopes, errors, pagination, CORS, rate limits), OpenAPI + Swagger UI | TESTED · Swagger UI visual check NOT RUN |
 | Job queue, scheduler exactly-once, transactional outbox → Kafka → idempotent consumers, retry topics, DLQ | TESTED (real broker) |
