@@ -29,31 +29,33 @@ On Windows/Git-Bash prefix docker commands with `MSYS_NO_PATHCONV=1`.
 
 ## 3. Layout (where things go)
 
+Rule: **a folder is a feature** — controllers, `views/` and `routes.php` live together. Full guide with the tree,
+aliases and a Yii2 → Yii3 mapping: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md).
+
 | What | Where |
 |---|---|
-| Business-agnostic platform modules | `src/Platform/<Module>/` (Domain / Application / Infrastructure as needed) |
-| Business modules | `src/Modules/<Name>/{Domain,Application,Infrastructure}` |
-| Admin HTTP actions | `src/Admin/Action/<Section>/<Name>Controller.php` |
-| Web (end-user) actions | `src/Web/Action/<Area>/` |
-| REST API v1 actions | `src/Api/V1/Action/<Resource>/` |
-| Views (never next to actions) | `resources/views/{admin,web,auth,layouts,components,emails}/...` |
-| Admin routes (one file per section) | `config/routes/admin/NN-section.php` → list of `Route`/`Group` (prefix `/admin` is added) |
-| Web module routes | `config/routes/web/*.php` (inside authenticated group) |
-| API routes | `config/routes/api-v1/*.php` (inside `/api/v1` group) |
-| DI definitions | `config/common/di/<module>.php` (one file per module; do not edit others' files) |
-| Permissions & roles | `config/common/permissions/<module>.php` then `./yii rbac:sync` |
-| Job handlers | `config/common/jobs/<module>.php` (`'type' => Handler::class`) |
-| Kafka consumer groups | `config/common/events/<module>.php` |
+| Admin section (Control Center) | `src/Admin/<Section>/` — `<Name>Controller.php`, `routes.php` (prefix `/admin` is added), `views/` |
+| End-user area | `src/Web/<Area>/` — controllers, `routes.php`, `views/` (Home, Account, Auth, Notifications, System) |
+| REST API v1 resource | `src/Api/V1/<Resource>/` — controller (OpenAPI attributes), `routes.php` |
+| **Business module** | `src/Modules/<Name>/` — `module.php`, `Domain/`, `Application/`, `Infrastructure/`, `Admin/`, `Web/`, `Api/` (each: controller + `routes.php` + `views/`), `config/{di,permissions,jobs,events,commands}.php`, `migrations/` — generate it with Enterprise Gii |
+| Business-agnostic platform services | `src/Platform/<Area>/` |
+| Shared views | `resources/views/{layouts,components,errors}/` only |
+| Area route entry points | `config/routes/{admin,web,api-v1,auth,system,webhooks}.php` — middleware + discovery, no feature routes |
+| Platform DI / permissions / jobs / consumer groups | `config/common/di/<area>.php`, `config/common/permissions/platform.php`, `config/common/jobs/*.php`, `config/common/events.php` |
 | Notification channel adapters | `config/common/notification-channels/<name>.php` |
-| Console commands | `config/console/commands/<module>.php` (`'name' => Command::class`) |
-| Migrations | `migrations/` (non-namespaced `M<yymmddhhmmss><Name>`; use `SqlScript::run($b, <<<'SQL' … SQL)`) |
+| Console commands | platform: `config/console/commands/<area>.php`; module: `src/Modules/<Name>/config/commands.php` |
+| Migrations | platform: `migrations/`; module: `src/Modules/<Name>/migrations/` (non-namespaced `M<yymmddhhmmss><Name>`; `SqlScript::run($b, <<<'SQL' … SQL)`) |
 | Tests | `tests/{Unit,Integration,Api,E2E,Security}` |
+
+Discovery is automatic (globs in `config/routes/*.php`, `config/common/di/modules.php`, `config/common/{jobs,events}.php`,
+`RbacCatalog`, migration paths in `params.php`, OpenAPI dirs in `config/common/di/api.php`) — never register a module
+in shared files. Namespace = folder (`src/Admin/Kafka` → `App\Admin\Kafka`, `src/Modules/Blog/Admin` → `App\Modules\Blog\Admin`).
 
 ## 4. Patterns
 
 ### Admin section skeleton
 ```php
-// config/routes/admin/07-integrations.php
+// src/Admin/Integrations/routes.php
 return [
     Group::create('/integrations')->middleware(RequirePermission::for('integrations.view'))->routes(
         Route::get('')->action([IntegrationsController::class, 'index'])->name('admin.integrations'),
@@ -65,7 +67,7 @@ return [
 - `->middleware()` **before** `->action()` (router requirement).
 - Destructive/critical POSTs additionally `->middleware(RequireRecentAuth::class)` (step-up password+MFA).
 - Controllers are thin: parse input → call application service → `Responder`.
-- `Responder::render('admin/<section>/index', $params)` (layout `admin`), `->fragment()` for HTMX fragments,
+- `Responder::render('@admin/<Section>/views/index', $params)` (layout `admin`; module: `'@modules/<Name>/Admin/views/index'`), `->fragment()` for HTMX fragments,
   `->redirect('route.name')` (HTMX-aware), `->success()/->error()` flashes, `->json()`, `->download()`.
 - Domain exceptions (`ValidationException`, `NotFoundException`, `AccessDeniedException`, `ConflictException`,
   `TooManyRequestsException`) are mapped to pages/JSON by `DomainErrorMiddleware`. For forms, catch

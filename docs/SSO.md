@@ -1,7 +1,7 @@
 # Single sign-on (SSO)
 
 Code: `src/Platform/Identity/Sso/*` (adapters + `SsoService`), admin UI **Admin → Authentication** (`admin.auth*`,
-`src/Admin/Action/Authentication/AuthenticationController.php`).
+`src/Admin/Authentication/AuthenticationController.php`).
 
 ## Login methods
 

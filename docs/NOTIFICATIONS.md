@@ -18,7 +18,7 @@ recipients → `PermanentJobFailure` (no retries); 429/5xx/network → retried b
 
 Generate VAPID keys: `php -r 'require "vendor/autoload.php"; print_r(Minishlink\WebPush\VAPID::createVapidKeys());'`.
 
-## Web Push subscriptions (end-user endpoints, `config/routes/web/push.php`)
+## Web Push subscriptions (end-user endpoints, `src/Web/Notifications/routes.php`)
 
 Inside the authenticated web group (session + CSRF header `X-CSRF-Token`):
 

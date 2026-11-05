@@ -15,9 +15,9 @@ business tx ──► outbox (same tx) ──► outbox:relay ──► Kafka to
 | Relay | `src/Platform/Messaging/OutboxRelay.php` → `php yii outbox:relay --daemon` |
 | Consumer runner | `src/Platform/Messaging/Kafka/KafkaConsumerRunner.php` → `php yii kafka:consume --group=…` |
 | Cluster inspection / drift / lag | `src/Platform/Messaging/Kafka/KafkaAdmin.php` |
-| Topic provisioning | `src/Console/Command/KafkaProvisionCommand.php`, `src/Admin/Action/Kafka/KafkaProvisioningScript.php` (same output) |
+| Topic provisioning | `src/Console/Command/KafkaProvisionCommand.php`, `src/Admin/Kafka/KafkaProvisioningScript.php` (same output) |
 | Consumer groups | `config/common/events.php` + `config/common/events/*.php` |
-| Admin UI | `src/Admin/Action/Kafka/*`, `resources/views/admin/kafka/*`, `config/routes/admin/11-kafka.php` |
+| Admin UI | `src/Admin/Kafka/*`, `src/Admin/Kafka/views/*`, `src/Admin/Kafka/routes.php` |
 
 ## 1. Commands
 
@@ -54,7 +54,7 @@ $db->transaction(function () use ($outbox, $project) {
 ## 3. Consuming
 
 ```php
-// config/common/events/projects.php
+// src/Modules/Projects/config/events.php
 return ['projects-audit' => ['topics' => ['projects.events'], 'handlers' => ['project.created' => ProjectCreatedHandler::class, '*' => FallbackHandler::class]]];
 ```
 - **At-least-once + idempotent:** offsets are committed after the handler; `inbox (consumer_group, message_id)` is inserted

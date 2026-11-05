@@ -42,7 +42,7 @@ https://github.com/OWASP/ASVS/tree/v4.0.3/4.0 for the normative wording.
 | 2.1.1 | Passwords at least 12 characters | implemented | src/Platform/Identity/Application/PasswordPolicy.php (minLength 12, params security.password) |
 | 2.1.2 | Passwords of 64+ characters permitted | implemented | PasswordPolicy has no upper limit below 128 |
 | 2.1.4 | Any printable Unicode allowed | implemented | PasswordPolicy validates by character classes only |
-| 2.1.5 | Users can change their password | implemented | src/Web/Action/Auth/AccountSecurityController.php passwordSubmit |
+| 2.1.5 | Users can change their password | implemented | src/Web/Auth/AccountSecurityController.php passwordSubmit |
 | 2.1.6 | Password change requires current password | implemented | UserService::changeOwnPassword |
 | 2.1.7 | Passwords checked against breached lists | planned | HIBP k-anonymity check not integrated |
 | 2.1.9 | No composition rules beyond length | partial | composition rules (mixed case, digit, symbol) are enabled by policy request of the customer |
@@ -94,7 +94,7 @@ https://github.com/OWASP/ASVS/tree/v4.0.3/4.0 for the normative wording.
 
 | ID | Requirement | Status | Evidence |
 |---|---|---|---|
-| 4.1.1 | Access control enforced server-side | implemented | RequirePermission on every admin route (config/routes/admin/*.php) |
+| 4.1.1 | Access control enforced server-side | implemented | RequirePermission on every admin route (src/Admin/*/routes.php) |
 | 4.1.2 | Attributes used by access control cannot be manipulated | implemented | permissions resolved from yii_rbac_* tables, never from the request |
 | 4.1.3 | Principle of least privilege | implemented | 8 roles with scoped permissions (config/common/permissions/platform.php) |
 | 4.1.5 | Access controls fail securely | implemented | default deny: RequirePermission throws AccessDeniedException |

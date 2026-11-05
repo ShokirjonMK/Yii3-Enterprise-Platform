@@ -1,25 +1,28 @@
 # Business modules
 
-Business modules live in `src/Modules/<Name>/{Domain,Application,Infrastructure}` and plug into the platform
-only through configuration files (routes, permissions, jobs, consumer groups, DI) — they never edit platform
-core code. The **Projects** module is the reference implementation: copy its structure when building a new
+A business module is **one folder**, `src/Modules/<Name>/`: its domain and use cases, its Admin, Web and API
+controllers with their `views/` and `routes.php`, its `config/` (DI, permissions, jobs, consumer groups) and its
+`migrations/`. The platform discovers all of it — modules never edit platform core code or shared config files
+(see [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)). The **Projects** module is the reference implementation: copy its structure when building a new
 module.
 
 ## Projects — the reference business module
 
 | Concern | Where |
 |---|---|
-| Manifest | `src/Modules/Projects/module.php` (`code`, `name`, `version`, `flag` = `module.projects`, `admin_route` = `admin.projects`) |
-| Schema | `migrations/M261104050001Projects.php` — `projects`, `project_members`, `project_activity` (read model), `project_reports` |
+| Folder | `src/Modules/Projects/` — all paths below are relative to it |
+| Manifest | `module.php` (`code`, `name`, `version`, `flag` = `module.projects`, `admin_route` = `admin.projects`) |
+| Schema | `migrations/M261104050001Projects.php` (inside the module) — `projects`, `project_members`, `project_activity` (read model), `project_reports` |
 | Domain | `Domain/Project.php` (aggregate), `ProjectStatus.php` (state machine), `ProjectPriority.php`, `ProjectRules.php` (validation), `ProjectEvent.php` |
 | Use cases | `Application/ProjectService.php`, `Application/ProjectWorkflow.php` (approval bridge), `ArchiveOutcome.php` |
 | Persistence | `Infrastructure/ProjectRepository.php` |
-| Background job | `Infrastructure/GenerateProjectsReportJob.php` → `config/common/jobs/projects.php` (`projects.report.generate`) |
-| Kafka consumer | `Infrastructure/ProjectActivityProjector.php` → `config/common/events/projects.php` (group `projects-audit`, topic `projects.events`) |
-| RBAC | `config/common/permissions/projects.php` → `./yii rbac:sync` |
-| Admin UI | `config/routes/admin/23a-projects.php`, `src/Admin/Action/Projects/`, `resources/views/admin/projects/` |
-| Web UI | `config/routes/web/projects.php`, `src/Web/Action/Projects/`, `resources/views/web/projects/` |
-| REST API | `config/routes/api-v1/30-projects.php`, `src/Api/V1/Action/Projects/ProjectsController.php` (OpenAPI attributes) |
+| Background job | `Infrastructure/GenerateProjectsReportJob.php` → `config/jobs.php` (`projects.report.generate`) |
+| Kafka consumer | `Infrastructure/ProjectActivityProjector.php` → `config/events.php` (group `projects-audit`, topic `projects.events`) |
+| RBAC | `config/permissions.php` → `./yii rbac:sync` |
+| Admin UI | `Admin/ProjectsController.php`, `Admin/routes.php`, `Admin/views/` |
+| Web UI | `Web/ProjectsController.php`, `Web/routes.php`, `Web/views/` |
+| REST API | `Api/ProjectsController.php` (OpenAPI attributes), `Api/routes.php` |
+| DI | `config/di.php` |
 | Tests | `tests/Unit/ProjectsDomainTest.php`, `tests/Integration/ProjectsServiceTest.php`, `tests/Api/ApiProjectsTest.php`, `tests/E2E/ProjectsUiTest.php` |
 
 ### Data model
@@ -85,29 +88,32 @@ returns `202` + `Location: /api/v1/projects/reports/{id}`.
 
 ## How to build a module (checklist)
 
-1. **Flag** — add a feature flag `module.<code>` (seeder or Admin → Feature flags) and gate every route group
-   with `App\Api\V1\Middleware\RequireFeature::for('module.<code>')`.
-2. **Manifest** — `src/Modules/<Name>/module.php` returning `code`, `name`, `version`, `flag`, `admin_route`.
+Fastest path: `./yii gii:module <Name> --fields='…' --apply` (or Admin → Developer tools → Enterprise Gii) generates
+every item below, tests included; then run *Next steps* (migrations, `rbac:sync`, Kafka topics) from the same page.
+By hand — all paths relative to `src/Modules/<Name>/`:
+
+1. **Flag** — the module migration creates feature flag `module.<code>`; route files are wrapped in it automatically
+   and every route group also uses `App\Api\V1\Middleware\RequireFeature::for('module.<code>')`.
+2. **Manifest** — `module.php` returning `code`, `name`, `version`, `flag`, `admin_route`, `web_route`, `api_prefix`.
 3. **Migration** — `migrations/M<yymmddhhmmss><Name>.php` using `SqlScript::run()`; uuid PKs, `tenant_id`,
    `version`, `updated_at` trigger `platform_touch_updated_at()`, CHECK constraints for invariants.
-4. **Domain** — entities/value objects with invariants and a state machine; no I/O; raise domain events.
-5. **Permissions** — `config/common/permissions/<module>.php` (extend existing roles; do not redefine
-   descriptions), then `./yii rbac:sync`.
-6. **Application service** — assert permission → load with tenant check (foreign → 404) → domain call →
-   one transaction with repository write + `AuditLogger` + `Outbox::record()`; optimistic locking.
-7. **Jobs / consumers** — `config/common/jobs/<module>.php` (`'type' => ['handler' => …, 'queue' => …]`) and
-   `config/common/events/<module>.php` (`'group' => ['topics' => […], 'handlers' => [eventType => Handler]]`).
-8. **Admin UI** — `config/routes/admin/NN-<module>.php` (`->middleware()` before `->action()`), thin
-   controllers using `Responder`, views in `resources/views/admin/<module>/`, CSS only in your block of
-   `assets/admin/app.css`, no inline scripts/styles (strict CSP), HTMX for list navigation.
-9. **Web UI** — `config/routes/web/<module>.php` (inside the authenticated group) + `resources/views/web/<module>/`.
-10. **REST API** — `config/routes/api-v1/NN-<module>.php` with `BearerAuthentication`,
-    `RequireApiPermission::for(permission, scope)`, controllers in `src/Api/V1/Action/<Resource>/` annotated
-    with `OpenApi\Attributes`; regenerate `./yii api:openapi`.
-11. **DI** — `config/common/di/<module>.php` only for non-autowirable bindings.
-12. **Tests** — unit (domain), integration (service: outbox in tx, tenant isolation, locking, jobs via `Worker`,
-    consumers via `KafkaConsumerRunner::process`), API and E2E over HTTP.
+4. **Domain** — `Domain/`: entities/value objects with invariants and a state machine; no I/O; raise domain events.
+5. **Permissions** — `config/permissions.php` (extend existing roles; do not redefine descriptions), then `./yii rbac:sync`.
+6. **Application service** — `Application/`: assert permission → load with tenant check (foreign → 404) → domain
+   call → one transaction with repository write + `AuditLogger` + `Outbox::record()`; optimistic locking.
+7. **Jobs / consumers** — `config/jobs.php` (`'type' => ['handler' => …, 'queue' => …]`) and `config/events.php`
+   (`'group' => ['topics' => […], 'handlers' => [eventType => Handler]]`); handlers in `Infrastructure/`.
+8. **Admin UI** — `Admin/<Name>Controller.php` (thin, `Responder`), `Admin/routes.php` (`->middleware()` before
+   `->action()`), templates in `Admin/views/` rendered as `'@modules/<Name>/Admin/views/index'`; CSS only in your block
+   of `assets/admin/app.css`, no inline scripts/styles (strict CSP), HTMX for list navigation; sidebar link through
+   the manifest's `admin_route`.
+9. **Web UI** — `Web/<Name>Controller.php`, `Web/routes.php` (loaded inside the authenticated group), `Web/views/`.
+10. **REST API** — `Api/<Name>Controller.php` annotated with `OpenApi\Attributes`, `Api/routes.php` with
+    `BearerAuthentication`, `RequireApiPermission::for(permission, scope)`; regenerate `./yii api:openapi`.
+11. **DI** — `config/di.php` only for non-autowirable bindings; console commands in `config/commands.php`.
+12. **Tests** — `tests/Unit/<Name>DomainTest.php`, `tests/Integration/<Name>ServiceTest.php` (outbox in tx, tenant
+    isolation, locking, jobs via `Worker`, consumers via `KafkaConsumerRunner::process`), `tests/Api/`, `tests/E2E/`.
 13. After adding routes on a running stack, clear the router cache (FastRoute dispatch data is cached under
-    the PSR-16 key `routes-cache`).
+    the PSR-16 key `routes-cache`); restart workers/consumers so they load new job handlers and consumer groups.
 
 — Author: ShokirjonMK

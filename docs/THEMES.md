@@ -107,9 +107,9 @@ overwritten, and the active theme cannot be deleted.
 - `src/Platform/Appearance/`:
   - `ThemeRegistry`, `ThemeValidator`, `ThemeService`
   - `AppearanceViewInjection` — gives layouts the `$theme` parameter.
-- `src/Admin/Action/Settings/AppearanceController.php`
-- `src/Web/Action/Account/AppearanceController.php`
-- `src/Web/Action/System/ThemeCssAction.php`
+- `src/Admin/Settings/AppearanceController.php`
+- `src/Web/Account/AppearanceController.php`
+- `src/Web/System/ThemeCssAction.php`
 - `src/Console/Command/Theme*Command.php`
 - Migration `M261105000003Appearance` — tables `appearance_themes` and `appearance_choice`.
 - Tests:

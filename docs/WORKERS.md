@@ -9,7 +9,7 @@ with cron **schedules** that only *enqueue* jobs. Admin UI: **Control Center →
 | Worker | `src/Platform/Queue/Worker.php` | `php yii queue:work` |
 | Handler registry | `src/Platform/Queue/HandlerRegistry.php`, `config/common/jobs.php` + `config/common/jobs/*.php` | — |
 | Scheduler | `src/Platform/Scheduler/Scheduler.php` | `php yii scheduler:run --daemon` |
-| Admin UI | `src/Admin/Action/Jobs/*`, `resources/views/admin/jobs/*`, `config/routes/admin/10-jobs.php` | PHP-FPM |
+| Admin UI | `src/Admin/Jobs/*`, `src/Admin/Jobs/views/*`, `src/Admin/Jobs/routes.php` | PHP-FPM |
 
 Why PostgreSQL and not `yiisoft/queue`: no stable release of yiisoft/queue yet, and a database queue gives
 **transactional enqueue** — a job pushed inside a business transaction exists if and only if the transaction commits.
@@ -33,7 +33,7 @@ In Docker: services `worker` and `scheduler` (`compose.yaml`). In Kubernetes: De
 ## 2. Writing a job
 
 ```php
-// config/common/jobs/projects.php
+// src/Modules/Projects/config/jobs.php
 return ['projects.report.generate' => ['handler' => GenerateReportJob::class, 'queue' => 'default']];
 
 final class GenerateReportJob implements JobHandlerInterface

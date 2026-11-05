@@ -24,8 +24,8 @@ consent). The yii-gii JSON API (`/gii/api`, CORS `*`) stays **disabled** (`yiiso
 
 Code: `src/Platform/Gii/` (`EnterpriseGii`, `PathGuard`, `GiiPlan`, `PlannedFile`, `Spec/*`, `Generator/*`,
 `Console/GiiModuleCommand`), templates in `src/Platform/Gii/templates/<generator>/` (shared ones in `_shared/`),
-DI `config/common/di/gii.php`, console `config/console/commands/gii.php`, admin `config/routes/admin/22a-gii.php`,
-`src/Admin/Action/DevTools/GiiController.php`, `resources/views/admin/gii/index.php`.
+DI `config/common/di/gii.php`, console `config/console/commands/gii.php`, admin `src/Admin/DevTools/routes.php`,
+`src/Admin/DevTools/GiiController.php`, `src/Admin/DevTools/views/gii/index.php`.
 
 ## Console
 
@@ -40,7 +40,7 @@ docker compose exec -T app php yii gii:module Contracts \
 # write
 … gii:module Contracts --fields='…' --apply
 # replace protected files only after reviewing their diff
-… gii:module Contracts --fields='…' --apply --overwrite=src/Modules/Contracts/Domain/Contract.php,config/common/jobs/contracts.php
+… gii:module Contracts --fields='…' --apply --overwrite=src/Modules/Contracts/Domain/Contract.php,src/Modules/Contracts/config/jobs.php
 
 docker compose exec -T app php yii migrate:up && docker compose exec -T app php yii rbac:sync
 docker compose exec -T app php yii kafka:provision      # renders the topic script (contracts.events)
@@ -130,19 +130,19 @@ reference module (`Projects`, `Users`, `Settings`, …) are reserved. Derived na
 
 | id | Generator | Produces |
 |---|---|---|
-| `entity` | PostgreSQL Entity / Repository | `module.php` manifest, `Domain/<Entity>.php` (aggregate, events, soft delete), `Domain/<Entity>Status.php`, `Domain/<Entity>Rules.php`, `Infrastructure/<Entity>Repository.php` (tenant scope, sort whitelist, filters, search, optimistic lock, constraint → field errors), migration `M…<Module>` (uuid PK, `tenant_id`, `version`, CHECKs, partial indexes, `updated_at` trigger, flag `module.<code>`, `business_modules` row, config revision bump), `config/common/di/<code>.php` |
+| `entity` | PostgreSQL Entity / Repository | `module.php` manifest, `Domain/<Entity>.php` (aggregate, events, soft delete), `Domain/<Entity>Status.php`, `Domain/<Entity>Rules.php`, `Infrastructure/<Entity>Repository.php` (tenant scope, sort whitelist, filters, search, optimistic lock, constraint → field errors), migration `M…<Module>` (uuid PK, `tenant_id`, `version`, CHECKs, partial indexes, `updated_at` trigger, flag `module.<code>`, `business_modules` row, config revision bump), `src/Modules/<Module>/config/di.php` |
 | `crud` | CRUD | `Application/<Entity>Service.php` (RBAC per use case, tenant isolation → 404, `stale_version` 409, audit + outbox in one transaction), plus rules + repository |
-| `rbac` | RBAC | `config/common/permissions/<code>.php` (`view/create/update/delete`; `business_admin` all, `user`/`developer` view) |
-| `event` | Kafka Event | `Domain/<Entity>Event.php` (topic, types, payload, summary), outbox usage in the service, `Infrastructure/<Entity>ActivityProjector.php` (idempotent consumer), `config/common/events/<code>.php` (group `<slug>-activity`), migration `…Events` (`<entity>_activity`, `kafka_topics` row) |
+| `rbac` | RBAC | `src/Modules/<Module>/config/permissions.php` (`view/create/update/delete`; `business_admin` all, `user`/`developer` view) |
+| `event` | Kafka Event | `Domain/<Entity>Event.php` (topic, types, payload, summary), outbox usage in the service, `Infrastructure/<Entity>ActivityProjector.php` (idempotent consumer), `src/Modules/<Module>/config/events.php` (group `<slug>-activity`), migration `…Events` (`<entity>_activity`, `kafka_topics` row) |
 | `workflow` | Workflow | migration `…Workflow` (definition `<entity>.lifecycle` for `WorkflowEngine`, transitions `to_<state>`), `Application/<Entity>Workflow.php` (start + mirror; no-op when disabled; never breaks the business transaction) |
 | `notification` | Notification | migration `…Notifications` (template `<entity>.status_changed` or `.created`, en/ru/uz × inapp/email/telegram, existing rows kept), `Application/<Entity>Notifier.php` (Notifier call site, category `<code>`) |
-| `job` | Worker Job | `Infrastructure/PurgeDeleted<Module>Job.php` (`<code>.cleanup`: purge soft-deleted rows older than `retention_days`, batched, cancellable, audited), `config/common/jobs/<code>.php` |
+| `job` | Worker Job | `Infrastructure/PurgeDeleted<Module>Job.php` (`<code>.cleanup`: purge soft-deleted rows older than `retention_days`, batched, cancellable, audited), `src/Modules/<Module>/config/jobs.php` |
 | `report` | Report | `Infrastructure/Generate<Module>ReportJob.php` (`<code>.report.generate`: CSV with BOM, formula-injection safe → ObjectStorage `reports/<slug>/…`), migration `…Reports`, service `requestReport/report/recentReports`, admin report page + download |
 | `scheduler` | Scheduler | migration `…Schedule` (`schedules` row `<code>.cleanup`, `40 2 * * *`, payload `{"retention_days":90}`) |
 | `connector` | Integration Connector | `Infrastructure/<Module>Connector.php` via `IntegrationService::call()` → platform `HttpClient` (SSRF guard, timeout, retries with backoff, circuit breaker, logs), migration `…Integration` (integration row, disabled = *Not configured*, 5 s / 3 retries / 300 ms backoff) |
-| `admin` | Admin UI | `config/routes/admin/<NN>-<slug>.php` (flag + `RequirePermission`, middleware before action), `src/Admin/Action/<Module>/<Module>Controller.php`, views `index` (KPI per status, HTMX filters/search/sort, pager), `form` + `_fields` (422 errors per field), `view` (transitions, delete with `data-confirm`, activity), `report` |
-| `web` | Web UI | `config/routes/web/<slug>.php`, `src/Web/Action/<Module>/<Module>Controller.php`, views `index/form/view/_fields` |
-| `api` | REST API | `config/routes/api-v1/<NN>-<slug>.php` (Bearer, flag, `RequireApiPermission::for(perm, '<code>.read'/'<code>.write')`), controller with OpenAPI attributes (`<Entity>` / `<Entity>Input` schemas), ETag/If-Match (428/409), 201 + Location, 204 delete |
+| `admin` | Admin UI | `src/Modules/<Module>/Admin/routes.php` (flag + `RequirePermission`, middleware before action), `src/Modules/<Module>/Admin/<Module>Controller.php`, views `index` (KPI per status, HTMX filters/search/sort, pager), `form` + `_fields` (422 errors per field), `view` (transitions, delete with `data-confirm`, activity), `report` |
+| `web` | Web UI | `src/Modules/<Module>/Web/routes.php`, `src/Modules/<Module>/Web/<Module>Controller.php`, views `index/form/view/_fields` |
+| `api` | REST API | `src/Modules/<Module>/Api/routes.php` (Bearer, flag, `RequireApiPermission::for(perm, '<code>.read'/'<code>.write')`), controller with OpenAPI attributes (`<Entity>` / `<Entity>Input` schemas), ETag/If-Match (428/409), 201 + Location, 204 delete |
 | `tests` | Tests | `tests/Unit/<Module>DomainTest.php`, `tests/Integration/<Module>ServiceTest.php`, `tests/Api/Api<Module>Test.php`, `tests/E2E/<Module>UiTest.php` — covering exactly the generated features |
 
 Dependencies are resolved automatically (`api` → `entity, crud, rbac, api`; `scheduler` → `entity, job`).
@@ -160,12 +160,11 @@ Every generated PHP file starts with the header docblock
   listed (`--overwrite=a,b` / ticked checkbox); identical files are `unchanged`; files that appear between
   preview and apply are not overwritten. Unknown `--overwrite` paths are an error.
 - **Path safety** (`PathGuard`): relative paths only, no `..`/absolute/drive paths, charset `[A-Za-z0-9_./-]`,
-  `.php` only, only inside module-owned locations (`src/Modules/`, `src/Admin|Web/Action/`, `src/Api/V1/Action/`,
-  `resources/views/admin|web/`, `config/routes/{admin,web,api-v1}/`, `config/common/{permissions,jobs,events,di}/`,
-  `migrations/`, `tests/{Unit,Integration,Api,E2E}/`), never `src/Modules/Projects/`, `src/Admin/Action/DevTools/`,
-  API auth/docs; the real path of the nearest existing directory must be inside the real root; symlinks refused.
+  `.php` only, only inside `src/Modules/` (the whole module lives there) and `tests/{Unit,Integration,Api,E2E}/`,
+  never `src/Modules/Projects/` (hand-written reference); the real path of the nearest existing directory must be
+  inside the real root; symlinks refused.
   Checked when planning and again right before writing.
-- **Idempotent**: migration timestamps and route-file numbers of an existing module are re-used, output contains no
+- **Idempotent**: migration timestamps of an existing module are re-used, output contains no
   dates → a second run reports everything `unchanged`.
 - Not available in production (console + admin), not registered without yii-gii, yii-gii web API disabled.
 
@@ -183,11 +182,8 @@ Lifecycle `draft → active → closed` (forward-only, `closed` read-only). Admi
 `contracts-activity`), jobs `contracts.cleanup` (scheduled nightly) and `contracts.report.generate`,
 integration `contracts` (Not configured), workflow `contract.lifecycle`, notification `contract.status_changed`.
 It is **not** hand-edited: re-running the command above reports all 43 files `unchanged` (asserted by
-`tests/E2E/GiiGeneratedModuleTest.php`). Files: `src/Modules/Contracts/**`, `src/{Admin,Web}/Action/Contracts/`,
-`src/Api/V1/Action/Contracts/`, `resources/views/{admin,web}/contracts/`, `config/routes/admin/23b-contracts.php`,
-`config/routes/web/contracts.php`, `config/routes/api-v1/31-contracts.php`,
-`config/common/{permissions,jobs,events,di}/contracts.php`, `migrations/M261104110237Contracts*.php` …
-`M261104110243ContractsSchedule.php`, `tests/{Unit/ContractsDomainTest,Integration/ContractsServiceTest,Api/ApiContractsTest,E2E/ContractsUiTest}.php`.
+`tests/E2E/GiiGeneratedModuleTest.php`). Files: `src/Modules/Contracts/**` (Domain, Application, Infrastructure,
+`Admin/`, `Web/`, `Api/` — each with controller, `views/` and `routes.php` —, `config/`, `migrations/`), `tests/{Unit/ContractsDomainTest,Integration/ContractsServiceTest,Api/ApiContractsTest,E2E/ContractsUiTest}.php`.
 
 ## Tests
 

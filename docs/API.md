@@ -14,7 +14,7 @@ JSON errors → flag api.v1 → CORS → rate limit → JSON errors (inner) → 
            → [Bearer authentication → RequireFeature → RequireApiPermission(permission, scope)] → action
 ```
 
-Routes live in `config/routes/api-v1/*.php` (loaded in name order into the `/api/v1` group by
+Routes live in `src/Api/V1/*/routes.php + src/Modules/*/Api/routes.php` (loaded in name order into the `/api/v1` group by
 `config/routes/api-v1.php`). A trailing catch-all route keeps unmatched requests inside the pipeline so that
 they still get CORS/rate-limit headers and JSON `404` / `405 + Allow`.
 
@@ -220,7 +220,7 @@ no CORS headers.
 
 ## 10. OpenAPI and Swagger UI
 
-* Operations are documented with `zircote/swagger-php` attributes on the action classes in `src/Api/V1/Action`;
+* Operations are documented with `zircote/swagger-php` attributes on the action classes in `src/Api/V1/<Resource>`;
   shared schemas/responses/parameters live in `src/Api/V1/OpenApi/OpenApiSpec.php`.
 * `./yii api:openapi` writes `public/api/openapi.json` (run in CI/image build); `GET /api/v1/openapi.json`
   generates on the fly outside production and serves the file in production.
