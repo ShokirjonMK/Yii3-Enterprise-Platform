@@ -21,6 +21,7 @@ $commands = [
     'kafka:publish' => Command\KafkaPublishCommand::class,
     'kafka:handlers' => Command\KafkaHandlersCommand::class,
     'audit:verify' => Command\AuditVerifyCommand::class,
+    'user:mfa-reset' => Command\UserMfaResetCommand::class,
 ];
 
 foreach ([...(glob(__DIR__ . '/commands/*.php') ?: []), ...(glob(dirname(__DIR__, 2) . '/src/Modules/*/config/commands.php') ?: [])] as $file) {

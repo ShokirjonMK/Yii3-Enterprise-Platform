@@ -29,6 +29,11 @@ Several methods can be enrolled; at sign-in the user picks one (default = last u
 - **2FA settings** – code length / lifetime / attempts / resend pause / hourly cap, Telegram mode, voice provider,
   E-IMZO server, passkey RP name.
 - **Users → user → Reset 2FA** – removes all factors, recovery codes and remembered devices (lost phone).
+- **Break-glass (server console)** – when nobody can sign in to reset it (e.g. the only superadmin lost the device *and*
+  the recovery codes): `./yii user:mfa-reset <username|email> --reason="…"` (asks for confirmation, `--force` in
+  scripts). Removes every factor, recovery codes and remembered devices, ends the user's sessions; the role policy
+  forces a new enrolment at the next sign-in. Audited as `user.mfa_reset.console` (severity critical) with the reason,
+  OS user and host. Shell access to the application server is the authorisation.
 - Every change is audited (`auth.mfa_policy.*`, `auth.mfa.method_added/removed`, `user.mfa_reset`, …).
 
 ## Security notes
