@@ -8,7 +8,7 @@ use App\Platform\Gii\Spec\ModuleSpec;
 
 /**
  * Worker Job: queue handler purging soft-deleted rows after a retention period (batched, cancellable,
- * audited) registered in config/common/jobs/<module>.php.
+ * audited) registered in src/Modules/<Module>/config/jobs.php.
  */
 final class WorkerJobGenerator extends AbstractEnterpriseGenerator
 {
@@ -24,7 +24,7 @@ final class WorkerJobGenerator extends AbstractEnterpriseGenerator
 
     public static function getDescription(): string
     {
-        return 'Queue job handler (purges soft-deleted rows after a retention period) registered in config/common/jobs/<module>.php.';
+        return 'Queue job handler (purges soft-deleted rows after a retention period) registered in src/Modules/<Module>/config/jobs.php.';
     }
 
     public static function requires(): array
@@ -41,7 +41,7 @@ final class WorkerJobGenerator extends AbstractEnterpriseGenerator
     {
         return [
             $m->modulePath('Infrastructure/PurgeDeleted' . $m->module . 'Job.php') => 'job.php',
-            'config/common/jobs/' . $m->code . '.php' => '../_shared/jobs.php',
+            $m->modulePath('config/jobs.php') => '../_shared/jobs.php',
         ];
     }
 }

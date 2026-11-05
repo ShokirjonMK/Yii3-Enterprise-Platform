@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Template: API routes (config/routes/api-v1/<NN>-<module>.php).
+ * Template: API routes (src/Modules/<Module>/Api/routes.php).
  *
  * @var App\Platform\Gii\Spec\ModuleSpec $m
  */
@@ -19,7 +19,7 @@ echo $m->fill(<<<'PHP'
 
 declare(strict_types=1);
 
-use App\Api\V1\Action\{{Module}}\{{Module}}Controller;
+use App\Modules\{{Module}}\Api\{{Module}}Controller;
 use App\Api\V1\Middleware\BearerAuthentication;
 use App\Api\V1\Middleware\RequireApiPermission;
 use App\Api\V1\Middleware\RequireFeature;

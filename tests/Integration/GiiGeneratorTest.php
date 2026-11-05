@@ -34,15 +34,6 @@ final class GiiGeneratorTest extends IntegrationTestCase
         }
         $this->root = sys_get_temp_dir() . '/gii-' . bin2hex(random_bytes(6));
         mkdir($this->root . '/migrations', 0777, true);
-        // a copy of the route directories so NN numbering is computed like in the real tree
-        foreach (['config/routes/admin', 'config/routes/api-v1', 'config/routes/web'] as $dir) {
-            mkdir($this->root . '/' . $dir, 0777, true);
-            foreach (glob(dirname(__DIR__, 2) . '/' . $dir . '/*.php') ?: [] as $file) {
-                if (!str_contains(basename($file), 'contracts')) {
-                    copy($file, $this->root . '/' . $dir . '/' . basename($file));
-                }
-            }
-        }
         $this->gii = $this->get(EnterpriseGii::class)->withRoot($this->root);
     }
 
@@ -80,21 +71,21 @@ final class GiiGeneratorTest extends IntegrationTestCase
             'src/Modules/Contracts/Infrastructure/PurgeDeletedContractsJob.php',
             'src/Modules/Contracts/Infrastructure/GenerateContractsReportJob.php',
             'src/Modules/Contracts/Infrastructure/ContractsConnector.php',
-            'src/Admin/Action/Contracts/ContractsController.php',
-            'src/Web/Action/Contracts/ContractsController.php',
-            'src/Api/V1/Action/Contracts/ContractsController.php',
-            'resources/views/admin/contracts/index.php',
-            'resources/views/admin/contracts/form.php',
-            'resources/views/admin/contracts/view.php',
-            'resources/views/admin/contracts/_fields.php',
-            'resources/views/web/contracts/index.php',
-            'config/routes/admin/23b-contracts.php',
-            'config/routes/web/contracts.php',
-            'config/routes/api-v1/31-contracts.php',
-            'config/common/permissions/contracts.php',
-            'config/common/jobs/contracts.php',
-            'config/common/events/contracts.php',
-            'config/common/di/contracts.php',
+            'src/Modules/Contracts/Admin/ContractsController.php',
+            'src/Modules/Contracts/Admin/routes.php',
+            'src/Modules/Contracts/Admin/views/index.php',
+            'src/Modules/Contracts/Admin/views/form.php',
+            'src/Modules/Contracts/Admin/views/view.php',
+            'src/Modules/Contracts/Admin/views/_fields.php',
+            'src/Modules/Contracts/Web/ContractsController.php',
+            'src/Modules/Contracts/Web/routes.php',
+            'src/Modules/Contracts/Web/views/index.php',
+            'src/Modules/Contracts/Api/ContractsController.php',
+            'src/Modules/Contracts/Api/routes.php',
+            'src/Modules/Contracts/config/permissions.php',
+            'src/Modules/Contracts/config/jobs.php',
+            'src/Modules/Contracts/config/events.php',
+            'src/Modules/Contracts/config/di.php',
             'tests/Unit/ContractsDomainTest.php',
             'tests/Integration/ContractsServiceTest.php',
             'tests/Api/ApiContractsTest.php',
@@ -102,10 +93,10 @@ final class GiiGeneratorTest extends IntegrationTestCase
         ] as $expected) {
             self::assertContains($expected, $paths, $expected);
         }
-        $migrations = array_values(array_filter($paths, static fn($p) => str_starts_with($p, 'migrations/')));
+        $migrations = array_values(array_filter($paths, static fn($p) => str_starts_with($p, 'src/Modules/Contracts/migrations/')));
         self::assertCount(7, $migrations);
         foreach (['Contracts', 'ContractsEvents', 'ContractsReports', 'ContractsWorkflow', 'ContractsNotifications', 'ContractsIntegration', 'ContractsSchedule'] as $suffix) {
-            self::assertCount(1, preg_grep('#^migrations/M\d{12}' . $suffix . '\.php$#', $migrations), $suffix);
+            self::assertCount(1, preg_grep('#^src/Modules/Contracts/migrations/M\d{12}' . $suffix . '\.php$#', $migrations), $suffix);
         }
     }
 
@@ -129,7 +120,7 @@ final class GiiGeneratorTest extends IntegrationTestCase
 
         $again = $this->gii->plan('Contracts', self::FIELDS);
         self::assertSame(count($again->files), $again->counts()['unchanged'], 'second run: everything unchanged');
-        self::assertSame($plan->paths(), $again->paths(), 'stable file names (migration timestamps, route numbers)');
+        self::assertSame($plan->paths(), $again->paths(), 'stable file names (migration timestamps)');
     }
 
     public function testOverwriteProtectionAndExplicitOverwrite(): void
@@ -167,7 +158,7 @@ final class GiiGeneratorTest extends IntegrationTestCase
         $plan = $this->gii->plan('Invoices', 'number:string:required:unique:max=32,total:decimal,paid:bool', 'crud,api');
         self::assertNotContains('workflow', $plan->generators);
         self::assertNull($plan->file('src/Modules/Invoices/Application/InvoiceWorkflow.php'));
-        self::assertNotNull($plan->file('src/Api/V1/Action/Invoices/InvoicesController.php'));
+        self::assertNotNull($plan->file('src/Modules/Invoices/Api/InvoicesController.php'));
         $service = $plan->file('src/Modules/Invoices/Application/InvoiceService.php')?->content() ?? '';
         self::assertStringNotContainsString('Outbox', $service, 'no Kafka event generator → no outbox dependency');
         $this->gii->apply($plan);
@@ -201,7 +192,7 @@ final class GiiGeneratorTest extends IntegrationTestCase
             self::assertArrayHasKey('generators', $e->errors());
         }
         foreach (['../etc/passwd.php', 'src/Platform/Access/AccessService.php', 'config/common/params.php', '/abs/x.php',
-            'src/Modules/Projects/module.php', 'src/Admin/Action/DevTools/X.php', 'src/Modules/X/a b.php', 'src/Modules/X/y.txt'] as $bad) {
+            'src/Modules/Projects/module.php', 'src/Admin/DevTools/X.php', 'resources/views/admin/x.php', 'config/routes/admin/x.php', 'src/Modules/X/a b.php', 'src/Modules/X/y.txt'] as $bad) {
             try {
                 PathGuard::resolve($this->root, $bad);
                 self::fail("unsafe path \"$bad\" accepted");
@@ -230,9 +221,7 @@ final class GiiGeneratorTest extends IntegrationTestCase
         foreach ($it as $f) {
             if ($f->isFile()) {
                 $rel = substr($f->getPathname(), strlen($this->root) + 1);
-                if (!str_starts_with($rel, 'config/routes/') || str_contains($rel, 'contracts')) {
-                    $out[] = $rel;
-                }
+                $out[] = $rel;
             }
         }
         sort($out);

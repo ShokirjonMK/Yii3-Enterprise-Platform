@@ -39,8 +39,6 @@ final class ModuleSpec
     public readonly string $entityLabel;
     /** @var array<string,string> suffix => class name */
     private array $migrationClasses = [];
-    private string $adminRouteFile = '';
-    private string $apiRouteFile = '';
 
     /**
      * @param list<FieldSpec> $fields
@@ -172,17 +170,17 @@ final class ModuleSpec
 
     public function migrationPath(string $suffix = ''): string
     {
-        return 'migrations/' . $this->migrationClass($suffix) . '.php';
+        return $this->modulePath('migrations/' . $this->migrationClass($suffix) . '.php');
     }
 
     public function adminRouteFile(): string
     {
-        return $this->adminRouteFile;
+        return $this->modulePath('Admin/routes.php');
     }
 
     public function apiRouteFile(): string
     {
-        return $this->apiRouteFile;
+        return $this->modulePath('Api/routes.php');
     }
 
     public function modulePath(string $rel): string
@@ -222,7 +220,7 @@ final class ModuleSpec
         // migrations: re-use existing timestamps of this module, otherwise start after the newest migration
         $existing = [];
         $maxTs = '000000000000';
-        foreach (glob($this->root . '/migrations/M*.php') ?: [] as $file) {
+        foreach ([...(glob($this->root . '/migrations/M*.php') ?: []), ...(glob($this->root . '/src/Modules/*/migrations/M*.php') ?: [])] as $file) {
             if (preg_match('/^M(\d{12})([A-Za-z0-9]+)\.php$/', basename($file), $mm)) {
                 $existing[$mm[2]] = $mm[1];
                 $maxTs = max($maxTs, $mm[1]);
@@ -238,43 +236,6 @@ final class ModuleSpec
             $ts = $existing[$name] ?? self::addSeconds($base, $offset);
             $this->migrationClasses[$suffix] = 'M' . $ts . $name;
         }
-
-        $this->adminRouteFile = self::routeFile($this->root . '/config/routes/admin', $this->slug, static function (array $prefixes): string {
-            foreach (range('a', 'z') as $letter) {
-                if (!in_array('23' . $letter, $prefixes, true)) {
-                    return '23' . $letter;
-                }
-            }
-            return '29';
-        });
-        $this->adminRouteFile = 'config/routes/admin/' . $this->adminRouteFile;
-        $this->apiRouteFile = 'config/routes/api-v1/' . self::routeFile($this->root . '/config/routes/api-v1', $this->slug, static function (array $prefixes): string {
-            $max = 30;
-            foreach ($prefixes as $p) {
-                if (preg_match('/^(\d{2})/', $p, $mm)) {
-                    $max = max($max, (int) $mm[1]);
-                }
-            }
-            return sprintf('%02d', min(99, $max + 1));
-        });
-    }
-
-    /** @param callable(list<string>):string $next */
-    private static function routeFile(string $dir, string $slug, callable $next): string
-    {
-        $prefixes = [];
-        foreach (glob($dir . '/*.php') ?: [] as $file) {
-            $base = basename($file, '.php');
-            if (!str_contains($base, '-')) {
-                continue;
-            }
-            [$prefix, $name] = explode('-', $base, 2);
-            if ($name === $slug) {
-                return $base . '.php';
-            }
-            $prefixes[] = $prefix;
-        }
-        return $next($prefixes) . '-' . $slug . '.php';
     }
 
     private static function addSeconds(string $ts, int $seconds): string

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Template: web routes (config/routes/web/<module>.php).
+ * Template: web routes (src/Modules/<Module>/Web/routes.php).
  *
  * @var App\Platform\Gii\Spec\ModuleSpec $m
  */
@@ -20,7 +20,7 @@ echo $m->fill(<<<'PHP'
 declare(strict_types=1);
 
 use App\Api\V1\Middleware\RequireFeature;
-use App\Web\Action\{{Module}}\{{Module}}Controller;
+use App\Modules\{{Module}}\Web\{{Module}}Controller;
 use App\Web\Middleware\RequirePermission;
 use Yiisoft\Router\Group;
 use Yiisoft\Router\Route;

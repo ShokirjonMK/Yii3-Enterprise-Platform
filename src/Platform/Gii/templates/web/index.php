@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Template: web list view (resources/views/web/<module>/index.php).
+ * Template: web list view (src/Modules/<Module>/Web/views/index.php).
  *
  * @var App\Platform\Gii\Spec\ModuleSpec $m
  */

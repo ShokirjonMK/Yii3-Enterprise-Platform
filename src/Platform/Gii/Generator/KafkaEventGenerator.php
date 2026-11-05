@@ -8,7 +8,7 @@ use App\Platform\Gii\Spec\ModuleSpec;
 
 /**
  * Kafka Event: event payload class (topic, types, payload builder), outbox usage in the service (same
- * transaction), consumer handler maintaining an activity read model, config/common/events/<module>.php and
+ * transaction), consumer handler maintaining an activity read model, src/Modules/<Module>/config/events.php and
  * the read-model / topic-registry migration.
  */
 final class KafkaEventGenerator extends AbstractEnterpriseGenerator
@@ -43,7 +43,7 @@ final class KafkaEventGenerator extends AbstractEnterpriseGenerator
         return [
             $m->modulePath('Domain/' . $m->entity . 'Event.php') => 'event.php',
             $m->modulePath('Infrastructure/' . $m->entity . 'ActivityProjector.php') => 'projector.php',
-            'config/common/events/' . $m->code . '.php' => 'config.php',
+            $m->modulePath('config/events.php') => 'config.php',
             $m->migrationPath('Events') => 'migration.php',
         ];
     }

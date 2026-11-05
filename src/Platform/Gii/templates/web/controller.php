@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Template: web controller (src/Web/Action/<Module>/<Module>Controller.php).
+ * Template: web controller (src/Modules/<Module>/Web/<Module>Controller.php).
  *
  * @var App\Platform\Gii\Spec\ModuleSpec $m
  */
@@ -48,7 +48,7 @@ echo $m->fill(<<<'PHP'
 
 declare(strict_types=1);
 
-namespace App\Web\Action\{{Module}};
+namespace App\Modules\{{Module}}\Web;
 
 use App\Modules\{{Module}}\Application\{{Entity}}Service;
 use App\Modules\{{Module}}\Domain\{{Entity}};
@@ -84,7 +84,7 @@ final class {{Module}}Controller
         $params = $request->getQueryParams();
         $filters = ['q' => self::str($params, 'q')];__STATUS_FILTER__
         $page = $this->service->search($this->actor(), $filters, max(1, (int) ($params['page'] ?? 1)), self::PER_PAGE, self::str($params, 'sort') ?: '-updated_at');
-        return $this->responder->render('web/{{slug}}/index', [
+        return $this->responder->render('@modules/{{Module}}/Web/views/index', [
             'page' => $page,
             'filters' => $filters,
             'query' => array_filter($filters, static fn($v) => $v !== ''),
@@ -95,7 +95,7 @@ final class {{Module}}Controller
     {
         $actor = $this->actor();
         $e = $this->service->get($actor, $this->id());
-        return $this->responder->render('web/{{slug}}/view', [
+        return $this->responder->render('@modules/{{Module}}/Web/views/view', [
             'entity' => $e,
             'activity' => $this->service->activity($actor, $e->id),__TRANSITIONS__
         ], 'web');
@@ -143,7 +143,7 @@ final class {{Module}}Controller
 __STATUS_ACTION__
     private function form(?{{Entity}} $entity, array $values, array $errors, int $status = 200): ResponseInterface
     {
-        return $this->responder->render('web/{{slug}}/form', [
+        return $this->responder->render('@modules/{{Module}}/Web/views/form', [
             'entity' => $entity,
             'values' => $values,
             'errors' => $errors,

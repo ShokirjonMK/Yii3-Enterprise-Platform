@@ -40,7 +40,7 @@ final class EntityGenerator extends AbstractEnterpriseGenerator
             $m->modulePath('Domain/' . $m->entity . 'Rules.php') => '../_shared/rules.php',
             $m->modulePath('Infrastructure/' . $m->entity . 'Repository.php') => '../_shared/repository.php',
             $m->migrationPath() => 'migration.php',
-            'config/common/di/' . $m->code . '.php' => 'di.php',
+            $m->modulePath('config/di.php') => 'di.php',
         ];
         if ($m->hasStatus()) {
             $files[$m->modulePath('Domain/' . $m->entity . 'Status.php')] = 'status.php';

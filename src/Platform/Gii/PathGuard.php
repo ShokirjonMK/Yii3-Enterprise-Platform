@@ -14,15 +14,12 @@ final class PathGuard
 {
     /** Only these locations may receive generated code. */
     public const ALLOWED_PREFIXES = [
-        'src/Modules/', 'src/Admin/Action/', 'src/Web/Action/', 'src/Api/V1/Action/',
-        'resources/views/admin/', 'resources/views/web/',
-        'config/routes/admin/', 'config/routes/web/', 'config/routes/api-v1/',
-        'config/common/permissions/', 'config/common/jobs/', 'config/common/events/', 'config/common/di/',
-        'migrations/', 'tests/Unit/', 'tests/Integration/', 'tests/Api/', 'tests/E2E/',
+        'src/Modules/',                       // the whole module: Domain, Application, Infrastructure, Admin, Web, Api, config, migrations
+        'tests/Unit/', 'tests/Integration/', 'tests/Api/', 'tests/E2E/',
     ];
 
     /** Platform code that generators must never touch, even inside allowed prefixes. */
-    private const FORBIDDEN = ['src/Admin/Action/DevTools/', 'src/Modules/Projects/', 'src/Api/V1/Action/Auth/', 'src/Api/V1/Action/Docs/'];
+    private const FORBIDDEN = ['src/Modules/Projects/'];
 
     /** @return string absolute path */
     public static function resolve(string $root, string $relative): string

@@ -7,8 +7,8 @@ namespace App\Platform\Gii\Generator;
 use App\Platform\Gii\Spec\ModuleSpec;
 
 /**
- * Admin UI: config/routes/admin/<NN>-<module>.php, thin controller (src/Admin/Action/<Module>/) and views
- * (resources/views/admin/<module>/: list with HTMX filters/sort/pagination, form, detail).
+ * Admin UI in src/Modules/<Module>/Admin/: routes.php, thin controller and views/ (list with HTMX
+ * filters/sort/pagination, form, detail).
  */
 final class AdminUiGenerator extends AbstractEnterpriseGenerator
 {
@@ -34,21 +34,21 @@ final class AdminUiGenerator extends AbstractEnterpriseGenerator
 
     public static function marker(ModuleSpec $m): ?string
     {
-        return 'src/Admin/Action/' . $m->module . '/' . $m->module . 'Controller.php';
+        return $m->modulePath('Admin/' . $m->module . 'Controller.php');
     }
 
     protected function files(ModuleSpec $m): array
     {
         $files = [
             $m->adminRouteFile() => 'routes.php',
-            'src/Admin/Action/' . $m->module . '/' . $m->module . 'Controller.php' => 'controller.php',
-            'resources/views/admin/' . $m->slug . '/index.php' => 'index.php',
-            'resources/views/admin/' . $m->slug . '/form.php' => 'form.php',
-            'resources/views/admin/' . $m->slug . '/view.php' => 'view.php',
-            'resources/views/admin/' . $m->slug . '/_fields.php' => '../_shared/fields.php',
+            $m->modulePath('Admin/' . $m->module . 'Controller.php') => 'controller.php',
+            $m->modulePath('Admin/views/index.php') => 'index.php',
+            $m->modulePath('Admin/views/form.php') => 'form.php',
+            $m->modulePath('Admin/views/view.php') => 'view.php',
+            $m->modulePath('Admin/views/_fields.php') => '../_shared/fields.php',
         ];
         if ($m->has('report')) {
-            $files['resources/views/admin/' . $m->slug . '/report.php'] = 'report.php';
+            $files[$m->modulePath('Admin/views/report.php')] = 'report.php';
         }
         return $files;
     }

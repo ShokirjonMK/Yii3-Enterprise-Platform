@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Template: job registry (config/common/jobs/<module>.php) — shared by the Worker Job and Report generators.
+ * Template: job registry (src/Modules/<Module>/config/jobs.php) — shared by the Worker Job and Report generators.
  *
  * @var App\Platform\Gii\Spec\ModuleSpec $m
  */

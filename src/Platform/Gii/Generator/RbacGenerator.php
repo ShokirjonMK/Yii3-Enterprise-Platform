@@ -7,7 +7,7 @@ namespace App\Platform\Gii\Generator;
 use App\Platform\Gii\Spec\ModuleSpec;
 
 /**
- * RBAC: config/common/permissions/<module>.php (view/create/update/delete) extending existing roles;
+ * RBAC: src/Modules/<Module>/config/permissions.php (view/create/update/delete) extending existing roles;
  * applied with `./yii rbac:sync`.
  */
 final class RbacGenerator extends AbstractEnterpriseGenerator
@@ -24,16 +24,16 @@ final class RbacGenerator extends AbstractEnterpriseGenerator
 
     public static function getDescription(): string
     {
-        return 'Permission catalog config/common/permissions/<module>.php extending the existing roles; apply with ./yii rbac:sync.';
+        return 'Permission catalog src/Modules/<Module>/config/permissions.php extending the existing roles; apply with ./yii rbac:sync.';
     }
 
     public static function marker(ModuleSpec $m): ?string
     {
-        return 'config/common/permissions/' . $m->code . '.php';
+        return $m->modulePath('config/permissions.php');
     }
 
     protected function files(ModuleSpec $m): array
     {
-        return ['config/common/permissions/' . $m->code . '.php' => 'permissions.php'];
+        return [$m->modulePath('config/permissions.php') => 'permissions.php'];
     }
 }

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Template: admin controller (src/Admin/Action/<Module>/<Module>Controller.php).
+ * Template: admin controller (src/Modules/<Module>/Admin/<Module>Controller.php).
  *
  * @var App\Platform\Gii\Spec\ModuleSpec $m
  */
@@ -84,7 +84,7 @@ $reportActions = $report ? <<<'PHP'
 
     public function report(): ResponseInterface
     {
-        return $this->responder->render('admin/{{slug}}/report', [
+        return $this->responder->render('@modules/{{Module}}/Admin/views/report', [
             'report' => $this->service->report($this->actor(), $this->id()),
             'storageConfigured' => $this->storage->isConfigured(),
         ]);
@@ -108,7 +108,7 @@ echo $m->fill(<<<'PHP'
 
 declare(strict_types=1);
 
-namespace App\Admin\Action\{{Module}};
+namespace App\Modules\{{Module}}\Admin;
 
 __USES__
 
@@ -138,7 +138,7 @@ final class {{Module}}Controller
             $filters[$k] = self::str($params, $k);
         }
         $page = $this->service->search($actor, $filters, max(1, (int) ($params['page'] ?? 1)), self::PER_PAGE, self::str($params, 'sort') ?: null);
-        return $this->responder->render('admin/{{slug}}/index', [
+        return $this->responder->render('@modules/{{Module}}/Admin/views/index', [
             'page' => $page,
             'filters' => $filters,
             'query' => array_filter($filters + ['sort' => self::str($params, 'sort')], static fn($v) => $v !== ''),__COUNTS____REPORTS__
@@ -166,7 +166,7 @@ final class {{Module}}Controller
     {
         $actor = $this->actor();
         $e = $this->service->get($actor, $this->id());
-        return $this->responder->render('admin/{{slug}}/view', [
+        return $this->responder->render('@modules/{{Module}}/Admin/views/view', [
             'entity' => $e,
             'activity' => $this->service->activity($actor, $e->id),__TRANSITIONS__
         ]);
@@ -212,7 +212,7 @@ __REPORT_ACTIONS__
 
     private function form(?{{Entity}} $entity, array $values, array $errors, int $status = 200): ResponseInterface
     {
-        return $this->responder->render('admin/{{slug}}/form', [
+        return $this->responder->render('@modules/{{Module}}/Admin/views/form', [
             'entity' => $entity,
             'values' => $values,
             'errors' => $errors,

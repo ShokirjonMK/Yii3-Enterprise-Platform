@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Template: form fields partial (resources/views/{admin,web}/<module>/_fields.php).
+ * Template: form fields partial (src/Modules/<Module>/{Admin,Web}/views/_fields.php).
  *
  * @var App\Platform\Gii\Spec\ModuleSpec $m
  */

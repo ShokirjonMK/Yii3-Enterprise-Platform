@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Template: module DI file (config/common/di/<module>.php).
+ * Template: module DI file (src/Modules/<Module>/config/di.php).
  *
  * @var App\Platform\Gii\Spec\ModuleSpec $m
  */

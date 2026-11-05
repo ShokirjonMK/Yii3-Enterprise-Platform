@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Template: RBAC catalog (config/common/permissions/<module>.php).
+ * Template: RBAC catalog (src/Modules/<Module>/config/permissions.php).
  *
  * @var App\Platform\Gii\Spec\ModuleSpec $m
  */

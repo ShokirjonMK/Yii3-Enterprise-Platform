@@ -7,8 +7,8 @@ namespace App\Platform\Gii\Generator;
 use App\Platform\Gii\Spec\ModuleSpec;
 
 /**
- * REST API: config/routes/api-v1/<NN>-<module>.php (Bearer auth, scope + permission per route, feature flag)
- * and the controller with OpenAPI attributes (src/Api/V1/Action/<Module>/).
+ * REST API: src/Modules/<Module>/Api/routes.php (Bearer auth, scope + permission per route, feature flag)
+ * and the controller with OpenAPI attributes (src/Modules/<Module>/Api/).
  */
 final class RestApiGenerator extends AbstractEnterpriseGenerator
 {
@@ -34,14 +34,14 @@ final class RestApiGenerator extends AbstractEnterpriseGenerator
 
     public static function marker(ModuleSpec $m): ?string
     {
-        return 'src/Api/V1/Action/' . $m->module . '/' . $m->module . 'Controller.php';
+        return $m->modulePath('Api/' . $m->module . 'Controller.php');
     }
 
     protected function files(ModuleSpec $m): array
     {
         return [
             $m->apiRouteFile() => 'routes.php',
-            'src/Api/V1/Action/' . $m->module . '/' . $m->module . 'Controller.php' => 'controller.php',
+            $m->modulePath('Api/' . $m->module . 'Controller.php') => 'controller.php',
         ];
     }
 }

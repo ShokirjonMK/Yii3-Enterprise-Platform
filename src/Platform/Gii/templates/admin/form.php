@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Template: admin form view (resources/views/admin/<module>/form.php).
+ * Template: admin form view (src/Modules/<Module>/Admin/views/form.php).
  *
  * @var App\Platform\Gii\Spec\ModuleSpec $m
  */
@@ -47,7 +47,7 @@ $action = $editing ? $h->url('admin.{{code}}.update', ['id' => $entity->id]) : $
             <?= $this->render('./_fields', ['values' => $values, 'errors' => $errors]) ?>
             <div class="row span-2">
                 <button class="btn btn--primary" type="submit"><?= $h->icon('check') ?> <?= $editing ? $h->t('Save') : $h->t('Create') ?></button>
-                <a class="btn btn--ghost" href="<?= $editing ? $h->url('admin.{{code}}.view', ['id' => $entity->id]) : $h->url('admin.{{code}}') ?>"><?= $h->t('Cancel') ?></a>
+                <a class="btn btn--ghost" data-back href="<?= $editing ? $h->url('admin.{{code}}.view', ['id' => $entity->id]) : $h->url('admin.{{code}}') ?>"><?= $h->t('Cancel') ?></a>
             </div>
         </form>
     </div>

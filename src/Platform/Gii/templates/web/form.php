@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Template: web form view (resources/views/web/<module>/form.php).
+ * Template: web form view (src/Modules/<Module>/Web/views/form.php).
  *
  * @var App\Platform\Gii\Spec\ModuleSpec $m
  */

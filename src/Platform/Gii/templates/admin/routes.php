@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Template: admin routes (config/routes/admin/<NN>-<module>.php).
+ * Template: admin routes (src/Modules/<Module>/Admin/routes.php).
  *
  * @var App\Platform\Gii\Spec\ModuleSpec $m
  */
@@ -25,7 +25,7 @@ echo $m->fill(<<<'PHP'
 
 declare(strict_types=1);
 
-use App\Admin\Action\{{Module}}\{{Module}}Controller;
+use App\Modules\{{Module}}\Admin\{{Module}}Controller;
 use App\Api\V1\Middleware\RequireFeature;
 use App\Web\Middleware\RequirePermission;
 use Yiisoft\Router\Group;

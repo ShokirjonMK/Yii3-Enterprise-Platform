@@ -42,7 +42,7 @@ final class ReportGenerator extends AbstractEnterpriseGenerator
         return [
             $m->modulePath('Infrastructure/Generate' . $m->module . 'ReportJob.php') => 'job.php',
             $m->migrationPath('Reports') => 'migration.php',
-            'config/common/jobs/' . $m->code . '.php' => '../_shared/jobs.php',
+            $m->modulePath('config/jobs.php') => '../_shared/jobs.php',
         ];
     }
 }

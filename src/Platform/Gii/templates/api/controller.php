@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Template: API controller with OpenAPI attributes (src/Api/V1/Action/<Module>/<Module>Controller.php).
+ * Template: API controller with OpenAPI attributes (src/Modules/<Module>/Api/<Module>Controller.php).
  *
  * @var App\Platform\Gii\Spec\ModuleSpec $m
  */
@@ -104,7 +104,7 @@ echo $m->fill(<<<'PHP'
 
 declare(strict_types=1);
 
-namespace App\Api\V1\Action\{{Module}};
+namespace App\Modules\{{Module}}\Api;
 
 __USES__
 

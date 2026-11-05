@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Template: consumer group config (config/common/events/<module>.php).
+ * Template: consumer group config (src/Modules/<Module>/config/events.php).
  *
  * @var App\Platform\Gii\Spec\ModuleSpec $m
  */
