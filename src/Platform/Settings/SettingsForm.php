@@ -77,6 +77,15 @@ final class SettingsForm
                 }
                 $new = is_string($input[$field]) ? trim($input[$field]) : $input[$field];
                 $current = $this->settings->get($key);
+                if ($def['type'] === 'json') {
+                    $decoded = is_string($new) ? json_decode($new, true) : $new;
+                    if (json_last_error() === JSON_ERROR_NONE && $decoded === $current) {
+                        continue;
+                    }
+                    $this->settings->set($actorId, $key, $new, comment: $comment, permission: $permission);
+                    $changed[] = $key;
+                    continue;
+                }
                 if ((string) $new !== (string) ($current ?? '')) {
                     $this->settings->set($actorId, $key, $def['type'] === 'int' ? $new : (string) $new, comment: $comment, permission: $permission);
                     $changed[] = $key;

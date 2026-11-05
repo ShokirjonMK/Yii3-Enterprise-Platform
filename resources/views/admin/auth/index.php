@@ -37,6 +37,7 @@ $labels = ['auth.local_login' => $h->tr('Local login (username + password)'), 'a
         </div>
     <?php endif ?>
 </div>
+<?= $this->render('./_tabs', ['active' => 'admin.auth']) ?>
 
 <div class="card">
     <div class="card__head"><h2><?= $h->t('Login methods') ?></h2></div>

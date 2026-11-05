@@ -32,8 +32,14 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
             ->withHeader('Cross-Origin-Resource-Policy', 'same-origin');
 
         if (!$response->hasHeader('Content-Security-Policy')) {
+            // a page may widen connect-src for itself only (e.g. the E-IMZO local websocket on 127.0.0.1)
+            $extraConnect = preg_replace('/[^a-z0-9:\/.\s-]/i', '', $response->getHeaderLine('X-CSP-Connect')) ?? '';
+            $response = $response->withoutHeader('X-CSP-Connect');
             $policy = [];
             foreach ($this->csp as $directive => $value) {
+                if ($directive === 'connect-src' && trim($extraConnect) !== '') {
+                    $value .= ' ' . trim($extraConnect);
+                }
                 $policy[] = $directive . ' ' . $value;
             }
             $response = $response->withHeader('Content-Security-Policy', implode('; ', $policy));

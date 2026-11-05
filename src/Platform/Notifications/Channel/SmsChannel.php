@@ -51,7 +51,7 @@ final class SmsChannel implements NotificationChannelInterface
         }
         $cfg = new IntegrationConfig(code: 'sms', baseUrl: $url, authType: 'bearer', secret: $token, timeoutMs: 10000, maxRetries: 0, status: 'healthy');
         try {
-            $data = $this->http->sendJson($cfg, 'POST', $url, ['json' => $payload]);
+            $data = $this->http->sendJson($cfg, 'POST', $url, ['json' => $payload, 'secrets' => array_values(array_filter((array) ($notification['secrets'] ?? []), 'is_string'))]);
         } catch (IntegrationException $e) {
             if (!$e->isRetryable() && !in_array($e->errorClass(), ['dns', 'connect', 'network'], true)) {
                 throw new PermanentJobFailure($e->getMessage(), 0, $e);

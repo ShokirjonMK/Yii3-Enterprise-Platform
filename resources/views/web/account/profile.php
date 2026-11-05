@@ -17,7 +17,7 @@ $errors ??= [];
 ?>
 <div class="page-head">
     <div class="page-head__titles"><h1><?= $h->t('My profile') ?></h1><p class="page-head__sub"><?= $h->e($user->username) ?></p></div>
-    <div class="page-head__actions"><a class="btn" href="<?= $h->url('web.security') ?>"><?= $h->icon('shield') ?> <?= $h->t('Security & sessions') ?></a></div>
+    <div class="page-head__actions"><a class="btn" href="<?= $h->url('web.security') ?>"><?= $h->icon('shield') ?> <?= $h->t('Security & sessions') ?></a> <a class="btn" href="<?= $h->url('web.appearance') ?>"><?= $h->icon('sun') ?> <?= $h->t('Appearance') ?></a></div>
 </div>
 <div class="grid grid--sidebar">
     <form class="card" method="post" action="<?= $h->url('web.profile.update') ?>" hx-boost="true" hx-target="#main" hx-select="#main" hx-swap="outerHTML">

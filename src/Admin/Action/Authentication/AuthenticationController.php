@@ -46,6 +46,7 @@ final class AuthenticationController
         private readonly FeatureFlagService $flags,
         private readonly AccessService $access,
         private readonly RbacCatalog $catalog,
+        private readonly \App\Platform\Access\RoleManager $roleManager,
         private readonly TenantService $tenants,
         private readonly ConnectionInterface $db,
     ) {}
@@ -271,7 +272,8 @@ final class AuthenticationController
         $type = isset(self::CONFIG_FIELDS[$type]) ? $type : 'oidc';
         $values['type'] = $type;
         $values['config'] = is_array($values['config'] ?? null) ? $values['config'] : [];
-        $roles = array_values(array_diff(array_keys($this->catalog->roles()), RbacCatalog::ADMIN_ROLES));
+        // every non-administrative role from RBAC storage (catalog + roles created in the admin panel)
+        $roles = array_keys(array_filter($this->roleManager->roles(), static fn(array $r) => !$r['admin']));
         return $this->responder->render('admin/auth/form', [
             'code' => $code,
             'values' => $values,

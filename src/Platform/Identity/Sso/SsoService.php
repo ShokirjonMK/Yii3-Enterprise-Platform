@@ -169,7 +169,7 @@ final class SsoService
             'tenant_id' => $tenantId,
         ]);
         $this->access->assignSystem($id, 'user');
-        if ($provider['default_role'] !== 'user' && !in_array($provider['default_role'], \App\Platform\Access\RbacCatalog::ADMIN_ROLES, true)) {
+        if ($provider['default_role'] !== 'user' && !$this->access->isAdminRole((string) $provider['default_role'])) {
             $this->access->assignSystem($id, (string) $provider['default_role']);
         }
         $this->audit->record('user.provisioned_via_sso', 'user', $id, null, ['username' => $username, 'provider' => $provider['code']], category: 'security', severity: 'notice', actorId: $id);
@@ -211,7 +211,7 @@ final class SsoService
             $errors['config.allow_insecure_http'][] = 'Insecure HTTP is not allowed in production.';
         }
         $defaultRole = (string) ($input['default_role'] ?? 'user');
-        if (in_array($defaultRole, \App\Platform\Access\RbacCatalog::ADMIN_ROLES, true)) {
+        if ($this->access->isAdminRole($defaultRole)) {
             $errors['default_role'][] = 'Administrative roles cannot be granted automatically.';
         }
         $allowlist = array_values(array_filter(array_map('trim', preg_split('/\R/', (string) ($input['redirect_allowlist'] ?? '')) ?: [])));

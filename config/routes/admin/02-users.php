@@ -24,6 +24,7 @@ return [
         Route::post("/$uuid/block")->middleware($manage)->action([UsersController::class, 'block'])->name('admin.users.block'),
         Route::post("/$uuid/unblock")->middleware($manage)->action([UsersController::class, 'unblock'])->name('admin.users.unblock'),
         Route::post("/$uuid/unlock")->middleware($manage)->action([UsersController::class, 'unlock'])->name('admin.users.unlock'),
+        Route::post("/$uuid/mfa-reset")->middleware($manage, RequireRecentAuth::class)->action([UsersController::class, 'resetMfa'])->name('admin.users.mfa-reset'),
         Route::post("/$uuid/archive")->middleware($manage, RequireRecentAuth::class)->action([UsersController::class, 'archive'])->name('admin.users.archive'),
         Route::post("/$uuid/reset-password")->middleware($manage, RequireRecentAuth::class)->action([UsersController::class, 'resetPassword'])->name('admin.users.reset-password'),
         Route::post("/$uuid/roles")->middleware(RequirePermission::for('rbac.manage'), RequireRecentAuth::class)->action([UsersController::class, 'roles'])->name('admin.users.roles'),

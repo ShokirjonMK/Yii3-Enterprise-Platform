@@ -39,6 +39,9 @@ final class UsersController
         private readonly UserRepository $repo,
         private readonly AccessService $access,
         private readonly RbacCatalog $catalog,
+        private readonly \App\Platform\Access\RoleManager $roleManager,
+        private readonly \App\Platform\Identity\Mfa\MfaManager $mfaManager,
+        private readonly \App\Platform\Audit\AuditLogger $audit,
         private readonly OrganizationService $organizations,
         private readonly TenantService $tenants,
         private readonly SsoService $sso,
@@ -105,8 +108,10 @@ final class UsersController
             'organization' => $user->organizationId !== null ? $this->safeOrganization($actor, $user->organizationId) : null,
             'roles' => $this->access->rolesOf($user->id),
             'directRoles' => $this->access->directRoles($user->id),
-            'catalogRoles' => $this->catalog->roles(),
-            'adminRoles' => RbacCatalog::ADMIN_ROLES,
+            'catalogRoles' => $allRoles = $this->roleManager->roles(),
+            'adminRoles' => array_keys(array_filter($allRoles, static fn(array $r) => $r['admin'])),
+            'mfaMethods' => $this->mfaManager->enrolled($user),
+            'mfaPolicy' => $this->mfaManager->policy($user),
             'actorIsSuper' => $this->access->isSuperadmin($actor->id),
             'isSelf' => $actor->id === $user->id,
             'sessions' => $this->users->activeSessions($actor, $user->id),
@@ -197,6 +202,23 @@ final class UsersController
         $this->users->assertMayAdminister($actor, $user);
         $this->users->unlock($actor, $user->id);
         $this->responder->success('Account unlocked.');
+        return $this->responder->redirect('admin.users.view', ['id' => $user->id]);
+    }
+
+    /** Removes every second factor (lost phone / key): the user enrols again at next sign-in if the policy requires it. */
+    public function resetMfa(CurrentRoute $route): ResponseInterface
+    {
+        $actor = $this->actor->user();
+        $user = $this->users->get($actor, (string) $route->getArgument('id'));
+        $this->users->assertMayAdminister($actor, $user);
+        if ($actor->id === $user->id) {
+            $this->responder->error('Use Account → Security to change your own two-factor methods.');
+            return $this->responder->redirect('admin.users.view', ['id' => $user->id]);
+        }
+        $before = array_column($this->mfaManager->enrolled($user), 'type');
+        $this->mfaManager->resetAll($user->id);
+        $this->audit->record('user.mfa_reset', 'user', $user->id, ['methods' => $before], ['methods' => []], [], category: 'security', severity: 'warning', actorId: $actor->id);
+        $this->responder->success('Two-factor authentication was reset. The user sets it up again at the next sign-in.');
         return $this->responder->redirect('admin.users.view', ['id' => $user->id]);
     }
 

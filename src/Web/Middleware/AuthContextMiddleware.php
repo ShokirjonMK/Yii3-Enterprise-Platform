@@ -29,7 +29,9 @@ final class AuthContextMiddleware implements MiddlewareInterface
     /** Routes reachable while a gate is pending. */
     private const GATE_ROUTES = [
         'password' => ['auth.password.change', 'auth.password.submit', 'auth.logout', 'auth.locale'],
-        'mfa_setup' => ['auth.mfa.setup', 'auth.mfa.setup.confirm', 'auth.logout', 'auth.locale'],
+        'mfa_setup' => ['auth.mfa.setup', 'auth.mfa.setup.confirm', 'auth.mfa.setup.telegram', 'auth.mfa.setup.telegram.status',
+            'auth.mfa.setup.otp.send', 'auth.mfa.setup.otp.verify', 'auth.mfa.setup.passkey.options', 'auth.mfa.setup.passkey',
+            'auth.mfa.setup.eimzo.challenge', 'auth.mfa.setup.eimzo', 'auth.mfa.recovery', 'auth.logout', 'auth.locale'],
     ];
 
     public function __construct(

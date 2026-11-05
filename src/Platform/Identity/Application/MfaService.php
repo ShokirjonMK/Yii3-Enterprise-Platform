@@ -15,7 +15,8 @@ use SensitiveParameter;
 use Yiisoft\Db\Connection\ConnectionInterface;
 
 /**
- * TOTP (RFC 6238) multi-factor authentication with single-use recovery codes.
+ * TOTP (RFC 6238) authenticator app + single-use recovery codes, and the users.mfa_enabled switch shared by
+ * all second factors (other methods live in user_mfa_methods, see App\Platform\Identity\Mfa\MfaManager).
  *  - secrets are stored encrypted (XChaCha20-Poly1305),
  *  - replay protection: a time step can be used only once (users.mfa_last_used_step),
  *  - recovery codes are stored as Argon2id hashes and consumed on use.
@@ -80,7 +81,16 @@ final class MfaService
      */
     public function verifyForUser(User $user, string $code): bool
     {
-        if (!$user->mfaEnabled || $user->mfaSecretEnc === null) {
+        if (!$user->mfaEnabled) {
+            return false;
+        }
+        return $this->verifyTotp($user, $code) || $this->consumeRecoveryCode($user, $code);
+    }
+
+    /** Authenticator-app code only (no recovery codes). */
+    public function verifyTotp(User $user, string $code): bool
+    {
+        if ($user->mfaSecretEnc === null) {
             return false;
         }
         $secret = $this->encrypter->decrypt($user->mfaSecretEnc, 'mfa');
@@ -93,7 +103,13 @@ final class MfaService
             )->execute();
             return $updated === 1;
         }
-        return $this->consumeRecoveryCode($user, $code);
+        return false;
+    }
+
+    /** Single-use recovery code. */
+    public function verifyRecoveryCode(User $user, string $code): bool
+    {
+        return $user->mfaEnabled && $this->consumeRecoveryCode($user, $code);
     }
 
     /**
@@ -101,15 +117,56 @@ final class MfaService
      *
      * @return list<string>
      */
-    public function enable(string $userId, #[SensitiveParameter] string $secret): array
+    public function enable(string $userId, #[SensitiveParameter] string $secret, bool $keepRecoveryCodes = false): array
     {
-        [$plain, $hashes] = $this->makeRecoveryCodes();
-        $this->db->createCommand()->update('users', [
+        $data = [
             'mfa_enabled' => true,
             'mfa_secret_enc' => $this->encrypter->encrypt($secret, 'mfa'),
-            'mfa_recovery_codes' => json_encode($hashes),
             'mfa_last_used_step' => intdiv(time(), self::PERIOD),
-        ], ['id' => $userId])->execute();
+        ];
+        $plain = [];
+        if (!$keepRecoveryCodes) {
+            [$plain, $hashes] = $this->makeRecoveryCodes();
+            $data['mfa_recovery_codes'] = json_encode($hashes);
+        }
+        $this->db->createCommand()->update('users', $data, ['id' => $userId])->execute();
+        return $plain;
+    }
+
+    /**
+     * Removes only the authenticator app. Two-factor stays on when other methods (Telegram, passkey…) remain.
+     */
+    public function removeTotp(string $userId): void
+    {
+        $this->db->createCommand()->update('users', ['mfa_secret_enc' => null, 'mfa_last_used_step' => null], ['id' => $userId])->execute();
+    }
+
+    /**
+     * Recomputes users.mfa_enabled from the enrolled factors. Returns fresh recovery codes when two-factor has just
+     * become active and the user has none (show them once), otherwise null. Clears recovery codes when nothing is left.
+     *
+     * @return list<string>|null
+     */
+    public function refresh(string $userId): ?array
+    {
+        $row = $this->db->createCommand('SELECT mfa_enabled, mfa_secret_enc IS NOT NULL AS totp, mfa_recovery_codes,
+                (SELECT count(*) FROM user_mfa_methods m WHERE m.user_id = u.id) AS methods FROM users u WHERE id = :id', [':id' => $userId])->queryOne();
+        if ($row === null) {
+            return null;
+        }
+        $active = (bool) $row['totp'] || (int) $row['methods'] > 0;
+        if (!$active) {
+            $this->disable($userId);
+            return null;
+        }
+        $codes = json_decode((string) $row['mfa_recovery_codes'], true);
+        $plain = null;
+        $data = ['mfa_enabled' => true];
+        if (!is_array($codes) || $codes === []) {
+            [$plain, $hashes] = $this->makeRecoveryCodes();
+            $data['mfa_recovery_codes'] = json_encode($hashes);
+        }
+        $this->db->createCommand()->update('users', $data, ['id' => $userId])->execute();
         return $plain;
     }
 
@@ -121,6 +178,8 @@ final class MfaService
             'mfa_recovery_codes' => '[]',
             'mfa_last_used_step' => null,
         ], ['id' => $userId])->execute();
+        $this->db->createCommand()->delete('user_mfa_methods', ['user_id' => $userId])->execute();
+        $this->db->createCommand()->delete('mfa_trusted_devices', ['user_id' => $userId])->execute();
     }
 
     /** @return list<string> */

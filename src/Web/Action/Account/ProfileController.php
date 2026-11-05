@@ -37,6 +37,8 @@ final class ProfileController
         private readonly AuditLogger $audit,
         private readonly AccessService $access,
         private readonly SessionInterface $session,
+        private readonly \App\Platform\Identity\Mfa\MfaManager $mfaManager,
+        private readonly \App\Platform\Identity\Mfa\TrustedDevices $devices,
     ) {}
 
     public function show(): ResponseInterface
@@ -83,6 +85,10 @@ final class ProfileController
             'currentSession' => SessionRegistry::hash((string) $this->webAuth->sessionId()),
             'tokens' => $this->tokens->listForUser($user->id),
             'newToken' => $newToken,
+            'mfaMethods' => $this->mfaManager->enrolled($user),
+            'mfaPolicy' => $this->mfaManager->policy($user),
+            'mfaPreferred' => $this->mfaManager->preferred($user, $this->mfaManager->usable($user))['type'] ?? null,
+            'trustedDevices' => $this->devices->forUser($user->id),
         ], 'web');
     }
 
@@ -153,8 +159,7 @@ final class ProfileController
     public function disableMfa(): ResponseInterface
     {
         $user = $this->user();
-        $roles = $this->access->rolesOf($user->id);
-        if ($user->mfaRequired || array_intersect($roles, ['superadmin', 'platform_admin', 'security_admin', 'devops_sre']) !== []) {
+        if ($this->mfaManager->policy($user)->required) {
             $this->responder->error('Two-factor authentication is mandatory for your account.');
             return $this->responder->redirect('web.security');
         }

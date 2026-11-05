@@ -11,7 +11,6 @@ use App\Shared\Domain\Exception\TooManyRequestsException;
 use App\Shared\Domain\Exception\ValidationException;
 use App\Shared\Infrastructure\Context\RequestContext;
 use SensitiveParameter;
-use Yiisoft\Rbac\ManagerInterface;
 use Yiisoft\Security\PasswordHasher;
 
 /**
@@ -25,17 +24,13 @@ final class AuthenticationService
     /** Pre-computed Argon2id hash used to equalise timing for unknown users. */
     private const DUMMY_HASH = '$argon2id$v=19$m=65536,t=4,p=1$ZWlkUE9MR2tLV2FpOFEuZA$72jelz29bM0ZmBrDCoNxnWLVG3QTRVYkCIU4F3aItwM';
 
-    /**
-     * @param list<string> $mfaEnforcedRoles
-     */
     public function __construct(
         private readonly UserRepository $users,
         private readonly PasswordHasher $hasher,
         private readonly LoginThrottle $throttle,
         private readonly AuditLogger $audit,
         private readonly RequestContext $context,
-        private readonly ManagerInterface $rbac,
-        private readonly array $mfaEnforcedRoles = [],
+        private readonly \App\Platform\Identity\Mfa\MfaManager $mfa,
     ) {}
 
     public function authenticate(string $login, #[SensitiveParameter] string $password): LoginResult
@@ -95,13 +90,12 @@ final class AuthenticationService
     /** Builds the second-step requirements for a user who passed the first factor (password or SSO). */
     public function result(User $user, string $method): LoginResult
     {
-        $roles = array_keys($this->rbac->getRolesByUserId($user->id));
-        $mfaMandatory = $user->mfaRequired || array_intersect($roles, $this->mfaEnforcedRoles) !== [];
+        // who must use 2FA and with which methods: per-role policies (Admin → Authentication → Two-factor)
         return new LoginResult(
             $user,
             $method,
             mfaRequired: $user->mfaEnabled,
-            mfaSetupRequired: !$user->mfaEnabled && $mfaMandatory,
+            mfaSetupRequired: $this->mfa->setupRequired($user),
             mustChangePassword: $method === 'password' && $user->mustChangePassword,
         );
     }

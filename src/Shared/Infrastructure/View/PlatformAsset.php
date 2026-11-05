@@ -23,6 +23,7 @@ final class PlatformAsset extends AssetBundle
     public array $js = [
         ['vendor/htmx.min.js', 'defer' => true],
         ['admin/app.js', 'defer' => true],
+        ['admin/mfa.js', 'defer' => true],
     ];
 
     public array $publishOptions = [

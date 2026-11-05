@@ -202,7 +202,8 @@ final class UserService
         if ($this->access->isSuperadmin($actor->id)) {
             return;
         }
-        if (array_intersect($this->access->rolesOf($target->id), RbacCatalog::ADMIN_ROLES) !== []) {
+        // administrative = catalog admin roles and custom roles flagged/holding privileged permissions
+        if (array_filter($this->access->rolesOf($target->id), fn(string $r) => $this->access->isAdminRole($r)) !== []) {
             throw new AccessDeniedException('Only a superadmin can modify an administrative account.');
         }
     }

@@ -53,10 +53,6 @@ return [
         '__construct()' => ['issuer' => $security['mfa']['issuer']],
     ],
 
-    AuthenticationService::class => [
-        '__construct()' => ['mfaEnforcedRoles' => $security['mfa']['enforceForRoles']],
-    ],
-
     SessionRegistry::class => [
         '__construct()' => [
             'idleTimeout' => $security['session']['idleTimeout'],

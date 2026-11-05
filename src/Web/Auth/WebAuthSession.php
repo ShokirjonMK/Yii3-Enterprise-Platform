@@ -18,7 +18,9 @@ use Yiisoft\User\CurrentUser;
 /**
  * Interactive (cookie/session) authentication state machine:
  *
- *   password/SSO ok ──► [mfa pending] ──TOTP──► logged in ──► [must change password] ──► [mfa setup] ──► full access
+ *   password/SSO ok ──► [mfa pending] ──2nd factor──► logged in ──► [must change password] ──► [mfa setup] ──► full access
+ *   (2nd factor: authenticator app, passkey, E-IMZO, Telegram / e-mail / SMS / voice code, recovery code;
+ *    skipped on a remembered device when the role policy allows it)
  *
  * The session id is regenerated at every privilege change (fixation protection).
  */
@@ -39,8 +41,14 @@ final class WebAuthSession
     ) {}
 
     /** Called after the first factor succeeded. Returns the route name to continue with. */
-    public function begin(LoginResult $result): string
+    public function begin(LoginResult $result, bool $trustedDevice = false): string
     {
+        if ($result->mfaRequired && $trustedDevice) {
+            // "remember this device" (policy remember_days > 0): the second factor was proven on this browser recently
+            $this->audit->security('auth.mfa.trusted_device', 'success', [], 'info', $result->user->id, $result->user->username);
+            $this->complete($result->user, $result->method, true, $result->mustChangePassword, $result->mfaSetupRequired);
+            return $this->nextRoute();
+        }
         if ($result->mfaRequired) {
             $this->session->regenerateID();
             $this->session->set(self::PENDING, [
@@ -89,7 +97,8 @@ final class WebAuthSession
         $this->session->remove(self::PENDING);
         $user = $this->users->find((string) $p['user_id']);
         $result = $this->auth->result($user, (string) $p['method']);
-        $this->complete($user, (string) $p['method'], true, (bool) ($p['must_change'] ?? false), false);
+        // mfa_setup gate: the role policy may require a method the user has not enrolled yet
+        $this->complete($user, (string) $p['method'], true, (bool) ($p['must_change'] ?? false), $result->mfaSetupRequired);
         return $this->nextRoute();
     }
 

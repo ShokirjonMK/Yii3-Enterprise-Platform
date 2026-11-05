@@ -11,7 +11,13 @@ declare(strict_types=1);
  * @var string $currentSession
  * @var list<array<string,mixed>> $tokens
  * @var string|null $newToken
+ * @var list<array> $mfaMethods
+ * @var App\Platform\Identity\Mfa\MfaPolicy $mfaPolicy
+ * @var string|null $mfaPreferred
+ * @var list<array> $trustedDevices
  */
+
+use App\Platform\Identity\Mfa\MfaMethodType;
 
 $this->setTitle($h->tr('Security & sessions'));
 $csrfField = '<input type="hidden" name="_csrf" value="' . $h->e($csrf) . '">';
@@ -25,17 +31,49 @@ $csrfField = '<input type="hidden" name="_csrf" value="' . $h->e($csrf) . '">';
 
 <div class="grid grid--2">
     <div class="card">
-        <div class="card__head"><h2><?= $h->t('Two-factor authentication') ?></h2><?= $h->badge($user->mfaEnabled ? 'enabled' : 'disabled') ?></div>
+        <div class="card__head">
+            <h2><?= $h->t('Two-factor authentication') ?></h2>
+            <span><?= $h->badge($user->mfaEnabled ? 'enabled' : 'disabled') ?><?= $mfaPolicy->required ? ' ' . $h->badge('warning', $h->tr('required by your role')) : '' ?></span>
+        </div>
         <div class="card__body">
-            <?php if ($user->mfaEnabled): ?>
-                <p><?= $h->t('Recovery codes left: {n}', ['n' => count($user->mfaRecoveryCodes)]) ?></p>
-                <div class="btn-group">
-                    <form method="post" action="<?= $h->url('web.security.mfa.codes') ?>" data-confirm="<?= $h->t('Old recovery codes will stop working. Continue?') ?>"><?= $csrfField ?><button class="btn" type="submit"><?= $h->t('Regenerate recovery codes') ?></button></form>
-                    <form method="post" action="<?= $h->url('web.security.mfa.disable') ?>" data-confirm="<?= $h->t('Disable two-factor authentication?') ?>"><?= $csrfField ?><button class="btn btn--danger" type="submit"><?= $h->t('Disable') ?></button></form>
+            <?php if ($mfaMethods !== []): ?>
+                <div class="mfa-methods mb">
+                <?php foreach ($mfaMethods as $m): ?>
+                    <div class="mfa-method">
+                        <?= $h->icon(MfaMethodType::ICONS[$m['type']] ?? 'key') ?>
+                        <div class="mfa-method__main">
+                            <strong><?= $h->t(MfaMethodType::label($m['type'])) ?></strong><?= $m['type'] === $mfaPreferred ? ' ' . $h->badge('info', $h->tr('default')) : '' ?><?= !$mfaPolicy->allows($m['type']) ? ' ' . $h->badge('muted', $h->tr('not allowed by policy')) : '' ?>
+                            <small><?= $h->e(trim($m['label'] !== MfaMethodType::label($m['type']) ? $m['label'] : '')) ?><?= $m['target_hint'] !== '' && $m['target_hint'] !== $m['label'] ? ' · ' . $h->e($m['target_hint']) : '' ?><?= $m['last_used_at'] ? ' · ' . $h->t('used {ago}', ['ago' => $h->ago($m['last_used_at'])]) : '' ?></small>
+                        </div>
+                        <?php if ($m['type'] !== $mfaPreferred && $mfaPolicy->allows($m['type'])): ?>
+                            <form method="post" action="<?= $h->url('web.security.mfa.preferred') ?>"><?= $csrfField ?><input type="hidden" name="method" value="<?= $h->e($m['type']) ?>"><button class="btn btn--sm btn--ghost" type="submit"><?= $h->t('Make default') ?></button></form>
+                        <?php endif ?>
+                        <form method="post" action="<?= $h->url('web.security.mfa.remove', ['id' => $m['id']]) ?>" data-confirm="<?= $h->t('Remove this method?') ?>"><?= $csrfField ?><button class="btn btn--sm btn--danger" type="submit" aria-label="<?= $h->t('Remove') ?>"><?= $h->icon('trash', 'icon--sm') ?></button></form>
+                    </div>
+                <?php endforeach ?>
                 </div>
             <?php else: ?>
-                <p class="muted"><?= $h->t('Protect your account with an authenticator app.') ?></p>
-                <a class="btn btn--primary" href="<?= $h->url('auth.mfa.setup') ?>"><?= $h->t('Set up') ?></a>
+                <p class="muted"><?= $h->t('Protect your account with a second factor: authenticator app, passkey, Telegram, e-mail, SMS, voice call or E-IMZO.') ?></p>
+            <?php endif ?>
+            <div class="btn-group">
+                <a class="btn btn--primary" href="<?= $h->url('auth.mfa.setup') ?>"><?= $h->icon('plus') ?> <?= $h->t($mfaMethods === [] ? 'Set up' : 'Add method') ?></a>
+                <?php if ($user->mfaEnabled): ?>
+                    <form method="post" action="<?= $h->url('web.security.mfa.codes') ?>" data-confirm="<?= $h->t('Old recovery codes will stop working. Continue?') ?>"><?= $csrfField ?><button class="btn" type="submit"><?= $h->t('Regenerate recovery codes') ?> (<?= count($user->mfaRecoveryCodes) ?>)</button></form>
+                    <?php if (!$mfaPolicy->required): ?>
+                        <form method="post" action="<?= $h->url('web.security.mfa.disable') ?>" data-confirm="<?= $h->t('Disable two-factor authentication and remove all methods?') ?>"><?= $csrfField ?><button class="btn btn--danger" type="submit"><?= $h->t('Disable') ?></button></form>
+                    <?php endif ?>
+                <?php endif ?>
+            </div>
+            <?php if ($trustedDevices !== []): ?>
+                <h3 class="mt"><?= $h->t('Remembered devices') ?></h3>
+                <table class="table table--compact"><tbody>
+                <?php foreach ($trustedDevices as $d): ?>
+                    <tr>
+                        <td><?= $h->e(mb_strimwidth((string) $d['user_agent'], 0, 50, '…')) ?><br><small class="muted"><?= $h->e((string) $d['ip']) ?> · <?= $h->t('until {date}', ['date' => $h->datetime($d['expires_at'], 'Y-m-d')]) ?></small></td>
+                        <td class="actions"><form method="post" action="<?= $h->url('web.security.mfa.device.revoke', ['id' => $d['id']]) ?>"><?= $csrfField ?><button class="btn btn--sm" type="submit"><?= $h->t('Forget') ?></button></form></td>
+                    </tr>
+                <?php endforeach ?>
+                </tbody></table>
             <?php endif ?>
         </div>
     </div>

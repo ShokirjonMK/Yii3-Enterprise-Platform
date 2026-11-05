@@ -67,7 +67,12 @@ $canManage = $can('users.manage') && $mayAdminister;
                 <dt><?= $h->t('Tenant') ?></dt><dd><?php if ($tenant !== null): ?><?php if ($can('tenants.view')): ?><a href="<?= $h->url('admin.tenants.view', ['id' => $tenant['id']]) ?>"><?= $h->e($tenant['name']) ?></a><?php else: ?><?= $h->e($tenant['name']) ?><?php endif ?><?php else: ?>—<?php endif ?></dd>
                 <dt><?= $h->t('Organization') ?></dt><dd><?= $h->e($organization['name'] ?? '—') ?></dd>
                 <dt><?= $h->t('Sign-in policy') ?></dt><dd><code><?= $h->e($user->authPolicy) ?></code></dd>
-                <dt><?= $h->t('Two-factor') ?></dt><dd><?= $user->mfaEnabled ? $h->badge('enabled') : $h->badge($user->mfaRequired ? 'pending' : 'disabled', $user->mfaRequired ? $h->tr('required, not enrolled') : null) ?></dd>
+                <dt><?= $h->t('Two-factor') ?></dt><dd><?= $user->mfaEnabled ? $h->badge('enabled') : $h->badge($mfaPolicy->required ? 'pending' : 'disabled', $mfaPolicy->required ? $h->tr('required, not enrolled') : null) ?>
+                    <?php foreach ($mfaMethods as $m): ?> <span class="tag"><?= $h->t(\App\Platform\Identity\Mfa\MfaMethodType::label($m['type'])) ?></span><?php endforeach ?>
+                    <?php if ($user->mfaEnabled && $can('users.manage') && !$isSelf): ?>
+                        <form method="post" action="<?= $h->url('admin.users.mfa-reset', ['id' => $user->id]) ?>" class="inline" data-confirm="<?= $h->t('Remove all two-factor methods of this user? Use it when a phone or key is lost.') ?>"><input type="hidden" name="_csrf" value="<?= $h->e($csrf) ?>"><button class="btn btn--sm btn--danger" type="submit"><?= $h->t('Reset 2FA') ?></button></form>
+                    <?php endif ?>
+                    <br><small class="muted"><?= $h->t('Policy') ?>: <?= $h->e(implode(', ', $mfaPolicy->sources)) ?> · <?= $mfaPolicy->required ? $h->t('required') : $h->t('optional') ?></small></dd>
                 <dt><?= $h->t('Password changed') ?></dt><dd><?= $h->datetime($user->passwordChangedAt) ?><?= $user->mustChangePassword ? ' ' . $h->badge('pending', $h->tr('must change')) : '' ?></dd>
                 <dt><?= $h->t('Failed sign-ins') ?></dt><dd><?= (int) $user->failedLogins ?><?= $locked ? ' · ' . $h->t('locked until {t}', ['t' => $user->lockedUntil?->format('Y-m-d H:i')]) : '' ?></dd>
                 <dt><?= $h->t('Last sign-in') ?></dt><dd><?= $h->datetime($user->lastLoginAt) ?></dd>
