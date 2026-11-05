@@ -39,7 +39,8 @@ final class RbacCatalog
 
     private ?array $merged = null;
 
-    public function __construct(private readonly string $directory) {}
+    /** @param list<string> $moduleFiles src/Modules/<Name>/config/permissions.php */
+    public function __construct(private readonly string $directory, private readonly array $moduleFiles = []) {}
 
     /** @return array<string, string> */
     public function permissions(): array
@@ -85,6 +86,7 @@ final class RbacCatalog
         $roles = [];
         $files = glob(rtrim($this->directory, '/') . '/*.php') ?: [];
         sort($files);
+        $files = [...$files, ...$this->moduleFiles];
         foreach ($files as $file) {
             /** @var array{permissions?:array<string,string>, roles?:array<string,array>} $data */
             $data = require $file;

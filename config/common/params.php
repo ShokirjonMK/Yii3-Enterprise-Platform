@@ -214,6 +214,7 @@ return [
             $root . '/vendor/yiisoft/rbac-db/migrations/items',
             $root . '/vendor/yiisoft/rbac-db/migrations/assignments',
             $root . '/migrations',
+            ...(glob($root . '/src/Modules/*/migrations', GLOB_ONLYDIR) ?: []),
         ],
         'databases' => [],
     ],

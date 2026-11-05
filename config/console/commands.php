@@ -23,7 +23,7 @@ $commands = [
     'audit:verify' => Command\AuditVerifyCommand::class,
 ];
 
-foreach (glob(__DIR__ . '/commands/*.php') ?: [] as $file) {
+foreach ([...(glob(__DIR__ . '/commands/*.php') ?: []), ...(glob(dirname(__DIR__, 2) . '/src/Modules/*/config/commands.php') ?: [])] as $file) {
     $commands = array_merge($commands, require $file);
 }
 

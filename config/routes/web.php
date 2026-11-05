@@ -19,8 +19,10 @@ use Yiisoft\Session\SessionMiddleware;
  * End-user web application. Business modules register their own web routes in
  * config/routes/web/*.php (loaded inside the authenticated group below).
  */
-$moduleRoutes = [];
-$moduleRoutes = \App\Platform\FeatureFlags\FeatureRegistry::loadRoutes('web', glob(__DIR__ . '/web/*.php') ?: []);
+$moduleRoutes = \App\Platform\FeatureFlags\FeatureRegistry::loadRoutes('web', [
+    ...(glob(dirname(__DIR__, 2) . '/src/Modules/*/Web/routes.php') ?: []),
+    ...(glob(__DIR__ . '/web/*.php') ?: []),
+]);
 
 return [
     Group::create()

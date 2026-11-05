@@ -201,7 +201,7 @@ final class ProjectsServiceTest extends IntegrationTestCase
         $this->service->changeStatus($this->admin, $p->id, 'active');
         /** @var KafkaConsumerRunner $runner */
         $runner = $this->get(KafkaConsumerRunner::class);
-        $handlers = require dirname(__DIR__, 2) . '/config/common/events/projects.php';
+        $handlers = require dirname(__DIR__, 2) . '/src/Modules/Projects/config/events.php';
         $group = 'projects-audit';
         self::assertSame(ProjectActivityProjector::class, $handlers[$group]['handlers']['project.status_changed']);
 

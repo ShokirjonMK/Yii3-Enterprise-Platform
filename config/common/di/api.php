@@ -12,7 +12,7 @@ $root = dirname(__DIR__, 3);
 return [
     OpenApiGenerator::class => [
         '__construct()' => [
-            'sourceDir' => $root . '/src/Api/V1',
+            'sourceDir' => [$root . '/src/Api/V1', ...(glob($root . '/src/Modules/*/Api', GLOB_ONLYDIR) ?: [])],
             'outputFile' => $root . '/public/api/openapi.json',
         ],
     ],

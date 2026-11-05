@@ -21,7 +21,10 @@ $security = $params['platform']['security'];
 
 return [
     RbacCatalog::class => [
-        '__construct()' => ['directory' => dirname(__DIR__) . '/permissions'],
+        '__construct()' => [
+            'directory' => dirname(__DIR__) . '/permissions',
+            'moduleFiles' => glob(dirname(__DIR__, 3) . '/src/Modules/*/config/permissions.php') ?: [],
+        ],
     ],
 
     SettingsService::class => [

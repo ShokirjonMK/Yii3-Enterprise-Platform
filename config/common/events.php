@@ -12,7 +12,7 @@ $groups = [
     'platform-retry' => ['topics' => [], 'handlers' => []],
 ];
 
-foreach (glob(__DIR__ . '/events/*.php') ?: [] as $file) {
+foreach ([...(glob(__DIR__ . '/events/*.php') ?: []), ...(glob(dirname(__DIR__, 2) . '/src/Modules/*/config/events.php') ?: [])] as $file) {
     foreach (require $file as $group => $def) {
         $groups[$group] ??= ['topics' => [], 'handlers' => []];
         $groups[$group]['topics'] = array_values(array_unique([...$groups[$group]['topics'], ...($def['topics'] ?? [])]));

@@ -17,7 +17,7 @@ $map = [
     'platform.notifications.deliver' => ['handler' => App\Platform\Notifications\DeliverNotificationJob::class, 'queue' => 'notifications'],
 ];
 
-foreach (glob(__DIR__ . '/jobs/*.php') ?: [] as $file) {
+foreach ([...(glob(__DIR__ . '/jobs/*.php') ?: []), ...(glob(dirname(__DIR__, 2) . '/src/Modules/*/config/jobs.php') ?: [])] as $file) {
     $map = array_merge($map, require $file);
 }
 

@@ -19,7 +19,8 @@ final class OpenApiGenerator
     private array $warnings = [];
 
     public function __construct(
-        private readonly string $sourceDir,
+        // directories with OpenAPI attributes: src/Api/V1 and every src/Modules/<Name>/Api
+        private readonly string|array $sourceDir,
         private readonly string $outputFile,
     ) {}
 
@@ -50,7 +51,7 @@ final class OpenApiGenerator
                 $this->sink[] = $level . ': ' . $message;
             }
         };
-        $openapi = (new Generator($logger))->setVersion('3.1.0')->generate([$this->sourceDir]);
+        $openapi = (new Generator($logger))->setVersion('3.1.0')->generate((array) $this->sourceDir);
         if ($openapi === null) {
             throw new RuntimeException('OpenAPI generation produced no document.');
         }

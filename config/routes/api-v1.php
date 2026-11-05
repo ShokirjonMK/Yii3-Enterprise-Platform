@@ -25,7 +25,10 @@ use Yiisoft\Router\Route;
  * Protected routes add BearerAuthentication + RequireApiPermission::for(permission, scope) themselves.
  * The trailing catch-all turns unmatched paths into JSON 404 / 405 (+Allow) inside the pipeline.
  */
-$resources = \App\Platform\FeatureFlags\FeatureRegistry::loadRoutes('api', glob(__DIR__ . '/api-v1/*.php') ?: []);
+$resources = \App\Platform\FeatureFlags\FeatureRegistry::loadRoutes('api', [
+    ...(glob(__DIR__ . '/api-v1/*.php') ?: []),
+    ...(glob(dirname(__DIR__, 2) . '/src/Modules/*/Api/routes.php') ?: []),
+]);
 
 return [
     Route::get('/api/docs')
