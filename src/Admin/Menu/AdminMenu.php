@@ -55,6 +55,7 @@ final class AdminMenu
             ]],
             ['group' => 'Business modules', 'items' => [
                 ['n' => 0, 'label' => 'Projects', 'route' => 'admin.projects', 'icon' => 'folder', 'permission' => 'projects.view'],
+                ['n' => 0, 'label' => 'Multi-DB demo', 'route' => 'admin.multidb', 'icon' => 'database', 'permission' => 'multidb.view'],
             ]],
         ];
     }

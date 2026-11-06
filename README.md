@@ -38,6 +38,8 @@ On first login the superadmin must change the temporary password and enrol MFA.
 
 | | |
 |---|---|
+| [New project guide (uz)](docs/NEW_PROJECT_GUIDE.md) | starting a new project from the platform: repo, renaming, first run, modules, extra databases, API, tests, production checklist |
+| [Databases](docs/DATABASES.md) | named connections of any engine + the Multi-DB demo module (MariaDB, PostgreSQL, MongoDB, ClickHouse) |
 | [Architecture](docs/ARCHITECTURE.md) | modular monolith, layers, request pipeline, async processing |
 | [Security](docs/SECURITY.md) | controls, hardening, ASVS mapping |
 | [Implementation status](docs/IMPLEMENTATION_STATUS.md) | what is implemented / tested / verified, with evidence |

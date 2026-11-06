@@ -42,7 +42,8 @@ _Last update: 2026-11-05 — Author: ShokirjonMK_
 | 20 | Audit & Compliance | TESTED · VERIFIED (HMAC tamper detection) |
 | 21 | System Settings & Feature Flags | TESTED · VERIFIED |
 | 22 | Developer Tools + Enterprise Gii | TESTED · VERIFIED (non-prod only) |
-| 23 | Business Modules (Projects, Contracts) | TESTED · VERIFIED |
+| 23 | Business Modules (Projects, Contracts, Blog, Multi-DB demo) | TESTED · VERIFIED |
+| 23a | Multi-DB demo module: one CRUD (Admin, Web, REST API, console) over MariaDB, PostgreSQL ×2, MongoDB, ClickHouse with sample data — [DATABASES.md §6](DATABASES.md) | TESTED (MultiDbDatasetsTest 12, ApiMultiDbTest 9, MultiDbUiTest 5) · VERIFIED in the dev stack (`multidb:install`, `multidb:crud`) |
 | 24 | Incident Management | TESTED · Telegram alerts UNVERIFIED |
 | 25 | Databases (named connections, any engine; console) — [DATABASES.md](DATABASES.md) | TESTED · VERIFIED: PostgreSQL ×3, MongoDB 8, ClickHouse 25.3, MariaDB 11.4, SQLite; SQL Server / Oracle IMPLEMENTED · UNVERIFIED (no server in dev) |
 

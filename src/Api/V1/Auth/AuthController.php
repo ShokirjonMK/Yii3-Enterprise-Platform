@@ -29,7 +29,7 @@ use Yiisoft\Db\Connection\ConnectionInterface;
 final class AuthController
 {
     /** OAuth scopes understood by API v1 ("*" = everything the user's permissions allow). */
-    public const SCOPES = ['profile', 'users.read', 'users.write', 'projects.read', 'projects.write'];
+    public const SCOPES = ['profile', 'users.read', 'users.write', 'projects.read', 'projects.write', 'multidb.read', 'multidb.write'];
 
     /** Implemented by the identity work package (api_clients); used only when present. */
     public const CLIENT_SERVICE = 'App\\Platform\\Api\\ApiClientService';

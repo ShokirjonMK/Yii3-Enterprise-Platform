@@ -64,6 +64,7 @@ $this->beginPage();
             <a href="<?= $h->url('web.home') ?>"<?= $h->isRoute('web.home') ? ' aria-current="page"' : '' ?>><?= $h->t('Home') ?></a>
             <?php if ($identity): ?>
                 <?php if ($can('projects.view') && $feature('admin.projects')): ?><a href="<?= $h->url('web.projects') ?>"<?= $h->isRoute('web.projects') ? ' aria-current="page"' : '' ?>><?= $h->t('Projects') ?></a><?php endif ?>
+                <?php if ($can('multidb.view') && $h->urlOrNull('web.multidb') !== null): ?><a href="<?= $h->url('web.multidb') ?>"<?= $h->isRoute('web.multidb') ? ' aria-current="page"' : '' ?>><?= $h->t('Data sources') ?></a><?php endif ?>
                 <a href="<?= $h->url('web.notifications') ?>"<?= $h->isRoute('web.notifications') ? ' aria-current="page"' : '' ?>><?= $h->t('Notifications') ?></a>
                 <a href="<?= $h->url('web.profile') ?>"<?= $h->isRoute('web.profile', 'web.security', 'web.appearance', 'web.login_history') ? ' aria-current="page"' : '' ?>><?= $h->t('Profile') ?></a>
             <?php endif ?>
