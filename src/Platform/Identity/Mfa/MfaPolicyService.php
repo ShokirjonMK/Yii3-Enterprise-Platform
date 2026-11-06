@@ -165,8 +165,17 @@ final class MfaPolicyService
                 'updated_by' => $actorId,
             ])->execute();
             unset($before['updated_at']);
-            $this->audit->record('auth.mfa_policy.saved', 'mfa_policy', $subject, $before, $after, [], category: 'security',
-                severity: ($before['required'] ?? false) && !$after['required'] ? 'warning' : 'notice', actorId: $actorId);
+            $this->audit->record(
+                'auth.mfa_policy.saved',
+                'mfa_policy',
+                $subject,
+                $before,
+                $after,
+                [],
+                category: 'security',
+                severity: ($before['required'] ?? false) && !$after['required'] ? 'warning' : 'notice',
+                actorId: $actorId,
+            );
         });
         $this->policies = null;
     }

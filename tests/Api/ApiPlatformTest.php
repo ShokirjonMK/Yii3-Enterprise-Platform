@@ -106,9 +106,11 @@ final class ApiPlatformTest extends ApiTestCase
 
     public function testOpenApiDocumentIsValid(): void
     {
-        $r = $this->api('GET', '/api/v1/openapi.json', null);
+        self::assertSame(401, $this->api('GET', '/api/v1/openapi.json', null)->getStatusCode(), 'the document is private');
+        [$dev] = \App\Tests\Support\AdminSession::login(['developer']);
+        $r = $dev->get('/api/v1/openapi.json');
         self::assertSame(200, $r->getStatusCode());
-        $doc = $this->json($r);
+        $doc = json_decode($dev->body(), true);
         self::assertSame('3.1.0', $doc['openapi']);
         self::assertSame('ShokirjonMK', $doc['info']['contact']['name']);
         self::assertSame('https://github.com/ShokirjonMK', $doc['info']['contact']['url']);
@@ -139,13 +141,14 @@ final class ApiPlatformTest extends ApiTestCase
 
     public function testSwaggerUiPageHasStrictCsp(): void
     {
-        $r = $this->http->get('/api/docs');
+        [$dev] = \App\Tests\Support\AdminSession::login(['developer']);
+        $r = $dev->get('/api/docs');
         self::assertSame(200, $r->getStatusCode());
         $csp = $r->getHeaderLine('Content-Security-Policy');
         self::assertStringContainsString("script-src 'self'", $csp);
         self::assertStringNotContainsString('unsafe-inline', $csp);
         self::assertStringNotContainsString('unsafe-eval', $csp);
-        $html = $this->http->body();
+        $html = $dev->body();
         self::assertStringContainsString('/static/swagger-ui/swagger-ui-bundle.js', $html);
         self::assertStringContainsString('/static/api-docs.js', $html);
         self::assertStringContainsString('Built by', $html);

@@ -12,7 +12,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand(name: 'api:openapi', description: 'Generate the OpenAPI 3.1 document (public/api/openapi.json) from API v1 attributes')]
+#[AsCommand(name: 'api:openapi', description: 'Generate the OpenAPI 3.1 document (runtime/api/openapi.json, served only through the private /api/v1/openapi.json) from API v1 attributes')]
 final class OpenApiCommand extends Command
 {
     public function __construct(private readonly OpenApiGenerator $generator)

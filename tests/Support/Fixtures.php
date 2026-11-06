@@ -79,7 +79,7 @@ final class Fixtures
         self::db()->createCommand("DELETE FROM login_attempts WHERE created_at > now() - interval '1 day' AND (username LIKE 't-%' OR username LIKE 'nobody-%' OR success = false)")->execute();
         /** @var \Predis\ClientInterface $redis */
         $redis = TestContainer::service(\Predis\ClientInterface::class);
-        foreach ($redis->keys('rl:login-ip:*') as $key) {
+        foreach ([...$redis->keys('rl:login-ip:*'), ...$redis->keys('rl:api-docs-unlock:*')] as $key) {
             // keys() returns prefixed names; strip the client prefix before deleting
             $prefix = (string) $redis->getOptions()->prefix?->getPrefix();
             $redis->del([str_starts_with($key, $prefix) ? substr($key, strlen($prefix)) : $key]);

@@ -81,8 +81,18 @@ final class BackupsController
         $actor = $this->actor();
         $id = (string) $route->getArgument('id');
         $target = $this->backups->download($id);
-        $this->audit->record('backup.downloaded', 'backup', $id, null, null, ['mode' => $target['type']], category: 'security', severity: 'warning',
-            actorId: $actor->id, actorName: $actor->username);
+        $this->audit->record(
+            'backup.downloaded',
+            'backup',
+            $id,
+            null,
+            null,
+            ['mode' => $target['type']],
+            category: 'security',
+            severity: 'warning',
+            actorId: $actor->id,
+            actorName: $actor->username,
+        );
         if ($target['type'] === 'redirect') {
             return $this->responses->createResponse(302)->withHeader('Location', $target['url'])->withHeader('Cache-Control', 'no-store');
         }

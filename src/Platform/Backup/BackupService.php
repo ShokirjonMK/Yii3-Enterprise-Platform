@@ -188,15 +188,33 @@ final class BackupService
                 'verify_status' => 'pending',
                 'verify_details' => json_encode($details, JSON_UNESCAPED_SLASHES),
             ], ['id' => $id])->execute();
-            $this->audit->record('backup.completed', 'backup', $id, null, ['status' => 'succeeded', 'size_bytes' => $size, 'checksum_sha256' => $checksum],
+            $this->audit->record(
+                'backup.completed',
+                'backup',
+                $id,
+                null,
+                ['status' => 'succeeded', 'size_bytes' => $size, 'checksum_sha256' => $checksum],
                 ['trigger' => $trigger, 'location' => $key, 'offsite' => $offsite, 'tables' => count($counts)],
-                category: 'ops', severity: 'notice', actorId: $actorId);
+                category: 'ops',
+                severity: 'notice',
+                actorId: $actorId,
+            );
             $progress && $progress(100);
         } catch (Throwable $e) {
             $error = mb_substr(Redactor::redactString($e->getMessage()), 0, 2000);
             $this->db->createCommand()->update('backups', ['status' => 'failed', 'error' => $error, 'finished_at' => new Expression('now()')], ['id' => $id])->execute();
-            $this->audit->record('backup.completed', 'backup', $id, null, ['status' => 'failed'], ['trigger' => $trigger, 'error' => $error],
-                result: 'failure', category: 'ops', severity: 'warning', actorId: $actorId);
+            $this->audit->record(
+                'backup.completed',
+                'backup',
+                $id,
+                null,
+                ['status' => 'failed'],
+                ['trigger' => $trigger, 'error' => $error],
+                result: 'failure',
+                category: 'ops',
+                severity: 'warning',
+                actorId: $actorId,
+            );
             throw $e;
         } finally {
             $file !== null && @unlink($file);
@@ -280,9 +298,18 @@ final class BackupService
             'verified_at' => new Expression('now()'),
             'verify_details' => json_encode($details, JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR),
         ], ['id' => $id])->execute();
-        $this->audit->record('backup.verified', 'backup', $id, null, ['verify_status' => $result['passed'] ? 'passed' : 'failed'],
+        $this->audit->record(
+            'backup.verified',
+            'backup',
+            $id,
+            null,
+            ['verify_status' => $result['passed'] ? 'passed' : 'failed'],
             ['database' => $verifyDb, 'tables' => $result['tables_compared'] ?? 0, 'mismatches' => array_keys($result['mismatches'] ?? []), 'error' => $result['error'] ?? null],
-            result: $result['passed'] ? 'success' : 'failure', category: 'ops', severity: $result['passed'] ? 'info' : 'warning', actorId: $actorId);
+            result: $result['passed'] ? 'success' : 'failure',
+            category: 'ops',
+            severity: $result['passed'] ? 'info' : 'warning',
+            actorId: $actorId,
+        );
         return $result;
     }
 

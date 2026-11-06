@@ -33,7 +33,6 @@ return [
             Route::post('/auth/locale')->action([LoginController::class, 'locale'])->name('auth.locale'),
             Route::get('/auth/sso/{provider:[a-z0-9_-]+}')->action([SsoController::class, 'start'])->name('auth.sso.start'),
             Route::get('/auth/sso/{provider:[a-z0-9_-]+}/callback')->action([SsoController::class, 'callback'])->name('auth.sso.callback'),
-
             Group::create()
                 ->middleware(RequireLogin::class)
                 ->routes(

@@ -251,9 +251,15 @@ final class SsoService
             }
             $after = $row;
             unset($after['secret_enc']);
-            $this->audit->record($existing === null ? 'sso.provider.created' : 'sso.provider.updated', 'sso_provider', $newCode,
-                $existing === null ? null : array_diff_key($existing, ['secret' => 1]), $after + ['secret_changed' => isset($row['secret_enc'])],
-                category: 'security', severity: 'warning');
+            $this->audit->record(
+                $existing === null ? 'sso.provider.created' : 'sso.provider.updated',
+                'sso_provider',
+                $newCode,
+                $existing === null ? null : array_diff_key($existing, ['secret' => 1]),
+                $after + ['secret_changed' => isset($row['secret_enc'])],
+                category: 'security',
+                severity: 'warning',
+            );
         });
         return $newCode;
     }

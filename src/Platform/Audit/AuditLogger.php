@@ -36,7 +36,7 @@ final class AuditLogger
     public function record(
         string $action,
         ?string $entityType = null,
-        null|string|int $entityId = null,
+        string|int|null $entityId = null,
         ?array $before = null,
         ?array $after = null,
         array $metadata = [],

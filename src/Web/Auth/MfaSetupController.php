@@ -17,8 +17,6 @@ use App\Shared\Domain\Exception\TooManyRequestsException;
 use App\Shared\Domain\Exception\ValidationException;
 use App\Shared\Infrastructure\Context\RequestContext;
 use App\Shared\Infrastructure\Http\Responder;
-use App\Web\Auth\SecondFactor;
-use App\Web\Auth\WebAuthSession;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use RuntimeException;

@@ -24,7 +24,7 @@ final class RbacCatalog
     public const PRIVILEGED_PERMISSIONS = [
         'rbac.manage', 'rbac.grant_admin', 'auth.manage', 'security.manage', 'settings.manage', 'tenants.cross',
         'users.impersonate', 'db.manage', 'infra.manage', 'backup.manage', 'deploy.approve',
-        'databases.manage', 'databases.query', 'databases.write',
+        'databases.manage', 'databases.query', 'databases.write', 'api.docs.manage',
     ];
 
     /** Roles and permissions declared in the catalog files are "system" items (cannot be deleted in the panel). */

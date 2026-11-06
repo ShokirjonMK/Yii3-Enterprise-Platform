@@ -281,8 +281,16 @@ final class FeatureFlagService
             }
             $after = $data;
             unset($after['version'], $after['updated_by']);
-            $this->audit->record($action, 'feature_flag', $flag['code'],
-                array_intersect_key($flag, $after), $after, category: 'config', severity: 'notice', actorId: $actorId);
+            $this->audit->record(
+                $action,
+                'feature_flag',
+                $flag['code'],
+                array_intersect_key($flag, $after),
+                $after,
+                category: 'config',
+                severity: 'notice',
+                actorId: $actorId,
+            );
         });
         $this->revision->bump();
         $this->flags = null;

@@ -79,7 +79,9 @@ $hidden = static function () use ($h, $values, $selected): string {
             <fieldset class="span-2 gii-generators">
                 <legend><?= $h->t('Generators') ?></legend>
                 <?php foreach ($catalog as $g): ?>
-                    <?php if ($g['id'] === 'module') { continue; } ?>
+                    <?php if ($g['id'] === 'module') {
+                        continue;
+                    } ?>
                     <label class="gii-generator">
                         <input type="checkbox" name="generators[]" value="<?= $h->e($g['id']) ?>"<?= in_array($g['id'], $selected, true) ? ' checked' : '' ?>>
                         <span><strong><?= $h->e($g['name']) ?></strong> <code><?= $h->e($g['id']) ?></code>

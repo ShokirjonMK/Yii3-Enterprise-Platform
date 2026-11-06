@@ -54,7 +54,9 @@ final class AlertNotifier
         $chat = trim((string) ($this->settings->get('notifications.telegram_alert_chat') ?? ''));
         if ($token !== '' && $chat !== '') {
             try {
-                $icon = match ($severity) { 'critical' => '🔴', 'error' => '🟠', 'info' => 'ℹ️', default => '🟡' };
+                $icon = match ($severity) {
+                    'critical' => '🔴', 'error' => '🟠', 'info' => 'ℹ️', default => '🟡'
+                };
                 $lines = [$icon . ' <b>' . TelegramBotClient::escape(mb_strtoupper($severity) . ': ' . $title) . '</b>', '', TelegramBotClient::escape($message)];
                 foreach ($context as $k => $v) {
                     $lines[] = '• <code>' . TelegramBotClient::escape((string) $k) . '</code>: ' . TelegramBotClient::escape(is_scalar($v) ? (string) $v : (string) json_encode($v));

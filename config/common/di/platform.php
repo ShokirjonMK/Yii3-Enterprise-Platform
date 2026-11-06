@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Platform\Access\RbacCatalog;
 use App\Platform\Settings\SettingsService;
 use App\Platform\Identity\Application\ApiTokenService;
-use App\Platform\Identity\Application\AuthenticationService;
 use App\Platform\Identity\Application\LoginThrottle;
 use App\Platform\Identity\Application\MfaService;
 use App\Platform\Identity\Application\PasswordPolicy;

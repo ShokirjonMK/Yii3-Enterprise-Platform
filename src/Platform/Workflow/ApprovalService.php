@@ -11,7 +11,6 @@ use App\Shared\Domain\Exception\ConflictException;
 use App\Shared\Domain\Exception\NotFoundException;
 use App\Shared\Domain\Exception\ValidationException;
 use App\Shared\Domain\Uuid;
-use App\Shared\Infrastructure\Database\Sql;
 use DateTimeImmutable;
 use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Db\Expression\Expression;

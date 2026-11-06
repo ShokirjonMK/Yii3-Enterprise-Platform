@@ -52,10 +52,10 @@ final class BlogDomainTest extends TestCase
     {
         try {
             BlogRules::normalize([
-            'title' => str_repeat('x', 256),
-            'description' => str_repeat('x', 501),
-            'due_on' => '2026-13-45',
-            'owner_id' => 'not-a-uuid',
+                'title' => str_repeat('x', 256),
+                'description' => str_repeat('x', 501),
+                'due_on' => '2026-13-45',
+                'owner_id' => 'not-a-uuid',
             ], false);
             self::fail('ValidationException expected');
         } catch (ValidationException $e) {

@@ -148,8 +148,11 @@ final class ApiController
 
     private function secretPage(array $client, string $secret, string $reason): ResponseInterface
     {
-        return $this->responder->render('@admin/Api/views/secret', ['client' => $client, 'secret' => $secret, 'reason' => $reason],
-            status: $reason === 'created' ? 201 : 200)
+        return $this->responder->render(
+            '@admin/Api/views/secret',
+            ['client' => $client, 'secret' => $secret, 'reason' => $reason],
+            status: $reason === 'created' ? 201 : 200,
+        )
             ->withHeader('Cache-Control', 'no-store, max-age=0')
             ->withHeader('Pragma', 'no-cache');
     }

@@ -122,10 +122,15 @@ final class ProjectsController
     {
         $body = (array) $request->getParsedBody();
         try {
-            $project = $this->projects->changeStatus($this->actor(), $this->id(), (string) ($body['status'] ?? ''),
-                isset($body['version']) ? (int) $body['version'] : null, trim((string) ($body['comment'] ?? '')));
+            $project = $this->projects->changeStatus(
+                $this->actor(),
+                $this->id(),
+                (string) ($body['status'] ?? ''),
+                isset($body['version']) ? (int) $body['version'] : null,
+                trim((string) ($body['comment'] ?? '')),
+            );
             $this->responder->success('Status changed to ' . $project->status()->label() . '.');
-        } catch (ConflictException | ValidationException $e) {
+        } catch (ConflictException|ValidationException $e) {
             $this->responder->error($e->getMessage());
         }
         return $this->responder->redirect('admin.projects.view', ['id' => $this->id()]);
@@ -149,7 +154,7 @@ final class ProjectsController
         try {
             $this->projects->addMember($this->actor(), $this->id(), trim((string) ($body['login'] ?? '')), (string) ($body['role'] ?? 'member'));
             $this->responder->success('Member added.');
-        } catch (ValidationException | ConflictException $e) {
+        } catch (ValidationException|ConflictException $e) {
             $this->responder->error($e->getMessage() === 'Validation failed.' ? implode(' ', array_merge(...array_values($e instanceof ValidationException ? $e->errors() : []))) : $e->getMessage());
         }
         return $this->responder->redirect('admin.projects.view', ['id' => $this->id()]);

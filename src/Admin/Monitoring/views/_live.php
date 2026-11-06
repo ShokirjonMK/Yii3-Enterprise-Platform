@@ -50,7 +50,9 @@ $db = $o['db'];
                         <tbody>
                         <?php foreach ($alerts['items'] as $a): ?>
                             <tr><td class="mono"><?= $h->e($a['name']) ?></td>
-                                <td><?= $h->badge(match ($a['severity']) { 'critical' => 'critical', 'warning' => 'warning', default => 'info' }, $a['severity']) ?></td>
+                                <td><?= $h->badge(match ($a['severity']) {
+                                    'critical' => 'critical', 'warning' => 'warning', default => 'info'
+                                }, $a['severity']) ?></td>
                                 <td class="small"><?= $h->e($a['summary']) ?></td>
                                 <td class="small nowrap"><?= $h->ago($a['starts_at']) ?></td></tr>
                         <?php endforeach ?>

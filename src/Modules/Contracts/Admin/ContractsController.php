@@ -10,7 +10,6 @@ namespace App\Modules\Contracts\Admin;
 
 use App\Modules\Contracts\Application\ContractService;
 use App\Modules\Contracts\Domain\Contract;
-use App\Modules\Contracts\Domain\ContractStatus;
 use App\Platform\Identity\Domain\Identity;
 use App\Platform\Identity\Domain\User;
 use App\Platform\Storage\ObjectStorage;
@@ -114,10 +113,15 @@ final class ContractsController
     {
         $body = (array) $request->getParsedBody();
         try {
-            $e = $this->service->changeStatus($this->actor(), $this->id(), (string) ($body['status'] ?? ''),
-                isset($body['version']) ? (int) $body['version'] : null, trim((string) ($body['comment'] ?? '')));
+            $e = $this->service->changeStatus(
+                $this->actor(),
+                $this->id(),
+                (string) ($body['status'] ?? ''),
+                isset($body['version']) ? (int) $body['version'] : null,
+                trim((string) ($body['comment'] ?? '')),
+            );
             $this->responder->success('Status changed to ' . $e->status()->label() . '.');
-        } catch (ConflictException | ValidationException $ex) {
+        } catch (ConflictException|ValidationException $ex) {
             $this->responder->error($ex->getMessage());
         }
         return $this->responder->redirect('admin.contracts.view', ['id' => $this->id()]);

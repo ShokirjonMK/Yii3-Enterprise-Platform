@@ -153,7 +153,7 @@ validate:composer:
   image: composer:2
   needs: []
   script:
-    - composer validate --strict --no-check-publish
+    - composer validate --no-check-publish  # not --strict: yiisoft/yii-gii has no release yet and is pinned to a commit on purpose
 
 validate:kubernetes:
   stage: validate
@@ -246,7 +246,7 @@ psalm:
   extends: .php
   stage: quality
   script:
-    - php vendor/bin/psalm --no-cache --no-progress --output-format=code_climate > psalm.json || { php vendor/bin/psalm --no-cache --no-progress; exit 1; }
+    - php -d memory_limit=3G vendor/bin/psalm --no-cache --threads=1 --no-progress --output-format=code_climate > psalm.json || { php -d memory_limit=3G vendor/bin/psalm --no-cache --threads=1 --no-progress; exit 1; }
   artifacts:
     when: always
     reports:

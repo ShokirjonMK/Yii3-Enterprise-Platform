@@ -45,7 +45,11 @@ final class KafkaProvisionCommand extends Command
             $name = $this->config->topic((string) $r['name']);
             $lines[] = sprintf(
                 '/opt/kafka/bin/kafka-topics.sh --bootstrap-server "$BS" --create --if-not-exists --topic %s --partitions %d --replication-factor %d --config retention.ms=%d --config cleanup.policy=%s',
-                escapeshellarg($name), (int) $r['partitions'], (int) ($rf ?? $r['replication_factor']), (int) $r['retention_ms'], escapeshellarg((string) $r['cleanup_policy']),
+                escapeshellarg($name),
+                (int) $r['partitions'],
+                (int) ($rf ?? $r['replication_factor']),
+                (int) $r['retention_ms'],
+                escapeshellarg((string) $r['cleanup_policy']),
             );
             $state = $r['exists'] === null ? 'unknown (Kafka unreachable)' : ($r['exists'] ? 'exists, partitions=' . $r['live_partitions'] : 'MISSING');
             $output->writeln(sprintf('%-28s %s', $name, $state));

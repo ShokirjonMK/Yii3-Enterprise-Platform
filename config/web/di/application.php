@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Environment;
 use App\Platform\Identity\Application\SecurityPolicy;
 use App\Shared\Infrastructure\Http\ClientIp;
 use App\Shared\Infrastructure\Http\CorrelationIdMiddleware;

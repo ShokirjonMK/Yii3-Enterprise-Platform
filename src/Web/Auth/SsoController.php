@@ -10,7 +10,6 @@ use App\Platform\Identity\Sso\SsoException;
 use App\Platform\Identity\Sso\SsoService;
 use App\Shared\Domain\Exception\NotFoundException;
 use App\Shared\Infrastructure\Http\Responder;
-use App\Web\Auth\WebAuthSession;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Yiisoft\Router\CurrentRoute;

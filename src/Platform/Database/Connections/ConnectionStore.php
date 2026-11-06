@@ -56,9 +56,16 @@ final class ConnectionStore
             return $this->cache;
         }
         $out = [self::PLATFORM => new ConnectionDefinition(
-            self::PLATFORM, DatabaseDriver::PGSQL, $this->platformDb['host'], (int) $this->platformDb['port'], $this->platformDb['name'],
-            $this->platformDb['user'], $this->platformDb['password'], ['sslmode' => $this->platformDb['sslmode'] ?? 'disable'],
-            source: 'system', description: 'Platform database (users, audit, settings, queue…)',
+            self::PLATFORM,
+            DatabaseDriver::PGSQL,
+            $this->platformDb['host'],
+            (int) $this->platformDb['port'],
+            $this->platformDb['name'],
+            $this->platformDb['user'],
+            $this->platformDb['password'],
+            ['sslmode' => $this->platformDb['sslmode'] ?? 'disable'],
+            source: 'system',
+            description: 'Platform database (users, audit, settings, queue…)',
         )];
         foreach ($this->envConnections as $c) {
             try {
@@ -162,8 +169,19 @@ final class ConnectionStore
         if ($password === '' && $current !== null && ($in['clear_password'] ?? '') !== '1') {
             $password = $current->password;
         }
-        return new ConnectionDefinition($data['name'], $data['driver'], $data['host'], (int) $data['port'], $data['database'], $data['username'], $password,
-            json_decode($data['options'], true) ?: [], $data['read_only'], true, 'panel');
+        return new ConnectionDefinition(
+            $data['name'],
+            $data['driver'],
+            $data['host'],
+            (int) $data['port'],
+            $data['database'],
+            $data['username'],
+            $password,
+            json_decode($data['options'], true) ?: [],
+            $data['read_only'],
+            true,
+            'panel',
+        );
     }
 
     private function editable(string $name): ConnectionDefinition
@@ -257,9 +275,20 @@ final class ConnectionStore
         }
         $options = is_string($r['options']) ? (json_decode($r['options'], true) ?: []) : (array) $r['options'];
         return new ConnectionDefinition(
-            (string) $r['name'], (string) $r['driver'], (string) $r['host'], (int) $r['port'], (string) $r['database'], (string) $r['username'],
-            $password, $options, self::bool($r['read_only']), self::bool($r['enabled']), 'panel', (string) $r['description'],
-            (int) $r['version'], (string) $r['updated_at'],
+            (string) $r['name'],
+            (string) $r['driver'],
+            (string) $r['host'],
+            (int) $r['port'],
+            (string) $r['database'],
+            (string) $r['username'],
+            $password,
+            $options,
+            self::bool($r['read_only']),
+            self::bool($r['enabled']),
+            'panel',
+            (string) $r['description'],
+            (int) $r['version'],
+            (string) $r['updated_at'],
         );
     }
 

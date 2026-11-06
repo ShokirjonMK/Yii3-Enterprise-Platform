@@ -80,8 +80,10 @@ final class ThemeServiceTest extends IntegrationTestCase
                 self::assertTrue(true);
             }
         }
-        self::assertSame(':root{--primary:#123456}a{background:url(data:image/png;base64,AAAA)}',
-            $v->css(':root{--primary:#123456}a{background:url(data:image/png;base64,AAAA)}'));
+        self::assertSame(
+            ':root{--primary:#123456}a{background:url(data:image/png;base64,AAAA)}',
+            $v->css(':root{--primary:#123456}a{background:url(data:image/png;base64,AAAA)}'),
+        );
     }
 
     public function testZipValidation(): void
@@ -186,8 +188,13 @@ final class ThemeServiceTest extends IntegrationTestCase
     private function freshService(): ThemeService
     {
         $this->get(ThemeRegistry::class)->forget();
-        return new ThemeService($this->get(ThemeRegistry::class), new ThemeValidator(), $this->db,
-            $this->get(\App\Platform\Access\AccessService::class), $this->get(\App\Platform\Audit\AuditLogger::class));
+        return new ThemeService(
+            $this->get(ThemeRegistry::class),
+            new ThemeValidator(),
+            $this->db,
+            $this->get(\App\Platform\Access\AccessService::class),
+            $this->get(\App\Platform\Audit\AuditLogger::class),
+        );
     }
 
     private function expectRejected(ThemeValidator $v, string $zip): void

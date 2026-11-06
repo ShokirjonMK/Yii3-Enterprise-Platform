@@ -69,8 +69,12 @@ final class GiiModuleCommand extends Command
         }
 
         $apply = (bool) $input->getOption('apply');
-        $output->writeln(sprintf('<info>Enterprise Gii</info> · module <comment>%s</comment> · generators: %s · %s',
-            $plan->module, implode(', ', $plan->generators), $apply ? '<fg=red>APPLY</>' : 'dry run (use --apply to write)'));
+        $output->writeln(sprintf(
+            '<info>Enterprise Gii</info> · module <comment>%s</comment> · generators: %s · %s',
+            $plan->module,
+            implode(', ', $plan->generators),
+            $apply ? '<fg=red>APPLY</>' : 'dry run (use --apply to write)',
+        ));
         $output->writeln('');
         $colors = [PlannedFile::NEW => 'green', PlannedFile::OVERWRITE => 'blue', PlannedFile::SKIP => 'yellow', PlannedFile::UNCHANGED => 'gray'];
         foreach ($plan->files as $f) {
@@ -86,8 +90,14 @@ final class GiiModuleCommand extends Command
         }
         $c = $plan->counts();
         $output->writeln('');
-        $output->writeln(sprintf('%d files: %d new, %d overwrite, %d skip (protected), %d unchanged.',
-            count($plan->files), $c['new'], $c['overwrite'], $c['skip'], $c['unchanged']));
+        $output->writeln(sprintf(
+            '%d files: %d new, %d overwrite, %d skip (protected), %d unchanged.',
+            count($plan->files),
+            $c['new'],
+            $c['overwrite'],
+            $c['skip'],
+            $c['unchanged'],
+        ));
 
         if (!$apply) {
             if ($c['skip'] > 0) {

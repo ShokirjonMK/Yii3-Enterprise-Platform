@@ -41,7 +41,7 @@ jobs:
       - name: Composer validate + install
         run: |
           docker run --rm -v "$PWD":/app -w /app -e COMPOSER_CACHE_DIR=/app/.composer-cache yep-php:ci \
-            sh -ec 'composer validate --strict --no-check-publish && composer install --no-interaction --no-progress --prefer-dist'
+            sh -ec 'composer validate --no-check-publish && composer install --no-interaction --no-progress --prefer-dist'
 
       - name: PHP syntax lint
         run: |
@@ -52,7 +52,7 @@ jobs:
         run: docker run --rm -v "$PWD":/app -w /app yep-php:ci php vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --dry-run --diff
 
       - name: Static analysis (psalm)
-        run: docker run --rm -v "$PWD":/app -w /app yep-php:ci php vendor/bin/psalm --no-cache --output-format=github
+        run: docker run --rm -v "$PWD":/app -w /app yep-php:ci php -d memory_limit=3G vendor/bin/psalm --no-cache --threads=1 --output-format=github
 
       - name: Unit tests (no database)
         run: |

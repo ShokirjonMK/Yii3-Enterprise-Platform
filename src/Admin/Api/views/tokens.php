@@ -62,7 +62,9 @@ $query = array_filter($filters, static fn($v) => $v !== '');
                     <td class="small nowrap"><?= $h->datetime($k['created_at'], 'Y-m-d') ?></td>
                     <td class="small nowrap"><?= $h->ago($k['last_used_at']) ?><?= $k['last_used_ip'] ? '<div class="mono muted">' . $h->e($k['last_used_ip']) . '</div>' : '' ?></td>
                     <td class="small nowrap"><?= $h->datetime($k['expires_at'], 'Y-m-d') ?></td>
-                    <td><?= $h->badge(match ($k['state']) { 'active' => 'active', 'expired' => 'failed', default => 'blocked' }, $h->tr($k['state'])) ?></td>
+                    <td><?= $h->badge(match ($k['state']) {
+                        'active' => 'active', 'expired' => 'failed', default => 'blocked'
+                    }, $h->tr($k['state'])) ?></td>
                     <td class="actions">
                         <?php if ($k['state'] === 'active' && $can('api.manage')): ?>
                             <form method="post" action="<?= $h->url('admin.api.tokens.revoke', ['id' => $k['id']]) ?>" data-confirm="<?= $h->t('Revoke token {n} of {u}?', ['n' => $k['name'], 'u' => $k['username']]) ?>">

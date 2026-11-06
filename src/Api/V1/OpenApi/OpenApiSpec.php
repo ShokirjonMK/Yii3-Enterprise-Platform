@@ -194,6 +194,4 @@ use OpenApi\Attributes as OA;
         ),
     ],
 )]
-final class OpenApiSpec
-{
-}
+final class OpenApiSpec {}

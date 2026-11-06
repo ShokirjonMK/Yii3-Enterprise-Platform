@@ -10,7 +10,11 @@ use App\Api\V1\Middleware\CorsMiddleware;
 use App\Api\V1\Middleware\RateLimitMiddleware;
 use App\Api\V1\Middleware\RequireFeature;
 use App\Shared\Infrastructure\Http\DomainErrorMiddleware;
+use App\Web\Middleware\AuthContextMiddleware;
+use App\Web\Middleware\LocaleMiddleware;
+use Yiisoft\Csrf\CsrfTokenMiddleware;
 use Yiisoft\Definitions\Reference;
+use Yiisoft\Session\SessionMiddleware;
 use Yiisoft\Request\Body\RequestBodyParser;
 use Yiisoft\Router\Group;
 use Yiisoft\Router\Route;
@@ -31,10 +35,23 @@ $resources = \App\Platform\FeatureFlags\FeatureRegistry::loadRoutes('api', [
 ]);
 
 return [
-    Route::get('/api/docs')
-        ->middleware(DomainErrorMiddleware::json(), RequireFeature::for('api.v1'), RequireFeature::for('api.docs'))
-        ->action([DocsController::class, 'page'])
-        ->name('api.docs'),
+    // Swagger UI is private (ApiDocsAccess): session pipeline so that a signed-in user with api.docs.view, or a
+    // browser unlocked with a superadmin-issued access password, can open it; everybody else gets the password form.
+    Group::create('/api/docs')
+        ->middleware(
+            SessionMiddleware::class,
+            CsrfTokenMiddleware::class,
+            LocaleMiddleware::class,
+            AuthContextMiddleware::class,
+            DomainErrorMiddleware::class,
+            RequireFeature::for('api.v1'),
+            RequireFeature::for('api.docs'),
+        )
+        ->routes(
+            Route::get('')->action([DocsController::class, 'page'])->name('api.docs'),
+            Route::post('/unlock')->action([DocsController::class, 'unlock'])->name('api.docs.unlock'),
+            Route::post('/lock')->action([DocsController::class, 'lock'])->name('api.docs.lock'),
+        ),
 
     Group::create('/api/v1')
         ->middleware(

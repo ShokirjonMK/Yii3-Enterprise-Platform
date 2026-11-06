@@ -17,7 +17,9 @@ $tabs = [
 <div class="page-head"><div class="page-head__titles"><h1><?= $h->t('Messaging & Notifications') ?></h1>
     <p class="page-head__sub"><?= $h->t('In-app, e-mail, Telegram, SMS and Web Push delivery through the queue with retries and failure tracking.') ?></p></div></div>
 <nav class="tabs" hx-boost="true" hx-target="#main" hx-select="#main" hx-swap="outerHTML">
-    <?php foreach ($tabs as $key => [$route, $label, $perm]): if (!$can($perm)) { continue; } ?>
+    <?php foreach ($tabs as $key => [$route, $label, $perm]): if (!$can($perm)) {
+        continue;
+    } ?>
         <a href="<?= $h->url($route) ?>"<?= $key === $active ? ' aria-current="page"' : '' ?>><?= $h->t($label) ?></a>
     <?php endforeach ?>
 </nav>

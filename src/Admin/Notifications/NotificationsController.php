@@ -58,7 +58,7 @@ final class NotificationsController
         try {
             $this->service->setEnabled($this->actor(), $code, $enable);
             $this->responder->success($enable ? 'Channel enabled.' : 'Channel disabled.');
-        } catch (ValidationException | ConflictException $e) {
+        } catch (ValidationException|ConflictException $e) {
             $this->responder->error($e instanceof ValidationException ? implode(' ', array_merge(...array_values($e->errors()))) : $e->getMessage());
         }
         return $this->responder->redirect('admin.notifications');
@@ -155,8 +155,14 @@ final class NotificationsController
             $params = [];
         }
         $params = array_map(static fn($v) => is_scalar($v) || $v === null ? $v : json_encode($v), $params) + ['name' => 'Jane Doe'];
-        $preview = $this->service->preview((string) ($in['code'] ?? ''), (string) ($in['channel'] ?? 'inapp'), (string) ($in['locale'] ?? 'en'), $params,
-            isset($in['subject']) ? (string) $in['subject'] : null, isset($in['body']) ? (string) $in['body'] : null);
+        $preview = $this->service->preview(
+            (string) ($in['code'] ?? ''),
+            (string) ($in['channel'] ?? 'inapp'),
+            (string) ($in['locale'] ?? 'en'),
+            $params,
+            isset($in['subject']) ? (string) $in['subject'] : null,
+            isset($in['body']) ? (string) $in['body'] : null,
+        );
         return $this->responder->fragment('@admin/Notifications/views/_preview', ['preview' => $preview, 'error' => $error]);
     }
 
@@ -226,8 +232,15 @@ final class NotificationsController
     {
         $in = (array) $request->getParsedBody();
         try {
-            $result = $this->service->broadcast($this->actor(), (string) ($in['role'] ?? ''), (string) ($in['template_code'] ?? ''),
-                (string) ($in['subject'] ?? ''), (string) ($in['message'] ?? ''), array_values((array) ($in['channels'] ?? [])), 'broadcast');
+            $result = $this->service->broadcast(
+                $this->actor(),
+                (string) ($in['role'] ?? ''),
+                (string) ($in['template_code'] ?? ''),
+                (string) ($in['subject'] ?? ''),
+                (string) ($in['message'] ?? ''),
+                array_values((array) ($in['channels'] ?? [])),
+                'broadcast',
+            );
         } catch (ValidationException $e) {
             return $this->renderBroadcast($in, $e->errors(), null, 422);
         }

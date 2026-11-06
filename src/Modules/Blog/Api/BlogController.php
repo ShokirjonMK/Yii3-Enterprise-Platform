@@ -26,26 +26,26 @@ use Yiisoft\Router\CurrentRoute;
  * (JSON envelope, ETag = version, If-Match for updates, standard error shape).
  */
 #[OA\Schema(schema: 'Blog', type: 'object', properties: [
-        new OA\Property(property: 'id', type: 'string', format: 'uuid'),
-        new OA\Property(property: 'tenant_id', type: 'string', format: 'uuid'),
-        new OA\Property(property: 'title', type: 'string', maxLength: 255),
-        new OA\Property(property: 'description', type: 'string', maxLength: 500, nullable: true),
-        new OA\Property(property: 'status', type: 'string', enum: ['draft', 'active', 'archive']),
-        new OA\Property(property: 'due_on', type: 'string', format: 'date', nullable: true),
-        new OA\Property(property: 'owner_id', type: 'string', format: 'uuid', nullable: true),
-        new OA\Property(property: 'owner_id_name', type: 'string', nullable: true, description: 'List responses only'),
-        new OA\Property(property: 'allowed_transitions', type: 'array', items: new OA\Items(type: 'string')),
-        new OA\Property(property: 'version', type: 'integer'),
-        new OA\Property(property: 'created_by', type: 'string', format: 'uuid', nullable: true),
-        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
-        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
+    new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+    new OA\Property(property: 'tenant_id', type: 'string', format: 'uuid'),
+    new OA\Property(property: 'title', type: 'string', maxLength: 255),
+    new OA\Property(property: 'description', type: 'string', maxLength: 500, nullable: true),
+    new OA\Property(property: 'status', type: 'string', enum: ['draft', 'active', 'archive']),
+    new OA\Property(property: 'due_on', type: 'string', format: 'date', nullable: true),
+    new OA\Property(property: 'owner_id', type: 'string', format: 'uuid', nullable: true),
+    new OA\Property(property: 'owner_id_name', type: 'string', nullable: true, description: 'List responses only'),
+    new OA\Property(property: 'allowed_transitions', type: 'array', items: new OA\Items(type: 'string')),
+    new OA\Property(property: 'version', type: 'integer'),
+    new OA\Property(property: 'created_by', type: 'string', format: 'uuid', nullable: true),
+    new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+    new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
 ])]
 #[OA\Schema(schema: 'BlogInput', type: 'object', required: ['title'], properties: [
-        new OA\Property(property: 'title', type: 'string', maxLength: 255),
-        new OA\Property(property: 'description', type: 'string', maxLength: 500),
-        new OA\Property(property: 'due_on', type: 'string', format: 'date'),
-        new OA\Property(property: 'owner_id', type: 'string', format: 'uuid', description: 'Defaults to the caller when omitted'),
-        new OA\Property(property: 'version', type: 'integer', description: 'Alternative to If-Match on PATCH'),
+    new OA\Property(property: 'title', type: 'string', maxLength: 255),
+    new OA\Property(property: 'description', type: 'string', maxLength: 500),
+    new OA\Property(property: 'due_on', type: 'string', format: 'date'),
+    new OA\Property(property: 'owner_id', type: 'string', format: 'uuid', description: 'Defaults to the caller when omitted'),
+    new OA\Property(property: 'version', type: 'integer', description: 'Alternative to If-Match on PATCH'),
 ])]
 final class BlogController
 {

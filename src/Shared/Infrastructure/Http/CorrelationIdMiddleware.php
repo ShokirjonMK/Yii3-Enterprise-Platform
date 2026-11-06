@@ -49,7 +49,9 @@ final class CorrelationIdMiddleware implements MiddlewareInterface
         $now = microtime(true);
         return $response->withHeader('Server-Timing', sprintf(
             'boot;dur=%.1f;desc="bootstrap", app;dur=%.1f;desc="request", total;dur=%.1f',
-            ($entered - $started) * 1000, ($now - $entered) * 1000, ($now - $started) * 1000,
+            ($entered - $started) * 1000,
+            ($now - $entered) * 1000,
+            ($now - $started) * 1000,
         ));
     }
 }

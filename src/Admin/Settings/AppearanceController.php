@@ -7,7 +7,6 @@ namespace App\Admin\Settings;
 use App\Admin\Users\AdminActor;
 use App\Platform\Access\AccessService;
 use App\Platform\Appearance\AppearanceViewInjection;
-use App\Platform\Appearance\ThemeRegistry;
 use App\Platform\Appearance\ThemeService;
 use App\Shared\Domain\Exception\ConflictException;
 use App\Shared\Domain\Exception\NotFoundException;

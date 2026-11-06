@@ -36,6 +36,8 @@ return [
 
         'api.view' => 'View API clients, tokens and usage',
         'api.manage' => 'Manage API clients and keys',
+        'api.docs.view' => 'View the API documentation (Swagger UI, OpenAPI document)',
+        'api.docs.manage' => 'Issue and revoke API documentation access passwords',
 
         'integrations.view' => 'View external integrations',
         'integrations.manage' => 'Configure external integrations and webhooks',
@@ -117,7 +119,7 @@ return [
             'description' => 'Engineering access: developer tools, read-only operations',
             'children' => ['user'],
             'permissions' => [
-                'admin.access', 'devtools.use', 'api.view', 'integrations.view', 'jobs.view', 'kafka.view', 'db.view',
+                'admin.access', 'devtools.use', 'api.view', 'api.docs.view', 'integrations.view', 'jobs.view', 'kafka.view', 'db.view',
                 'redis.view', 'monitoring.view', 'modules.view', 'incidents.view', 'deploy.view', 'settings.view',
             ],
         ],

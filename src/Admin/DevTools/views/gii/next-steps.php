@@ -26,7 +26,11 @@ $this->setParameter('breadcrumbs', [$h->tr('Developer tools') => $h->urlOrNull('
 </div>
 
 <?php if ($errors !== []): ?>
-    <div class="alert alert--error" role="alert"><?= $h->icon('alert') ?> <div><?php foreach ($errors as $msgs) { foreach ($msgs as $m) { echo $h->t($m), ' '; } } ?></div></div>
+    <div class="alert alert--error" role="alert"><?= $h->icon('alert') ?> <div><?php foreach ($errors as $msgs) {
+        foreach ($msgs as $m) {
+            echo $h->t($m), ' ';
+        }
+    } ?></div></div>
 <?php endif ?>
 
 <div class="card">

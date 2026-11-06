@@ -39,8 +39,12 @@ $labels = [
             <?php if ($can('projects.update')): ?>
                 <a class="btn" href="<?= $h->url('admin.projects.edit', ['id' => $project->id]) ?>"><?= $h->icon('edit') ?> <?= $h->t('Edit') ?></a>
                 <?php foreach ($transitions as $t): ?>
-                    <?php if ($t === ProjectStatus::Archived) { continue; } ?>
-                    <?php if ($status === ProjectStatus::Draft && $t === ProjectStatus::Active && !$can('projects.approve')) { continue; } ?>
+                    <?php if ($t === ProjectStatus::Archived) {
+                        continue;
+                    } ?>
+                    <?php if ($status === ProjectStatus::Draft && $t === ProjectStatus::Active && !$can('projects.approve')) {
+                        continue;
+                    } ?>
                     <form method="post" action="<?= $h->url('admin.projects.status', ['id' => $project->id]) ?>">
                         <input type="hidden" name="_csrf" value="<?= $h->e($csrf) ?>">
                         <input type="hidden" name="version" value="<?= $project->version() ?>">

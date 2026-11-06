@@ -219,8 +219,13 @@ final class ChannelsProvidersTest extends IntegrationTestCase
         self::assertTrue($again['suppressed']);
         $limiter->reset('alert:' . $fp);
 
-        $ok = new AlertNotifier($this->get(SettingsService::class), new TelegramBotClient($this->http([new Response(200, ['Content-Type' => 'application/json'], '{"ok":true,"result":{"message_id":1}}')])),
-            $this->get(TransportInterface::class), $limiter, $this->get(LoggerInterface::class));
+        $ok = new AlertNotifier(
+            $this->get(SettingsService::class),
+            new TelegramBotClient($this->http([new Response(200, ['Content-Type' => 'application/json'], '{"ok":true,"result":{"message_id":1}}')])),
+            $this->get(TransportInterface::class),
+            $limiter,
+            $this->get(LoggerInterface::class),
+        );
         self::assertSame('telegram', $ok->alert('Backup failed', 'pg_dump exit 1', 'error', [], $fp . 'b')['channel']);
         $limiter->reset('alert:' . $fp . 'b');
     }

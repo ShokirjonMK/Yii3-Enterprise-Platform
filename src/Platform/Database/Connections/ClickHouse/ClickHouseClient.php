@@ -32,7 +32,8 @@ final class ClickHouseClient
         private readonly string $baseUrl,
         private readonly string $database,
         private readonly string $username = 'default',
-        #[SensitiveParameter] private readonly string $password = '',
+        #[SensitiveParameter]
+        private readonly string $password = '',
         float $timeout = 30.0,
         private readonly array $settings = [],
         ?ClientInterface $http = null,

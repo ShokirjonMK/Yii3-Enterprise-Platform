@@ -28,7 +28,8 @@ final class KubernetesClient
     /** @param bool|string $verify true | CA bundle path | false (never in production) */
     public function __construct(
         private readonly string $apiUrl,
-        #[SensitiveParameter] private readonly ?string $token,
+        #[SensitiveParameter]
+        private readonly ?string $token,
         private readonly string $namespace = 'platform',
         private readonly bool|string $verify = true,
         private readonly mixed $handler = null,

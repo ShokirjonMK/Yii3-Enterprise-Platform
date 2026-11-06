@@ -107,7 +107,7 @@ final class BlogController
         try {
             $e = $this->service->changeStatus($this->actor(), $this->id(), (string) ($body['status'] ?? ''), isset($body['version']) ? (int) $body['version'] : null);
             $this->responder->success('Status changed to ' . $e->status()->label() . '.');
-        } catch (ConflictException | ValidationException $ex) {
+        } catch (ConflictException|ValidationException $ex) {
             $this->responder->error($ex->getMessage());
         }
         return $this->responder->redirect('web.blog.view', ['id' => $this->id()]);

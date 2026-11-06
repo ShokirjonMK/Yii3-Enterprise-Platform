@@ -13,7 +13,6 @@ use App\Shared\Domain\Exception\NotFoundException;
 use App\Shared\Domain\Exception\ValidationException;
 use App\Shared\Infrastructure\Database\Page;
 use App\Shared\Infrastructure\Database\Paginator;
-use App\Shared\Infrastructure\Database\Sql;
 use Psr\Log\LoggerInterface;
 use Throwable;
 use Yiisoft\Db\Connection\ConnectionInterface;
@@ -149,9 +148,18 @@ final class IncidentService
                 array_combine(array_map(static fn($k) => ':' . $k, array_keys($row)), array_values($row)),
             )->queryOne();
             $this->event((string) $inc['id'], 'opened', sprintf('Opened (%s, %s) via %s.', $row['severity'], $row['service'], $row['source']), $actor?->id);
-            $this->audit->record('incident.opened', 'incident', (string) $inc['id'], null, $row, ['number' => (int) $inc['number']],
-                category: 'ops', severity: in_array($row['severity'], ['sev1', 'sev2'], true) ? 'warning' : 'notice',
-                actorId: $actor?->id, actorName: $actor?->username);
+            $this->audit->record(
+                'incident.opened',
+                'incident',
+                (string) $inc['id'],
+                null,
+                $row,
+                ['number' => (int) $inc['number']],
+                category: 'ops',
+                severity: in_array($row['severity'], ['sev1', 'sev2'], true) ? 'warning' : 'notice',
+                actorId: $actor?->id,
+                actorName: $actor?->username,
+            );
             return $inc;
         });
         $this->announce((string) $incident['id'], (int) $incident['number'], $row);
@@ -213,8 +221,18 @@ final class IncidentService
             }
             $this->db->createCommand()->update('incidents', $update, ['id' => $id])->execute();
             $this->event($id, 'acknowledged', 'Acknowledged by ' . $actor->username . (isset($update['commander_id']) ? ' (incident commander)' : '') . '.', $actor->id);
-            $this->audit->record('incident.acknowledged', 'incident', $id, ['status' => $inc['status']], ['status' => $update['status'] ?? $inc['status']], [],
-                category: 'ops', severity: 'notice', actorId: $actor->id, actorName: $actor->username);
+            $this->audit->record(
+                'incident.acknowledged',
+                'incident',
+                $id,
+                ['status' => $inc['status']],
+                ['status' => $update['status'] ?? $inc['status']],
+                [],
+                category: 'ops',
+                severity: 'notice',
+                actorId: $actor->id,
+                actorName: $actor->username,
+            );
         });
     }
 
@@ -235,8 +253,17 @@ final class IncidentService
             $this->lock($id);
             $this->event($id, 'note', $body, $actor->id);
             $this->db->createCommand()->update('incidents', ['updated_at' => new Expression('now()')], ['id' => $id])->execute();
-            $this->audit->record('incident.note_added', 'incident', $id, null, null, ['length' => mb_strlen($body)],
-                category: 'ops', actorId: $actor->id, actorName: $actor->username);
+            $this->audit->record(
+                'incident.note_added',
+                'incident',
+                $id,
+                null,
+                null,
+                ['length' => mb_strlen($body)],
+                category: 'ops',
+                actorId: $actor->id,
+                actorName: $actor->username,
+            );
         });
     }
 
@@ -252,8 +279,17 @@ final class IncidentService
             $this->db->createCommand()->update('incidents', ['commander_id' => $commander, 'updated_at' => new Expression('now()')], ['id' => $id])->execute();
             $name = $commander === null ? 'nobody' : (string) (new Query($this->db))->select('username')->from('users')->where(['id' => $commander])->scalar();
             $this->event($id, 'commander', 'Incident commander: ' . $name . '.', $actor->id);
-            $this->audit->record('incident.commander_assigned', 'incident', $id, ['commander_id' => $inc['commander_id']], ['commander_id' => $commander], [],
-                category: 'ops', actorId: $actor->id, actorName: $actor->username);
+            $this->audit->record(
+                'incident.commander_assigned',
+                'incident',
+                $id,
+                ['commander_id' => $inc['commander_id']],
+                ['commander_id' => $commander],
+                [],
+                category: 'ops',
+                actorId: $actor->id,
+                actorName: $actor->username,
+            );
         });
     }
 
@@ -267,8 +303,17 @@ final class IncidentService
             $inc = $this->lock($id);
             $this->db->createCommand()->update('incidents', ['postmortem' => trim($text) === '' ? null : $text, 'updated_at' => new Expression('now()')], ['id' => $id])->execute();
             $this->event($id, 'postmortem', $inc['postmortem'] === null ? 'Postmortem added.' : 'Postmortem updated.', $actor->id);
-            $this->audit->record('incident.postmortem_saved', 'incident', $id, null, null, ['length' => mb_strlen($text)],
-                category: 'ops', actorId: $actor->id, actorName: $actor->username);
+            $this->audit->record(
+                'incident.postmortem_saved',
+                'incident',
+                $id,
+                null,
+                null,
+                ['length' => mb_strlen($text)],
+                category: 'ops',
+                actorId: $actor->id,
+                actorName: $actor->username,
+            );
         });
     }
 
@@ -317,13 +362,28 @@ final class IncidentService
             }
             $this->db->createCommand()->update('incidents', $update, ['id' => $id])->execute();
             $this->event($id, 'status', "Status: $from → $to." . (trim($note) !== '' ? ' ' . trim($note) : ''), $actor?->id);
-            $this->audit->record('incident.status_changed', 'incident', $id, ['status' => $from], ['status' => $to], ['note' => mb_substr($note, 0, 500)],
-                category: 'ops', severity: 'notice', actorId: $actor?->id, actorName: $actor?->username);
+            $this->audit->record(
+                'incident.status_changed',
+                'incident',
+                $id,
+                ['status' => $from],
+                ['status' => $to],
+                ['note' => mb_substr($note, 0, 500)],
+                category: 'ops',
+                severity: 'notice',
+                actorId: $actor?->id,
+                actorName: $actor?->username,
+            );
             return $inc;
         });
         if ($to === 'resolved') {
-            $this->telegram->send(sprintf("✅ <b>Resolved</b> incident #%d [%s] %s\n%s",
-                (int) $inc['number'], TelegramAlerter::escape((string) $inc['severity']), TelegramAlerter::escape((string) $inc['title']), TelegramAlerter::escape(mb_substr($note, 0, 500))));
+            $this->telegram->send(sprintf(
+                "✅ <b>Resolved</b> incident #%d [%s] %s\n%s",
+                (int) $inc['number'],
+                TelegramAlerter::escape((string) $inc['severity']),
+                TelegramAlerter::escape((string) $inc['title']),
+                TelegramAlerter::escape(mb_substr($note, 0, 500)),
+            ));
         }
     }
 
@@ -340,9 +400,15 @@ final class IncidentService
         } catch (Throwable $e) {
             $this->logger->error('Incident notifications failed', ['incident' => $id, 'exception' => $e]);
         }
-        $sent = $this->telegram->send(sprintf("🚨 <b>[%s] Incident #%d</b>: %s\nService: %s · Source: %s\n%s",
-            TelegramAlerter::escape(strtoupper($row['severity'])), $number, TelegramAlerter::escape($row['title']),
-            TelegramAlerter::escape($row['service']), TelegramAlerter::escape($row['source']), TelegramAlerter::escape($params['url'])));
+        $sent = $this->telegram->send(sprintf(
+            "🚨 <b>[%s] Incident #%d</b>: %s\nService: %s · Source: %s\n%s",
+            TelegramAlerter::escape(strtoupper($row['severity'])),
+            $number,
+            TelegramAlerter::escape($row['title']),
+            TelegramAlerter::escape($row['service']),
+            TelegramAlerter::escape($row['source']),
+            TelegramAlerter::escape($params['url']),
+        ));
         try {
             $this->event($id, 'notified', sprintf('Notified %d on-call deliveries%s.', $notified, $sent ? ' + Telegram alert chat' : ''), null);
         } catch (Throwable) {

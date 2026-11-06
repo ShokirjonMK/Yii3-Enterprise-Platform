@@ -61,7 +61,9 @@ $err = static fn(string $part) => $k8s['errors'][$part] ?? null;
             <?php foreach ($k8s['pods'] as $p): ?>
                 <tr>
                     <td class="mono small"><?= $h->e($p['name']) ?></td>
-                    <td><?= $h->badge(match ($p['phase']) { 'Running', 'Succeeded' => 'healthy', 'Pending' => 'pending', default => 'failed' }, $p['phase']) ?></td>
+                    <td><?= $h->badge(match ($p['phase']) {
+                        'Running', 'Succeeded' => 'healthy', 'Pending' => 'pending', default => 'failed'
+                    }, $p['phase']) ?></td>
                     <td><?= $h->e($p['ready']) ?></td>
                     <td class="num"><?= (int) $p['restarts'] ?></td>
                     <td class="small"><?= $h->e($p['node']) ?></td>

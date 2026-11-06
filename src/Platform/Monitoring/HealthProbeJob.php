@@ -48,7 +48,9 @@ final class HealthProbeJob implements JobHandlerInterface
         $opened = [];
         $resolved = [];
         foreach ($results as $component => $r) {
-            $up = match ($r['status']) { HealthChecker::UP => 1.0, HealthChecker::DEGRADED => 0.5, HealthChecker::NOT_CONFIGURED => -1.0, default => 0.0 };
+            $up = match ($r['status']) {
+                HealthChecker::UP => 1.0, HealthChecker::DEGRADED => 0.5, HealthChecker::NOT_CONFIGURED => -1.0, default => 0.0
+            };
             $this->metrics->gauge('health_component_up', 'Health probe result per component (1 up, 0.5 degraded, 0 down, -1 not configured)', $up, ['component' => $component]);
             $this->metrics->observe('health_check_latency_seconds', 'Health check latency', $r['latency_ms'] / 1000, ['component' => $component], [0.005, 0.01, 0.05, 0.1, 0.5, 1, 3, 5]);
 
@@ -60,8 +62,13 @@ final class HealthProbeJob implements JobHandlerInterface
             try {
                 if ($r['status'] === HealthChecker::DOWN && $failures >= $this->failureThreshold) {
                     $error = (string) ($r['details']['error'] ?? 'no details');
-                    $result = $this->incidents->autoOpen($fingerprint, ucfirst($component) . ' is down', self::CRITICAL[$component], $component,
-                        sprintf("Health probe reported %s DOWN for %d consecutive checks.\nLast error: %s", $component, $failures, mb_substr($error, 0, 1000)));
+                    $result = $this->incidents->autoOpen(
+                        $fingerprint,
+                        ucfirst($component) . ' is down',
+                        self::CRITICAL[$component],
+                        $component,
+                        sprintf("Health probe reported %s DOWN for %d consecutive checks.\nLast error: %s", $component, $failures, mb_substr($error, 0, 1000)),
+                    );
                     if ($result['created']) {
                         $opened[] = $result['id'];
                     }

@@ -70,6 +70,44 @@ final class OutboxKafkaRoundTripTest extends IntegrationTestCase
         self::assertCount(1, array_filter(self::$received, static fn(EventEnvelope $e) => $e->aggregateId === $aggregate));
     }
 
+    /**
+     * Pausing a consumer group in Admin → Kafka (consumer_state.paused) pauses the assigned partitions and
+     * resuming continues where it stopped. Regression: the runner called KafkaConsumer::pause()/resume(),
+     * which php-rdkafka does not have (fatal error in the worker); the API is pausePartitions()/resumePartitions().
+     */
+    public function testPausedGroupStopsConsumingAndResumes(): void
+    {
+        $aggregate = 'agg-' . uniqid();
+        $group = 'test-pause-' . uniqid();
+        $this->db->createCommand()->insert('consumer_state', ['consumer_group' => $group, 'paused' => true])->execute();
+        try {
+            $envelope = $this->db->transaction(fn() => $this->get(Outbox::class)->record('platform.users', 'test.ping', 'test', $aggregate, ['n' => 2]));
+            $this->get(OutboxRelay::class)->relayOnce(500);
+
+            $runner = new KafkaConsumerRunner(
+                $this->get(KafkaConfig::class),
+                $this->get(\App\Platform\Messaging\Kafka\KafkaProducer::class),
+                $this->db,
+                $this->c,
+                $this->get(\Psr\Log\LoggerInterface::class),
+                $this->get(\App\Shared\Infrastructure\Context\RequestContext::class),
+                $this->get(\App\Platform\Monitoring\Metrics::class),
+                [$group => ['topics' => ['platform.users'], 'handlers' => ['test.ping' => RecordingHandler::class]]],
+            );
+            $mine = fn() => array_filter(self::$received, static fn(EventEnvelope $e) => $e->aggregateId === $aggregate);
+
+            $runner->run($group, null, 10);
+            self::assertCount(0, $mine(), 'a paused group consumes nothing');
+
+            $this->db->createCommand()->update('consumer_state', ['paused' => false], ['consumer_group' => $group])->execute();
+            $runner->run($group, null, 12);
+            self::assertCount(1, $mine(), 'after resume the pending event is consumed once');
+            self::assertSame($envelope->id, array_values($mine())[0]->id);
+        } finally {
+            $this->db->createCommand()->delete('consumer_state', ['consumer_group' => $group])->execute();
+        }
+    }
+
     public function testKafkaUnavailableKeepsEventsPending(): void
     {
         $cfg = new KafkaConfig(true, 'unreachable.invalid:9092', 'test', '');

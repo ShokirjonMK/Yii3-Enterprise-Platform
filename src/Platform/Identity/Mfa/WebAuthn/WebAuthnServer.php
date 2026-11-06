@@ -81,8 +81,10 @@ final class WebAuthnServer
         } catch (Throwable $e) {
             throw ValidationException::single('credential', 'The security key response is invalid (' . $e->getMessage() . ').');
         }
-        $transports = array_values(array_filter((array) ($credential['response']['transports'] ?? $credential['transports'] ?? []),
-            static fn($t) => is_string($t) && in_array($t, ['usb', 'nfc', 'ble', 'internal', 'hybrid', 'smart-card'], true)));
+        $transports = array_values(array_filter(
+            (array) ($credential['response']['transports'] ?? $credential['transports'] ?? []),
+            static fn($t) => is_string($t) && in_array($t, ['usb', 'nfc', 'ble', 'internal', 'hybrid', 'smart-card'], true),
+        ));
         return [
             'id' => self::b64u($auth['credential_id']),
             'public_key' => $publicKey,

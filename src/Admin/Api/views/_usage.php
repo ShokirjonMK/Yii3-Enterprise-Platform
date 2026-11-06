@@ -23,4 +23,5 @@ $tiles = [
 <nav class="tabs" aria-label="<?= $h->t('Section') ?>" hx-boost="true" hx-target="#main" hx-select="#main" hx-swap="outerHTML">
     <a href="<?= $h->url('admin.api') ?>"<?= $active === 'clients' ? ' aria-current="page"' : '' ?>><?= $h->t('API clients') ?></a>
     <a href="<?= $h->url('admin.api.tokens') ?>"<?= $active === 'tokens' ? ' aria-current="page"' : '' ?>><?= $h->t('Personal tokens') ?></a>
+    <a href="<?= $h->url('admin.api.docs') ?>"<?= $active === 'docs' ? ' aria-current="page"' : '' ?>><?= $h->t('Docs access') ?></a>
 </nav>

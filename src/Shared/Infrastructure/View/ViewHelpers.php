@@ -83,7 +83,7 @@ final class ViewHelpers
         return $this->translator->getLocale();
     }
 
-    public function datetime(null|string|DateTimeInterface $value, string $format = 'Y-m-d H:i', string $tz = 'Asia/Tashkent'): string
+    public function datetime(string|DateTimeInterface|null $value, string $format = 'Y-m-d H:i', string $tz = 'Asia/Tashkent'): string
     {
         if ($value === null || $value === '') {
             return '—';
@@ -92,7 +92,7 @@ final class ViewHelpers
         return Html::encode($dt->setTimezone(new DateTimeZone($tz))->format($format));
     }
 
-    public function ago(null|string|DateTimeInterface $value): string
+    public function ago(string|DateTimeInterface|null $value): string
     {
         if ($value === null || $value === '') {
             return '—';
@@ -107,7 +107,7 @@ final class ViewHelpers
         });
     }
 
-    public function bytes(null|int|float|string $bytes): string
+    public function bytes(int|float|string|null $bytes): string
     {
         if ($bytes === null || $bytes === '') {
             return '—';

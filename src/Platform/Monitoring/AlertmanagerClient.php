@@ -60,6 +60,8 @@ final class AlertmanagerClient
 
     private static function rank(string $severity): int
     {
-        return match ($severity) { 'critical' => 0, 'error', 'high' => 1, 'warning' => 2, default => 3 };
+        return match ($severity) {
+            'critical' => 0, 'error', 'high' => 1, 'warning' => 2, default => 3
+        };
     }
 }

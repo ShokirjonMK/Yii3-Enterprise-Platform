@@ -6,6 +6,4 @@ namespace App\Platform\Queue;
 
 use RuntimeException;
 
-final class JobTimeout extends RuntimeException
-{
-}
+final class JobTimeout extends RuntimeException {}

@@ -13,7 +13,6 @@ use App\Platform\Identity\Domain\User;
 use App\Shared\Domain\Exception\NotFoundException;
 use App\Shared\Infrastructure\Database\Page;
 use App\Shared\Infrastructure\Database\Paginator;
-use App\Shared\Infrastructure\Database\Sql;
 use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Db\Expression\Expression;
 use Yiisoft\Db\Query\Query;
@@ -120,8 +119,18 @@ final class SecurityCenter
             throw new \App\Shared\Domain\Exception\ConflictException('Use "Sign out" to end your own current session.');
         }
         $this->sessions->revoke($hashedId, 'revoked by ' . $actor->username);
-        $this->audit->record('security.session_revoked', 'user', (string) $row['user_id'], null, null, ['target' => $row['username']],
-            category: 'security', severity: 'notice', actorId: $actor->id, actorName: $actor->username);
+        $this->audit->record(
+            'security.session_revoked',
+            'user',
+            (string) $row['user_id'],
+            null,
+            null,
+            ['target' => $row['username']],
+            category: 'security',
+            severity: 'notice',
+            actorId: $actor->id,
+            actorName: $actor->username,
+        );
     }
 
     public function revokeAllSessions(User $actor, string $userId, ?string $keepSessionId): int
@@ -129,8 +138,18 @@ final class SecurityCenter
         $this->access->assert($actor->id, 'sessions.revoke');
         $user = $this->user($actor, $userId);
         $n = $this->sessions->revokeAllForUser($user['id'], 'revoked by ' . $actor->username, $user['id'] === $actor->id ? $keepSessionId : null);
-        $this->audit->record('security.sessions_revoked_all', 'user', $user['id'], null, null, ['target' => $user['username'], 'count' => $n],
-            category: 'security', severity: 'warning', actorId: $actor->id, actorName: $actor->username);
+        $this->audit->record(
+            'security.sessions_revoked_all',
+            'user',
+            $user['id'],
+            null,
+            null,
+            ['target' => $user['username'], 'count' => $n],
+            category: 'security',
+            severity: 'warning',
+            actorId: $actor->id,
+            actorName: $actor->username,
+        );
         return $n;
     }
 
@@ -139,8 +158,18 @@ final class SecurityCenter
         $this->access->assert($actor->id, 'security.manage');
         $user = $this->user($actor, $userId);
         $n = $this->tokens->revokeAllForUser($user['id']);
-        $this->audit->record('security.api_tokens_revoked', 'user', $user['id'], null, null, ['target' => $user['username'], 'count' => $n],
-            category: 'security', severity: 'warning', actorId: $actor->id, actorName: $actor->username);
+        $this->audit->record(
+            'security.api_tokens_revoked',
+            'user',
+            $user['id'],
+            null,
+            null,
+            ['target' => $user['username'], 'count' => $n],
+            category: 'security',
+            severity: 'warning',
+            actorId: $actor->id,
+            actorName: $actor->username,
+        );
         return $n;
     }
 
@@ -149,8 +178,18 @@ final class SecurityCenter
         $this->access->assert($actor->id, 'security.manage');
         $user = $this->user($actor, $userId);
         $this->throttle->unlock($user['id']);
-        $this->audit->record('security.user_unlocked', 'user', $user['id'], ['locked_until' => $user['locked_until']], ['locked_until' => null], ['target' => $user['username']],
-            category: 'security', severity: 'notice', actorId: $actor->id, actorName: $actor->username);
+        $this->audit->record(
+            'security.user_unlocked',
+            'user',
+            $user['id'],
+            ['locked_until' => $user['locked_until']],
+            ['locked_until' => null],
+            ['target' => $user['username']],
+            category: 'security',
+            severity: 'notice',
+            actorId: $actor->id,
+            actorName: $actor->username,
+        );
     }
 
     /** @return array{id:string, username:string, tenant_id:?string, locked_until:?string} */

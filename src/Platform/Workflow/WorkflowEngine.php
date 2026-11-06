@@ -6,7 +6,6 @@ namespace App\Platform\Workflow;
 
 use App\Platform\Access\AccessService;
 use App\Platform\Audit\AuditLogger;
-use App\Shared\Domain\Exception\AccessDeniedException;
 use App\Shared\Domain\Exception\ConflictException;
 use App\Shared\Domain\Exception\NotFoundException;
 use App\Shared\Domain\Exception\ValidationException;
@@ -97,13 +96,24 @@ final class WorkflowEngine
             throw ValidationException::single('definition', 'States in use by existing instances cannot be removed: ' . implode(', ', $missing));
         }
         $this->db->transaction(function () use ($row, $data, $actorId, $version): void {
-            $n = $this->db->createCommand()->update('workflows', $data + ['version' => new Expression('version + 1'), 'updated_at' => new Expression('now()')],
-                ['id' => $row['id'], 'version' => $version])->execute();
+            $n = $this->db->createCommand()->update(
+                'workflows',
+                $data + ['version' => new Expression('version + 1'), 'updated_at' => new Expression('now()')],
+                ['id' => $row['id'], 'version' => $version],
+            )->execute();
             if ($n === 0) {
                 throw new ConflictException('The workflow was modified concurrently. Reload and try again.', 'stale_version');
             }
-            $this->audit->record('workflow.updated', 'workflow', $row['id'], ['version' => (int) $row['version'], 'definition' => Sql::json($row['definition'])],
-                ['version' => $version + 1, 'definition' => json_decode((string) $data['definition'], true), 'enabled' => $data['enabled']], category: 'config', severity: 'notice', actorId: $actorId);
+            $this->audit->record(
+                'workflow.updated',
+                'workflow',
+                $row['id'],
+                ['version' => (int) $row['version'], 'definition' => Sql::json($row['definition'])],
+                ['version' => $version + 1, 'definition' => json_decode((string) $data['definition'], true), 'enabled' => $data['enabled']],
+                category: 'config',
+                severity: 'notice',
+                actorId: $actorId,
+            );
         });
     }
 
@@ -165,7 +175,7 @@ final class WorkflowEngine
                 'INSERT INTO workflow_instances (id, workflow_id, entity_type, entity_id, tenant_id, state, data, started_by)
                  VALUES (:id, :w, :et, :eid, :t, :s, CAST(:d AS jsonb), :u) ON CONFLICT ON CONSTRAINT workflow_instances_entity_uq DO NOTHING RETURNING id',
                 [':id' => $id, ':w' => $wf['id'], ':et' => $entityType, ':eid' => $entityId, ':t' => $tenantId, ':s' => $def->initial,
-                 ':d' => json_encode($data === [] ? new \stdClass() : $data, JSON_UNESCAPED_UNICODE), ':u' => $actorId],
+                    ':d' => json_encode($data === [] ? new \stdClass() : $data, JSON_UNESCAPED_UNICODE), ':u' => $actorId],
             )->queryScalar();
             if ($inserted === false || $inserted === null) {
                 throw new ConflictException('A workflow instance already exists for this entity.', 'instance_exists');
@@ -251,9 +261,15 @@ final class WorkflowEngine
                     'requested_by' => $actorId,
                     'expires_at' => $expires,
                 ])->execute();
-                $this->audit->record('approval.requested', 'approval_request', $approvalId, null,
+                $this->audit->record(
+                    'approval.requested',
+                    'approval_request',
+                    $approvalId,
+                    null,
                     ['transition' => $transition, 'instance_id' => $instance['id'], 'required_approvals' => $t['approval']['required_approvals']],
-                    ['workflow' => $wf['code'], 'entity' => $instance['entity_type'] . ':' . $instance['entity_id']], actorId: $actorId);
+                    ['workflow' => $wf['code'], 'entity' => $instance['entity_type'] . ':' . $instance['entity_id']],
+                    actorId: $actorId,
+                );
                 // transactional enqueue: approvers are notified only if the request is committed
                 $this->queue->push(NotifyApproversJob::TYPE, ['request_id' => $approvalId], ['queue' => 'notifications', 'idempotency_key' => 'approval-notify:' . $approvalId]);
             });
@@ -280,8 +296,15 @@ final class WorkflowEngine
         if ($t === null || !in_array($instance['state'], $t['from'], true)) {
             return false;
         }
-        $this->transitionInTransaction($instance, (string) $request['transition'], $t['to'], (int) $instance['version'], $approverId,
-            'Approved (request ' . $request['id'] . ')' . (($c = (string) (Sql::json($request['payload'])['comment'] ?? '')) !== '' ? ': ' . $c : ''), (string) $request['id']);
+        $this->transitionInTransaction(
+            $instance,
+            (string) $request['transition'],
+            $t['to'],
+            (int) $instance['version'],
+            $approverId,
+            'Approved (request ' . $request['id'] . ')' . (($c = (string) (Sql::json($request['payload'])['comment'] ?? '')) !== '' ? ': ' . $c : ''),
+            (string) $request['id'],
+        );
         return true;
     }
 
@@ -306,9 +329,11 @@ final class WorkflowEngine
 
     private function transitionInTransaction(array $instance, string $transition, string $to, int $version, string $actorId, string $comment, ?string $approvalId): void
     {
-        $n = $this->db->createCommand()->update('workflow_instances',
+        $n = $this->db->createCommand()->update(
+            'workflow_instances',
             ['state' => $to, 'version' => new Expression('version + 1'), 'updated_at' => new Expression('now()')],
-            ['id' => $instance['id'], 'version' => $version])->execute();
+            ['id' => $instance['id'], 'version' => $version],
+        )->execute();
         if ($n === 0) {
             throw new ConflictException('The item was changed by someone else. Reload and try again.', 'stale_version');
         }
@@ -322,10 +347,15 @@ final class WorkflowEngine
             $cancel[] = ['<>', 'id', $approvalId];
         }
         $this->db->createCommand()->update('approval_requests', ['status' => 'cancelled', 'decided_at' => new Expression('now()')], $cancel)->execute();
-        $this->audit->record('workflow.transition', (string) $instance['entity_type'], (string) $instance['entity_id'],
-            ['state' => $instance['state']], ['state' => $to],
+        $this->audit->record(
+            'workflow.transition',
+            (string) $instance['entity_type'],
+            (string) $instance['entity_id'],
+            ['state' => $instance['state']],
+            ['state' => $to],
             ['workflow' => $instance['workflow_code'] ?? null, 'instance_id' => $instance['id'], 'transition' => $transition, 'approval_id' => $approvalId, 'comment' => $comment],
-            actorId: $actorId);
+            actorId: $actorId,
+        );
     }
 
     /** @return array<string,mixed> */

@@ -67,7 +67,9 @@ $sources = ['system' => $h->tr('platform'), 'env' => '.env', 'panel' => $h->tr('
             <?php foreach ($drivers as $driver => $reason): ?>
                 <tr>
                     <td><?= $h->e(DatabaseDriver::label($driver)) ?></td>
-                    <td class="mono small"><?= $h->e(match (DatabaseDriver::family($driver)) { 'document' => '$dbs->mongo(\'name\')', 'olap' => '$dbs->clickhouse(\'name\')', default => '$dbs->sql(\'name\')' }) ?></td>
+                    <td class="mono small"><?= $h->e(match (DatabaseDriver::family($driver)) {
+                        'document' => '$dbs->mongo(\'name\')', 'olap' => '$dbs->clickhouse(\'name\')', default => '$dbs->sql(\'name\')'
+                    }) ?></td>
                     <td><?= $reason === null ? $h->badge('ok', $h->tr('ready')) : $h->badge('warning', $h->tr('not available')) . '<div class="small muted">' . $h->t($reason) . '</div>' ?></td>
                     <td><?= (int) ($engines[$driver] ?? 0) ?></td>
                 </tr>

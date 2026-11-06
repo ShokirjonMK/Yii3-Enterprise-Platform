@@ -12,6 +12,4 @@ use RuntimeException;
  *
  * Author: ShokirjonMK
  */
-final class PermanentMessageFailure extends RuntimeException
-{
-}
+final class PermanentMessageFailure extends RuntimeException {}

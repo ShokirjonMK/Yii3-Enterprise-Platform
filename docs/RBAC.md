@@ -110,6 +110,7 @@ so foreign-tenant users cannot be targeted.
 | 04 RBAC (`admin.rbac*`) | `rbac.view` | `rbac.manage` | re-auth for assign/revoke/sync and every role/permission create/edit/delete/reset |
 | 05 Multi-Tenancy (`admin.tenants*`) | `tenants.view` | `tenants.manage` | create/delete/status change also need `tenants.cross`; flag overrides also need `settings.manage`; status/delete need re-auth |
 | 06 API Management (`admin.api*`) | `api.view` | `api.manage` | rotate secret / delete need re-auth |
+| API documentation (`/api/docs`, `/api/v1/openapi.json`) | `api.docs.view` | `api.docs.manage` (privileged: access passwords) | issuing a password needs re-auth |
 
 ## Tests
 

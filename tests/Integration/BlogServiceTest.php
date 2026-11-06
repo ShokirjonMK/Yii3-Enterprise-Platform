@@ -164,8 +164,18 @@ final class BlogServiceTest extends IntegrationTestCase
         $e = $this->service->create($this->admin, $this->input());
         $row = (new Query($this->db))->from('outbox')->where(['aggregate_id' => $e->id])->one();
         self::assertNotNull($row);
-        $envelope = new EventEnvelope((string) $row['id'], (string) $row['event_type'], 1, (string) $row['aggregate_type'], (string) $row['aggregate_id'],
-            Sql::json($row['payload']), date(DATE_ATOM), null, $e->tenantId, $this->admin->id);
+        $envelope = new EventEnvelope(
+            (string) $row['id'],
+            (string) $row['event_type'],
+            1,
+            (string) $row['aggregate_type'],
+            (string) $row['aggregate_id'],
+            Sql::json($row['payload']),
+            date(DATE_ATOM),
+            null,
+            $e->tenantId,
+            $this->admin->id,
+        );
         $projector = $this->get(BlogActivityProjector::class);
         $projector->handle($envelope);
         $projector->handle($envelope); // replay

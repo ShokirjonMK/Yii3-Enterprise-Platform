@@ -91,8 +91,8 @@ final class OrganizationService
         $q = trim($q);
         if ($q !== '') {
             $needle = mb_strtolower($q);
-            return array_values(array_map(static fn($r) => $r + ['depth' => 0], array_filter($rows, static fn($r) =>
-                str_contains(mb_strtolower((string) $r['name']), $needle) || str_contains(mb_strtolower((string) $r['code']), $needle))));
+            return array_values(array_map(static fn($r) => $r + ['depth' => 0], array_filter($rows, static fn($r)
+                => str_contains(mb_strtolower((string) $r['name']), $needle) || str_contains(mb_strtolower((string) $r['code']), $needle))));
         }
         $children = [];
         $ids = array_column($rows, 'id');

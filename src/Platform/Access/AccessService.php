@@ -164,8 +164,16 @@ final class AccessService
         $this->forget($userId);
 
         if ($add !== [] || $remove !== []) {
-            $this->audit->record('rbac.roles.changed', 'user', $userId, ['roles' => $current], ['roles' => $roles],
-                ['added' => $add, 'removed' => $remove], category: 'access', severity: array_filter($add, fn(string $r) => $this->isAdminRole($r)) !== [] ? 'warning' : 'notice');
+            $this->audit->record(
+                'rbac.roles.changed',
+                'user',
+                $userId,
+                ['roles' => $current],
+                ['roles' => $roles],
+                ['added' => $add, 'removed' => $remove],
+                category: 'access',
+                severity: array_filter($add, fn(string $r) => $this->isAdminRole($r)) !== [] ? 'warning' : 'notice',
+            );
         }
     }
 

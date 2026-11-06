@@ -185,9 +185,16 @@ final class MfaManager
         }
         $c = $this->webauthn->verifyRegistration($credential, $challenge, $origin, $rpId);
         $label = trim($label) !== '' ? trim($label) : 'Passkey ' . date('Y-m-d');
-        $this->methods->save($user->id, MfaMethodType::WEBAUTHN, $c['id'], $label,
-            ['alg' => $c['alg'], 'aaguid' => $c['aaguid'], 'transports' => $c['transports'], 'uv' => $c['uv']], $c['public_key'],
-            hint: $c['uv'] ? 'biometric / PIN' : 'presence', signCount: $c['sign_count']);
+        $this->methods->save(
+            $user->id,
+            MfaMethodType::WEBAUTHN,
+            $c['id'],
+            $label,
+            ['alg' => $c['alg'], 'aaguid' => $c['aaguid'], 'transports' => $c['transports'], 'uv' => $c['uv']],
+            $c['public_key'],
+            hint: $c['uv'] ? 'biometric / PIN' : 'presence',
+            signCount: $c['sign_count'],
+        );
         return $this->added($user, MfaMethodType::WEBAUTHN);
     }
 
@@ -229,9 +236,14 @@ final class MfaManager
             throw new ConflictException('This E-IMZO key holder is already linked to another account.', 'mfa_target_taken');
         }
         $label = trim($info['name'] . ($info['organization'] !== '' ? ' — ' . $info['organization'] : ''));
-        $this->methods->save($user->id, MfaMethodType::EIMZO, $identity, $label ?: 'E-IMZO',
+        $this->methods->save(
+            $user->id,
+            MfaMethodType::EIMZO,
+            $identity,
+            $label ?: 'E-IMZO',
             ['serial' => $info['serial'], 'valid_to' => $info['valid_to'], 'tin' => $info['tin']],
-            hint: $info['pinfl'] !== '' ? 'PINFL ••••••••••' . substr($info['pinfl'], -4) : 'TIN ' . $info['tin']);
+            hint: $info['pinfl'] !== '' ? 'PINFL ••••••••••' . substr($info['pinfl'], -4) : 'TIN ' . $info['tin'],
+        );
         return $this->added($user, MfaMethodType::EIMZO);
     }
 
@@ -329,8 +341,15 @@ final class MfaManager
                 continue;
             }
             try {
-                $count = $this->webauthn->verifyAssertion($credential, (string) ($input['challenge'] ?? ''), (string) ($input['origin'] ?? ''),
-                    (string) ($input['rp_id'] ?? ''), $this->methods->secret($m), (int) ($m['meta']['alg'] ?? WebAuthnServer::ALG_ES256), $m['sign_count']);
+                $count = $this->webauthn->verifyAssertion(
+                    $credential,
+                    (string) ($input['challenge'] ?? ''),
+                    (string) ($input['origin'] ?? ''),
+                    (string) ($input['rp_id'] ?? ''),
+                    $this->methods->secret($m),
+                    (int) ($m['meta']['alg'] ?? WebAuthnServer::ALG_ES256),
+                    $m['sign_count'],
+                );
             } catch (ValidationException) {
                 return false;
             }

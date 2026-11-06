@@ -31,8 +31,17 @@ final class AuditComplianceTest extends TestCase
         $marker = 'e2e-audit-' . bin2hex(random_bytes(4));
         /** @var AuditLogger $audit */
         $audit = TestContainer::service(AuditLogger::class);
-        $audit->record('e2e.audit.probe', 'e2e', $marker, ['name' => 'old', 'password' => 'Hunter2-plain'], ['name' => 'new', 'api_token' => 'tok-secret-123'],
-            ['note' => 'Authorization: Bearer abc.def.ghi', 'marker' => $marker], category: 'data', actorId: $user['id'], actorName: $user['username']);
+        $audit->record(
+            'e2e.audit.probe',
+            'e2e',
+            $marker,
+            ['name' => 'old', 'password' => 'Hunter2-plain'],
+            ['name' => 'new', 'api_token' => 'tok-secret-123'],
+            ['note' => 'Authorization: Bearer abc.def.ghi', 'marker' => $marker],
+            category: 'data',
+            actorId: $user['id'],
+            actorName: $user['username'],
+        );
 
         $r = $web->get('/admin/audit?entity_id=' . $marker);
         self::assertSame(200, $r->getStatusCode());

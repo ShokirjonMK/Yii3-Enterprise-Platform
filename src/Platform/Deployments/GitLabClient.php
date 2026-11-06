@@ -30,7 +30,8 @@ final class GitLabClient
     public function __construct(
         private readonly string $baseUrl,
         private readonly string $projectId,
-        #[SensitiveParameter] private readonly ?string $token,
+        #[SensitiveParameter]
+        private readonly ?string $token,
         private readonly mixed $handler = null,
     ) {}
 

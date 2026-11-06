@@ -40,9 +40,7 @@ abstract class AbstractEnterpriseGenerator extends AbstractGenerator
     }
 
     /** Throws when the field spec does not support this generator. */
-    public static function assertApplicable(ModuleSpec $m): void
-    {
-    }
+    public static function assertApplicable(ModuleSpec $m): void {}
 
     public function getTemplatePath(GeneratorCommandInterface $command): string
     {

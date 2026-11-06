@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Admin\Users;
 
-use App\Admin\Users\AdminActor;
 use App\Platform\Organizations\OrganizationService;
 use App\Platform\Tenancy\TenantService;
 use App\Shared\Domain\Exception\ConflictException;

@@ -12,7 +12,6 @@ use App\Shared\Domain\Exception\NotFoundException;
 use App\Shared\Domain\Exception\ValidationException;
 use App\Shared\Infrastructure\Security\Encrypter;
 use Yiisoft\Db\Connection\ConnectionInterface;
-use Yiisoft\Db\Expression\Expression;
 use Yiisoft\Db\Query\Query;
 
 /**
@@ -127,9 +126,16 @@ final class SettingsService
                 'version' => (int) $row['version'], 'changed_by' => $actorId, 'comment' => mb_substr($comment, 0, 500),
             ])->execute();
             $mask = static fn($v) => $def['type'] === 'secret' ? ($v === null ? null : '***') : $v;
-            $this->audit->record('settings.changed', 'setting', $key, ['value' => $mask($before)], ['value' => $mask($typed)],
+            $this->audit->record(
+                'settings.changed',
+                'setting',
+                $key,
+                ['value' => $mask($before)],
+                ['value' => $mask($typed)],
                 ['scope' => $scope, 'scope_id' => $scopeId, 'version' => (int) $row['version'], 'comment' => $comment],
-                category: 'config', severity: ($def['critical'] ?? false) ? 'warning' : 'notice');
+                category: 'config',
+                severity: ($def['critical'] ?? false) ? 'warning' : 'notice',
+            );
         });
         $this->revision->bump();
         $this->cache = null;

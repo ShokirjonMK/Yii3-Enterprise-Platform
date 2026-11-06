@@ -108,8 +108,14 @@ final class RbacController
         if ($filters['q'] !== '') {
             $q->andWhere(TextSearch::condition($filters['q'], ['u.username', 'u.full_name']));
         }
-        $page = Paginator::paginate($q, AdminActor::page($request), 25, $filters['sort'] ?: null,
-            ['username' => 'u.username', 'full_name' => 'u.full_name', 'status' => 'u.status', 'assigned_at' => 'a.created_at'], 'username');
+        $page = Paginator::paginate(
+            $q,
+            AdminActor::page($request),
+            25,
+            $filters['sort'] ?: null,
+            ['username' => 'u.username', 'full_name' => 'u.full_name', 'status' => 'u.status', 'assigned_at' => 'a.created_at'],
+            'username',
+        );
 
         $effective = $this->roles->effective($name);
         $grouped = [];
@@ -163,8 +169,13 @@ final class RbacController
         $b = AdminActor::body($request);
         $name = trim((string) ($b['name'] ?? ''));
         try {
-            $this->roles->createRole($actor->id, $name, (string) ($b['description'] ?? ''), !empty($b['is_admin']),
-                trim((string) ($b['clone_from'] ?? '')) ?: null);
+            $this->roles->createRole(
+                $actor->id,
+                $name,
+                (string) ($b['description'] ?? ''),
+                !empty($b['is_admin']),
+                trim((string) ($b['clone_from'] ?? '')) ?: null,
+            );
         } catch (ValidationException $e) {
             $this->responder->error($e->getMessage());
             return $this->responder->redirect('admin.rbac');
@@ -190,8 +201,14 @@ final class RbacController
         }
         $isAdmin = array_key_exists('is_admin_present', $b) ? !empty($b['is_admin']) : null;
         try {
-            $this->roles->updateRole($actor->id, $name, $perms, array_map('strval', (array) ($b['children'] ?? [])),
-                array_key_exists('description', $b) ? (string) $b['description'] : null, $isAdmin);
+            $this->roles->updateRole(
+                $actor->id,
+                $name,
+                $perms,
+                array_map('strval', (array) ($b['children'] ?? [])),
+                array_key_exists('description', $b) ? (string) $b['description'] : null,
+                $isAdmin,
+            );
         } catch (ValidationException|ConflictException $e) {
             $this->responder->error($e->getMessage());
             return $this->responder->redirect('admin.rbac.role', ['role' => $name]);
@@ -306,8 +323,13 @@ final class RbacController
             return $stats;
         });
         $this->access->forget();
-        $this->responder->success(sprintf('Catalog synchronized: %d permission(s) and %d role(s) created, %d link(s) added, %d removed.',
-            $stats['permissions_created'], $stats['roles_created'], $stats['links_added'], $stats['links_removed']));
+        $this->responder->success(sprintf(
+            'Catalog synchronized: %d permission(s) and %d role(s) created, %d link(s) added, %d removed.',
+            $stats['permissions_created'],
+            $stats['roles_created'],
+            $stats['links_added'],
+            $stats['links_removed'],
+        ));
         return $this->responder->redirect('admin.rbac');
     }
 

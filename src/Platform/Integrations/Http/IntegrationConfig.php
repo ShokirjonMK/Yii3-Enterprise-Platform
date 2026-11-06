@@ -23,7 +23,8 @@ final readonly class IntegrationConfig
         public string $baseUrl = '',
         public bool $enabled = true,
         public string $authType = 'none',
-        #[SensitiveParameter] public ?string $secret = null,
+        #[SensitiveParameter]
+        public ?string $secret = null,
         public array $authConfig = [],
         public array $headers = [],
         public int $timeoutMs = 10000,

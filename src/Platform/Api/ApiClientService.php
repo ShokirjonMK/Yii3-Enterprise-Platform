@@ -219,8 +219,15 @@ final class ApiClientService
         $client = $this->load($actor, $id);
         $this->db->transaction(function () use ($client, $enabled): void {
             $this->db->createCommand()->update('api_clients', ['enabled' => $enabled], ['id' => $client['id']])->execute();
-            $this->audit->record($enabled ? 'api.client.enabled' : 'api.client.disabled', 'api_client', (string) $client['id'],
-                ['enabled' => $client['enabled']], ['enabled' => $enabled], category: 'security', severity: 'notice');
+            $this->audit->record(
+                $enabled ? 'api.client.enabled' : 'api.client.disabled',
+                'api_client',
+                (string) $client['id'],
+                ['enabled' => $client['enabled']],
+                ['enabled' => $enabled],
+                category: 'security',
+                severity: 'notice',
+            );
         });
     }
 
@@ -233,8 +240,16 @@ final class ApiClientService
         $hash = password_hash($secret, PASSWORD_ARGON2ID);
         $this->db->transaction(function () use ($client, $hash): void {
             $this->db->createCommand()->update('api_clients', ['secret_hash' => $hash], ['id' => $client['id']])->execute();
-            $this->audit->record('api.client.secret_rotated', 'api_client', (string) $client['id'], null, null,
-                ['client_id' => $client['client_id']], category: 'security', severity: 'warning');
+            $this->audit->record(
+                'api.client.secret_rotated',
+                'api_client',
+                (string) $client['id'],
+                null,
+                null,
+                ['client_id' => $client['client_id']],
+                category: 'security',
+                severity: 'warning',
+            );
         });
         return $secret;
     }
@@ -309,8 +324,16 @@ final class ApiClientService
         }
         $this->db->transaction(function () use ($row): void {
             $this->db->createCommand()->update('api_tokens', ['revoked_at' => new Expression('now()')], ['id' => $row['id'], 'revoked_at' => null])->execute();
-            $this->audit->record('api_token.revoked_by_admin', 'user', (string) $row['user_id'], null, null,
-                ['token_id' => $row['id'], 'name' => $row['name']], category: 'security', severity: 'notice');
+            $this->audit->record(
+                'api_token.revoked_by_admin',
+                'user',
+                (string) $row['user_id'],
+                null,
+                null,
+                ['token_id' => $row['id'], 'name' => $row['name']],
+                category: 'security',
+                severity: 'notice',
+            );
         });
     }
 

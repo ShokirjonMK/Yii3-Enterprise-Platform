@@ -121,7 +121,9 @@ final class FeatureFlagsController
             $this->responder->error('Unknown tenant.');
             return $this->responder->redirect('admin.settings.flags.show', ['code' => $code]);
         }
-        $value = match ((string) ($in['value'] ?? '')) { 'on' => true, 'off' => false, default => null };
+        $value = match ((string) ($in['value'] ?? '')) {
+            'on' => true, 'off' => false, default => null
+        };
         $this->flags->setTenantOverride($this->actor(), $code, $tenant, $value);
         $this->responder->success($value === null ? 'Tenant override removed.' : 'Tenant override saved.');
         return $this->responder->redirect('admin.settings.flags.show', ['code' => $code]);

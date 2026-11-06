@@ -84,7 +84,9 @@ $showSections = ['Server', 'Clients', 'Memory', 'Persistence', 'Stats', 'Replica
         <div class="card">
             <div class="card__head"><h2>INFO</h2></div>
             <div class="card__body grid grid--2">
-                <?php foreach ($showSections as $section): if (!isset($info['sections'][$section])) { continue; } ?>
+                <?php foreach ($showSections as $section): if (!isset($info['sections'][$section])) {
+                    continue;
+                } ?>
                     <details class="runtime-info">
                         <summary><strong><?= $h->e($section) ?></strong> <span class="small muted">(<?= count($info['sections'][$section]) ?>)</span></summary>
                         <table class="table table--compact"><tbody>

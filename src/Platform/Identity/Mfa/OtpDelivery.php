@@ -45,8 +45,12 @@ final class OtpDelivery
         $body = strtr($t['body'], ['{app}' => $app, '{code}' => $code, '{min}' => (string) max(1, $minutes)]);
         try {
             match ($type) {
-                MfaMethodType::TELEGRAM => $this->telegram->sendMessage($this->token(), $target,
-                    '🔐 <b>' . TelegramBotClient::escape($app) . "</b>\n\n" . TelegramBotClient::escape($t['subject']) . ': <code>' . $code . "</code>\n\n" . TelegramBotClient::escape(explode("\n", $body)[1] ?? ''), [$code]),
+                MfaMethodType::TELEGRAM => $this->telegram->sendMessage(
+                    $this->token(),
+                    $target,
+                    '🔐 <b>' . TelegramBotClient::escape($app) . "</b>\n\n" . TelegramBotClient::escape($t['subject']) . ': <code>' . $code . "</code>\n\n" . TelegramBotClient::escape(explode("\n", $body)[1] ?? ''),
+                    [$code],
+                ),
                 MfaMethodType::EMAIL => $this->email->send([
                     'id' => 'mfa-' . bin2hex(random_bytes(8)),
                     'recipient' => $target,

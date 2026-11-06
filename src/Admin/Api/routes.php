@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Admin\Api\ApiController;
+use App\Admin\Api\DocsAccessController;
 use App\Web\Middleware\RequirePermission;
 use App\Web\Middleware\RequireRecentAuth;
 use Yiisoft\Router\Group;
@@ -15,6 +16,10 @@ $apiManage = RequirePermission::for('api.manage');
 return [
     Group::create('/api')->middleware(RequirePermission::for('api.view'))->routes(
         Route::get('')->action([ApiController::class, 'index'])->name('admin.api'),
+        // Docs access: list for api.view, issue/revoke passwords for api.docs.manage (superadmin) with step-up
+        Route::get('/docs')->action([DocsAccessController::class, 'index'])->name('admin.api.docs'),
+        Route::post('/docs')->middleware(RequirePermission::for('api.docs.manage'), RequireRecentAuth::class)->action([DocsAccessController::class, 'issue'])->name('admin.api.docs.issue'),
+        Route::post("/docs/$client/revoke")->middleware(RequirePermission::for('api.docs.manage'))->action([DocsAccessController::class, 'revoke'])->name('admin.api.docs.revoke'),
         Route::get('/tokens')->action([ApiController::class, 'tokens'])->name('admin.api.tokens'),
         Route::post("/tokens/$client/revoke")->middleware($apiManage)->action([ApiController::class, 'revokeToken'])->name('admin.api.tokens.revoke'),
         Route::get('/clients/create')->middleware($apiManage)->action([ApiController::class, 'createForm'])->name('admin.api.clients.create'),

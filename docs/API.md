@@ -1,7 +1,7 @@
 # REST API v1
 
 Base path: `/api/v1` · OpenAPI 3.1: `GET /api/v1/openapi.json` (generated from attributes, `./yii api:openapi`
-writes `public/api/openapi.json`) · Swagger UI: `/api/docs`.
+writes `runtime/api/openapi.json`) · Swagger UI: `/api/docs`. Both documentation URLs are **private** (section 10).
 
 The API is **stateless**: no session, no cookies, no CSRF. Every request authenticates with a Bearer token.
 It is gated by the feature flag `api.v1` (all routes answer `404` when the flag is off); the Projects
@@ -222,8 +222,17 @@ no CORS headers.
 
 * Operations are documented with `zircote/swagger-php` attributes on the action classes in `src/Api/V1/<Resource>`;
   shared schemas/responses/parameters live in `src/Api/V1/OpenApi/OpenApiSpec.php`.
-* `./yii api:openapi` writes `public/api/openapi.json` (run in CI/image build); `GET /api/v1/openapi.json`
-  generates on the fly outside production and serves the file in production.
+* `./yii api:openapi` writes `runtime/api/openapi.json` (run in CI/image build); `GET /api/v1/openapi.json`
+  generates on the fly outside production and serves the file in production. The file is deliberately outside
+  `public/`, so nginx cannot serve it without the access check.
+* **Access to the documentation.** `/api/docs` and `/api/v1/openapi.json` open only for:
+  - a signed-in user whose role has `api.docs.view` (developer, admin and superadmin by default; grant it to any
+    role in Admin → RBAC), or
+  - a browser unlocked with an **access password** that a superadmin (`api.docs.manage`, step-up) issues in
+    Admin → API Management → Docs access: one per recipient, validity 1–365 days, shown once, SHA-256 hash stored,
+    revocable (the unlocked browser loses access on its next request). One unlock lasts 12 hours per browser
+    session; attempts are limited to 10 per 15 minutes per IP and audited (`api.docs.*`).
+  Everybody else gets the password form (`401`) and the JSON document answers `401 docs_locked`.
 * `/api/docs` serves Swagger UI 5.17.14 from local assets (`public/static/swagger-ui/`, Apache-2.0 `LICENSE`
   included) with a page-specific CSP allowing only `'self'` (initializer `public/static/api-docs.js`, no inline
   script). The `api.v1` flag also gates the docs page.

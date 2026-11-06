@@ -82,7 +82,9 @@ $id = (string) $tenant['id'];
                                 <label class="sr-only" for="ov-<?= $h->e($fl['code']) ?>"><?= $h->t('Override for {f}', ['f' => $fl['code']]) ?></label>
                                 <select id="ov-<?= $h->e($fl['code']) ?>" name="value" class="id-select-sm">
                                     <?php foreach (['inherit' => $h->tr('Inherit'), 'on' => $h->tr('Force on'), 'off' => $h->tr('Force off')] as $val => $lbl):
-                                        if ($val === 'off' && $fl['is_critical']) { continue; }
+                                        if ($val === 'off' && $fl['is_critical']) {
+                                            continue;
+                                        }
                                         $cur = $fl['override'] === null ? 'inherit' : ($fl['override'] ? 'on' : 'off'); ?>
                                         <option value="<?= $val ?>"<?= $cur === $val ? ' selected' : '' ?>><?= $h->e($lbl) ?></option>
                                     <?php endforeach ?>

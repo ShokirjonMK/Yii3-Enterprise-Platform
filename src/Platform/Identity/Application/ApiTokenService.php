@@ -157,7 +157,9 @@ final class ApiTokenService
      */
     private function insert(string $userId, string $type, array $scopes, int $ttl, string $familyId, string $name): array
     {
-        $letter = match ($type) { 'refresh' => 'r', 'personal' => 'p', default => 'a' };
+        $letter = match ($type) {
+            'refresh' => 'r', 'personal' => 'p', default => 'a'
+        };
         $token = 'yep_' . $letter . '_' . rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
         $id = \App\Shared\Domain\Uuid::v7();
         $this->db->createCommand()->insert('api_tokens', [

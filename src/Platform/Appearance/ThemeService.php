@@ -136,9 +136,16 @@ final class ThemeService
             ])->execute();
         }
         $this->resolved = null;
-        $this->audit->record('appearance.theme.activated', 'appearance', $scope . ($scopeId ? ':' . $scopeId : ''),
-            ['theme' => $scope === 'global' ? $before['theme'] : ($before['tenants'][$scopeId] ?? null)], ['theme' => $code],
-            category: 'config', severity: 'notice', actorId: $actorId);
+        $this->audit->record(
+            'appearance.theme.activated',
+            'appearance',
+            $scope . ($scopeId ? ':' . $scopeId : ''),
+            ['theme' => $scope === 'global' ? $before['theme'] : ($before['tenants'][$scopeId] ?? null)],
+            ['theme' => $code],
+            category: 'config',
+            severity: 'notice',
+            actorId: $actorId,
+        );
     }
 
     public function allowUserChoice(?string $actorId, bool $allow): void
@@ -177,8 +184,16 @@ final class ThemeService
         }
         [$manifest, $css] = $this->validator->zip($path);
         $hash = $this->registry->install($manifest, $css, $actorId, $replace);
-        $this->audit->record('appearance.theme.installed', 'theme', $manifest['code'], null, ['version' => $manifest['version'], 'hash' => $hash],
-            category: 'config', severity: 'notice', actorId: $actorId);
+        $this->audit->record(
+            'appearance.theme.installed',
+            'theme',
+            $manifest['code'],
+            null,
+            ['version' => $manifest['version'], 'hash' => $hash],
+            category: 'config',
+            severity: 'notice',
+            actorId: $actorId,
+        );
         return $manifest;
     }
 

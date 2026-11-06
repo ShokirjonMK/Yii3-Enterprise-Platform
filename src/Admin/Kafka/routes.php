@@ -25,7 +25,6 @@ return (static function (): array {
             Route::post('/topics/' . $topic . '/delete')->middleware($manage, RequireRecentAuth::class)->action([KafkaController::class, 'topicDelete'])->name('admin.kafka.topics.delete'),
             Route::get('/provision')->action([KafkaController::class, 'provision'])->name('admin.kafka.provision'),
             Route::get('/provision/download')->action([KafkaController::class, 'provisionDownload'])->name('admin.kafka.provision.download'),
-
             Route::get('/consumers')->action([KafkaController::class, 'consumers'])->name('admin.kafka.consumers'),
             Route::get('/handlers')->action([KafkaToolsController::class, 'handlers'])->name('admin.kafka.handlers'),
             Route::get('/publish')->action([KafkaToolsController::class, 'publishForm'])->name('admin.kafka.publish'),
@@ -34,11 +33,9 @@ return (static function (): array {
             Route::post('/settings')->middleware($manage, RequireRecentAuth::class)->action([KafkaToolsController::class, 'saveSettings'])->name('admin.kafka.settings.save'),
             Route::get('/consumers/' . $group . '/lag')->action([KafkaController::class, 'lag'])->name('admin.kafka.consumers.lag'),
             Route::post('/consumers/' . $group . '/pause')->middleware($manage)->action([KafkaController::class, 'pauseConsumer'])->name('admin.kafka.consumers.pause'),
-
             Route::get('/outbox')->action([KafkaController::class, 'outbox'])->name('admin.kafka.outbox'),
             Route::post('/outbox/requeue')->middleware($manage, RequireRecentAuth::class)->action([KafkaController::class, 'outboxRequeueAll'])->name('admin.kafka.outbox.requeue_all'),
             Route::post('/outbox/{id:[0-9a-fA-F-]{36}}/requeue')->middleware($manage, RequireRecentAuth::class)->action([KafkaController::class, 'outboxRequeue'])->name('admin.kafka.outbox.requeue'),
-
             Route::get('/dead-letters')->action([KafkaController::class, 'deadLetters'])->name('admin.kafka.dlq'),
             Route::get('/dead-letters/{id:\d+}')->action([KafkaController::class, 'deadLetter'])->name('admin.kafka.dlq.view'),
             Route::post('/dead-letters/{id:\d+}/replay')->middleware($manage, RequireRecentAuth::class)->action([KafkaController::class, 'replay'])->name('admin.kafka.dlq.replay'),

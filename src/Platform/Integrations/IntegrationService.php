@@ -101,8 +101,11 @@ final class IntegrationService
         $data = $this->validate($input + ['code' => $row['code']], $row);
         unset($data['code']); // the code is the stable identifier used by application code
         $this->db->transaction(function () use ($row, $data, $actorId, $version): void {
-            $n = $this->db->createCommand()->update('integrations', Sql::row($data) + ['version' => new Expression('version + 1')],
-                ['id' => $row['id'], 'version' => $version ?? (int) $row['version']])->execute();
+            $n = $this->db->createCommand()->update(
+                'integrations',
+                Sql::row($data) + ['version' => new Expression('version + 1')],
+                ['id' => $row['id'], 'version' => $version ?? (int) $row['version']],
+            )->execute();
             if ($n === 0) {
                 throw new ConflictException('The integration was modified concurrently. Reload and try again.', 'stale_version');
             }
@@ -123,8 +126,16 @@ final class IntegrationService
         }
         $this->db->transaction(function () use ($row, $enabled, $actorId): void {
             $this->db->createCommand()->update('integrations', ['enabled' => $enabled, 'version' => new Expression('version + 1')], ['id' => $row['id']])->execute();
-            $this->audit->record($enabled ? 'integration.enabled' : 'integration.disabled', 'integration', $row['id'],
-                ['enabled' => Sql::bool($row['enabled'])], ['enabled' => $enabled], category: 'config', severity: 'notice', actorId: $actorId);
+            $this->audit->record(
+                $enabled ? 'integration.enabled' : 'integration.disabled',
+                'integration',
+                $row['id'],
+                ['enabled' => Sql::bool($row['enabled'])],
+                ['enabled' => $enabled],
+                category: 'config',
+                severity: 'notice',
+                actorId: $actorId,
+            );
         });
     }
 
@@ -150,10 +161,16 @@ final class IntegrationService
         }
         $this->db->transaction(function () use ($row, $data, $actorId, $secretChanged, $allowPrivateNetwork): void {
             $this->db->createCommand()->update('integrations', $data + ['version' => new Expression('version + 1')], ['id' => $row['id']])->execute();
-            $this->audit->record('integration.security_changed', 'integration', $row['id'],
+            $this->audit->record(
+                'integration.security_changed',
+                'integration',
+                $row['id'],
                 ['allow_private_network' => Sql::bool($row['allow_private_network'])],
                 ['allow_private_network' => $allowPrivateNetwork, 'secret' => $secretChanged ? 'changed' : 'unchanged'],
-                category: 'security', severity: $allowPrivateNetwork ? 'warning' : 'notice', actorId: $actorId);
+                category: 'security',
+                severity: $allowPrivateNetwork ? 'warning' : 'notice',
+                actorId: $actorId,
+            );
         });
     }
 
@@ -195,8 +212,17 @@ final class IntegrationService
             $this->db->createCommand()->update('integrations', [
                 'status' => $result['status'], 'last_health_at' => new Expression('now()'), 'last_error' => $result['error'] === null ? null : mb_substr($result['error'], 0, 1000),
             ], ['id' => $row['id']])->execute();
-            $this->audit->record('integration.tested', 'integration', $row['id'], null, null, ['status' => $result['status'], 'http_status' => $result['http_status'], 'error_class' => $result['error_class']],
-                result: $result['ok'] ? 'success' : 'failure', category: 'config', actorId: $actorId);
+            $this->audit->record(
+                'integration.tested',
+                'integration',
+                $row['id'],
+                null,
+                null,
+                ['status' => $result['status'], 'http_status' => $result['http_status'], 'error_class' => $result['error_class']],
+                result: $result['ok'] ? 'success' : 'failure',
+                category: 'config',
+                actorId: $actorId,
+            );
         });
         return $result;
     }

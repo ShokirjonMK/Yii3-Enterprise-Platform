@@ -10,7 +10,6 @@ namespace App\Modules\Blog\Admin;
 
 use App\Modules\Blog\Application\BlogService;
 use App\Modules\Blog\Domain\Blog;
-use App\Modules\Blog\Domain\BlogStatus;
 use App\Platform\Identity\Domain\Identity;
 use App\Platform\Identity\Domain\User;
 use App\Platform\Storage\ObjectStorage;
@@ -114,10 +113,15 @@ final class BlogController
     {
         $body = (array) $request->getParsedBody();
         try {
-            $e = $this->service->changeStatus($this->actor(), $this->id(), (string) ($body['status'] ?? ''),
-                isset($body['version']) ? (int) $body['version'] : null, trim((string) ($body['comment'] ?? '')));
+            $e = $this->service->changeStatus(
+                $this->actor(),
+                $this->id(),
+                (string) ($body['status'] ?? ''),
+                isset($body['version']) ? (int) $body['version'] : null,
+                trim((string) ($body['comment'] ?? '')),
+            );
             $this->responder->success('Status changed to ' . $e->status()->label() . '.');
-        } catch (ConflictException | ValidationException $ex) {
+        } catch (ConflictException|ValidationException $ex) {
             $this->responder->error($ex->getMessage());
         }
         return $this->responder->redirect('admin.blog.view', ['id' => $this->id()]);

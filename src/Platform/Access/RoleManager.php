@@ -149,9 +149,17 @@ final class RoleManager
                 $this->rbac->addChild($name, $child);
             }
             $this->db->createCommand()->insert('rbac_role_meta', ['name' => $name, 'is_admin' => $isAdmin, 'created_by' => $actorId])->execute();
-            $this->audit->record('rbac.role.created', 'rbac_role', $name, null,
+            $this->audit->record(
+                'rbac.role.created',
+                'rbac_role',
+                $name,
+                null,
                 ['description' => $description, 'is_admin' => $isAdmin, 'permissions' => $perms, 'children' => $children],
-                ['clone_from' => $cloneFrom], category: 'access', severity: $isAdmin ? 'warning' : 'notice', actorId: $actorId);
+                ['clone_from' => $cloneFrom],
+                category: 'access',
+                severity: $isAdmin ? 'warning' : 'notice',
+                actorId: $actorId,
+            );
         });
         $this->access->forget();
     }
@@ -223,23 +231,38 @@ final class RoleManager
                 $this->rbac->updateRole($name, $role->withDescription($newDescription)->withUpdatedAt(time()));
             }
             $newFlag = $isAdmin ?? $before['is_admin'];
-            $this->db->createCommand()->upsert('rbac_role_meta',
+            $this->db->createCommand()->upsert(
+                'rbac_role_meta',
                 ['name' => $name, 'is_admin' => $newFlag, 'created_by' => $actorId],
-                ['is_admin' => $newFlag, 'updated_at' => new Expression('now()')])->execute();
+                ['is_admin' => $newFlag, 'updated_at' => new Expression('now()')],
+            )->execute();
 
             $after = ['permissions' => $permissions, 'children' => $children, 'description' => $newDescription, 'is_admin' => $newFlag];
             if ($add !== [] || $remove !== []) {
-                $this->audit->record('rbac.role.links_changed', 'rbac_role', $name,
+                $this->audit->record(
+                    'rbac.role.links_changed',
+                    'rbac_role',
+                    $name,
                     ['permissions' => $before['permissions'], 'children' => $before['children']],
                     ['permissions' => $permissions, 'children' => $children],
                     ['added' => $add, 'removed' => $remove, 'system' => $system],
-                    category: 'access', severity: $super && $this->access->isAdminRole($name) ? 'warning' : 'notice', actorId: $actorId);
+                    category: 'access',
+                    severity: $super && $this->access->isAdminRole($name) ? 'warning' : 'notice',
+                    actorId: $actorId,
+                );
             }
             if ($newDescription !== $before['description'] || $newFlag !== $before['is_admin']) {
-                $this->audit->record('rbac.role.updated', 'rbac_role', $name,
+                $this->audit->record(
+                    'rbac.role.updated',
+                    'rbac_role',
+                    $name,
                     ['description' => $before['description'], 'is_admin' => $before['is_admin']],
-                    ['description' => $newDescription, 'is_admin' => $newFlag], [],
-                    category: 'access', severity: $newFlag ? 'warning' : 'notice', actorId: $actorId);
+                    ['description' => $newDescription, 'is_admin' => $newFlag],
+                    [],
+                    category: 'access',
+                    severity: $newFlag ? 'warning' : 'notice',
+                    actorId: $actorId,
+                );
             }
         });
         $this->access->forget();
@@ -264,8 +287,17 @@ final class RoleManager
             $this->db->createCommand()->delete('yii_rbac_assignment', ['item_name' => $name])->execute();
             $this->db->createCommand()->delete('rbac_role_meta', ['name' => $name])->execute();
             $this->db->createCommand()->delete('rbac_link_overrides', ['or', ['parent' => $name], ['child' => $name]])->execute();
-            $this->audit->record('rbac.role.deleted', 'rbac_role', $name, ['permissions' => $perms, 'children' => $children, 'parents' => $parents], null,
-                ['assignments_removed' => $assigned], category: 'access', severity: 'warning', actorId: $actorId);
+            $this->audit->record(
+                'rbac.role.deleted',
+                'rbac_role',
+                $name,
+                ['permissions' => $perms, 'children' => $children, 'parents' => $parents],
+                null,
+                ['assignments_removed' => $assigned],
+                category: 'access',
+                severity: 'warning',
+                actorId: $actorId,
+            );
         });
         $this->access->forget();
         return $assigned;
@@ -284,8 +316,17 @@ final class RoleManager
         return $this->db->transaction(function () use ($actorId, $name, $sync): int {
             $n = $this->db->createCommand()->delete('rbac_link_overrides', ['parent' => $name])->execute();
             $stats = $sync->sync();
-            $this->audit->record('rbac.role.reset', 'rbac_role', $name, null, null, ['overrides_removed' => $n] + $stats,
-                category: 'access', severity: 'notice', actorId: $actorId);
+            $this->audit->record(
+                'rbac.role.reset',
+                'rbac_role',
+                $name,
+                null,
+                null,
+                ['overrides_removed' => $n] + $stats,
+                category: 'access',
+                severity: 'notice',
+                actorId: $actorId,
+            );
             $this->access->forget();
             return $n;
         });
@@ -294,8 +335,10 @@ final class RoleManager
     /** @return list<array{child:string, op:string}> */
     public function overridesOf(string $role): array
     {
-        return array_map(static fn(array $r) => ['child' => (string) $r['child'], 'op' => (string) $r['op']],
-            (new Query($this->db))->select(['child', 'op'])->from('rbac_link_overrides')->where(['parent' => $role])->orderBy('child')->all());
+        return array_map(
+            static fn(array $r) => ['child' => (string) $r['child'], 'op' => (string) $r['op']],
+            (new Query($this->db))->select(['child', 'op'])->from('rbac_link_overrides')->where(['parent' => $role])->orderBy('child')->all(),
+        );
     }
 
     public function createPermission(string $actorId, string $name, string $description): void
@@ -317,8 +360,17 @@ final class RoleManager
             if ($this->items->getRole(RbacCatalog::SUPERADMIN) !== null) {
                 $this->rbac->addChild(RbacCatalog::SUPERADMIN, $name); // superadmin = every permission
             }
-            $this->audit->record('rbac.permission.created', 'rbac_permission', $name, null, ['description' => $description], [],
-                category: 'access', severity: 'notice', actorId: $actorId);
+            $this->audit->record(
+                'rbac.permission.created',
+                'rbac_permission',
+                $name,
+                null,
+                ['description' => $description],
+                [],
+                category: 'access',
+                severity: 'notice',
+                actorId: $actorId,
+            );
         });
         $this->access->forget();
     }
@@ -337,8 +389,17 @@ final class RoleManager
         $this->db->transaction(function () use ($actorId, $name, $perm, $roles): void {
             $this->rbac->removePermission($name);
             $this->db->createCommand()->delete('rbac_link_overrides', ['child' => $name])->execute();
-            $this->audit->record('rbac.permission.deleted', 'rbac_permission', $name, ['description' => $perm->getDescription(), 'roles' => $roles], null, [],
-                category: 'access', severity: 'warning', actorId: $actorId);
+            $this->audit->record(
+                'rbac.permission.deleted',
+                'rbac_permission',
+                $name,
+                ['description' => $perm->getDescription(), 'roles' => $roles],
+                null,
+                [],
+                category: 'access',
+                severity: 'warning',
+                actorId: $actorId,
+            );
         });
         $this->access->forget();
     }
@@ -383,9 +444,11 @@ final class RoleManager
                 $this->db->createCommand()->delete('rbac_link_overrides', ['parent' => $role, 'child' => $child])->execute();
                 continue;
             }
-            $this->db->createCommand()->upsert('rbac_link_overrides',
+            $this->db->createCommand()->upsert(
+                'rbac_link_overrides',
                 ['parent' => $role, 'child' => $child, 'op' => $op, 'created_by' => $actorId],
-                ['op' => $op, 'created_by' => $actorId, 'created_at' => new Expression('now()')])->execute();
+                ['op' => $op, 'created_by' => $actorId, 'created_at' => new Expression('now()')],
+            )->execute();
         }
     }
 

@@ -28,7 +28,8 @@ final class ConnectionDefinition
         public readonly int $port = 0,
         public readonly string $database = '',
         public readonly string $username = '',
-        #[SensitiveParameter] public readonly string $password = '',
+        #[SensitiveParameter]
+        public readonly string $password = '',
         public readonly array $options = [],
         public readonly bool $readOnly = false,
         public readonly bool $enabled = true,

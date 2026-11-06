@@ -79,9 +79,16 @@ final class QueryConsole
         $ms = (int) ((hrtime(true) - $t) / 1e6);
 
         $this->audit->record(
-            $write ? 'database.query.write' : 'database.query.read', 'database_connection', $name, null, null,
+            $write ? 'database.query.write' : 'database.query.read',
+            'database_connection',
+            $name,
+            null,
+            null,
             ['driver' => $d->driver, 'statement' => mb_substr($statement, 0, 4000), 'rows' => count($result['rows']), 'affected' => $result['affected'], 'duration_ms' => $ms, 'error' => $error],
-            result: $error === null ? 'success' : 'failure', category: 'data', severity: $write ? 'warning' : 'notice', actorId: $actorId,
+            result: $error === null ? 'success' : 'failure',
+            category: 'data',
+            severity: $write ? 'warning' : 'notice',
+            actorId: $actorId,
         );
         return $result + ['duration_ms' => $ms, 'error' => $error];
     }

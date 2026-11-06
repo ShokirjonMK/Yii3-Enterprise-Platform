@@ -77,7 +77,9 @@ $policyForm = static function (string $subject, array $p, bool $editable, bool $
                     <?php if ($manage): ?>
                         <form method="post" action="<?= $h->url('admin.auth.mfa.check', ['type' => $t]) ?>" class="inline-form">
                             <?= $csrfField ?>
-                            <?php if (MfaMethodType::isOtp($t)): ?><input name="target" class="input--sm" placeholder="<?= $h->e(match ($t) { 'email' => 'test@example.com', 'telegram' => 'chat id', default => '+998901234567' }) ?>" aria-label="<?= $h->t('Test recipient (optional)') ?>"><?php endif ?>
+                            <?php if (MfaMethodType::isOtp($t)): ?><input name="target" class="input--sm" placeholder="<?= $h->e(match ($t) {
+                                'email' => 'test@example.com', 'telegram' => 'chat id', default => '+998901234567'
+                            }) ?>" aria-label="<?= $h->t('Test recipient (optional)') ?>"><?php endif ?>
                             <button class="btn btn--sm" type="submit"><?= $h->icon('activity', 'icon--sm') ?> <?= $h->t(MfaMethodType::isOtp($t) ? 'Check / test send' : 'Check') ?></button>
                         </form>
                     <?php endif ?>

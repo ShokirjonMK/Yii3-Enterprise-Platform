@@ -66,7 +66,7 @@ _Last update: 2026-11-05 — Author: ShokirjonMK_
 | Design themes (7 built-in packs, upload/activate, per-tenant/user) — see [THEMES.md](THEMES.md) | TESTED (ThemeServiceTest, AppearanceTest) |
 | Gii "Next steps" from the admin panel (migrate:up, rbac:sync, Kafka topic creation via CreateTopics; live log, history, audit) — see [GII.md](GII.md) | TESTED (GiiNextStepsTest incl. real broker, GiiNextStepsFlowTest via queue worker) · SASL PLAIN path UNVERIFIED (no SASL broker in dev) |
 | RBAC default deny, last-superadmin guard, tenant isolation (IDOR → 404), suspended tenants cannot log in | TESTED |
-| REST API v1 (token grants, refresh rotation, scopes, errors, pagination, CORS, rate limits), OpenAPI + Swagger UI | TESTED · Swagger UI visual check NOT RUN |
+| REST API v1 (token grants, refresh rotation, scopes, errors, pagination, CORS, rate limits), OpenAPI + Swagger UI (private: `api.docs.view` or a superadmin-issued access password — tests/E2E/ApiDocsAccessTest.php) | TESTED · Swagger UI checked in a browser by the user |
 | Job queue, scheduler exactly-once, transactional outbox → Kafka → idempotent consumers, retry topics, DLQ | TESTED (real broker) |
 | Settings (versions, rollback, encrypted secrets), feature flags (rollout, dependencies, critical guard) | TESTED |
 | Audit (append-only, HMAC, partitions) | TESTED |

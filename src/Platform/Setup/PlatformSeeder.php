@@ -79,7 +79,7 @@ final class PlatformSeeder
                 'INSERT INTO feature_flags (code, name, description, enabled, status, is_critical, dependencies)
                  VALUES (:c, :n, :d, :e, :s, false, :dep) ON CONFLICT (code) DO NOTHING',
                 [':c' => $code, ':n' => $def['name'], ':d' => $def['description'], ':e' => (bool) $def['default'],
-                 ':s' => $def['default'] ? 'enabled' : 'disabled', ':dep' => json_encode($def['dependencies'] ?? [])],
+                    ':s' => $def['default'] ? 'enabled' : 'disabled', ':dep' => json_encode($def['dependencies'] ?? [])],
             )->execute();
         }
 

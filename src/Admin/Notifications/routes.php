@@ -23,7 +23,6 @@ return [
         Route::get('/channels/{code:(?:email|telegram|sms|webpush)}/settings')->action([ChannelSettingsController::class, 'form'])->name('admin.notifications.settings'),
         Route::post('/channels/{code:(?:email|telegram|sms|webpush)}/settings')->middleware($manage, RequireRecentAuth::class)->action([ChannelSettingsController::class, 'save'])->name('admin.notifications.settings.save'),
         Route::post('/channels/webpush/vapid')->middleware($manage, RequireRecentAuth::class)->action([ChannelSettingsController::class, 'vapid'])->name('admin.notifications.settings.vapid'),
-
         Route::get('/templates')->action([N::class, 'templates'])->name('admin.notifications.templates'),
         Route::get('/templates/new')->middleware($manage)->action([N::class, 'createTemplate'])->name('admin.notifications.templates.create'),
         Route::post('/templates')->middleware($manage)->action([N::class, 'storeTemplate'])->name('admin.notifications.templates.store'),
@@ -31,12 +30,10 @@ return [
         Route::get("/templates/$uuid")->action([N::class, 'editTemplate'])->name('admin.notifications.templates.edit'),
         Route::post("/templates/$uuid")->middleware($manage)->action([N::class, 'updateTemplate'])->name('admin.notifications.templates.update'),
         Route::post("/templates/$uuid/delete")->middleware($manage)->action([N::class, 'deleteTemplate'])->name('admin.notifications.templates.delete'),
-
         Route::get('/deliveries')->action([N::class, 'deliveries'])->name('admin.notifications.deliveries'),
         Route::post('/deliveries/retry-failed')->middleware($manage)->action([N::class, 'retryFailed'])->name('admin.notifications.retry_failed'),
         Route::get("/deliveries/$uuid")->action([N::class, 'delivery'])->name('admin.notifications.delivery'),
         Route::post("/deliveries/$uuid/retry")->middleware($manage)->action([N::class, 'retry'])->name('admin.notifications.retry'),
-
         Route::get('/broadcast')->middleware(RequirePermission::for('notifications.send'))->action([N::class, 'broadcastForm'])->name('admin.notifications.broadcast'),
         Route::post('/broadcast')->middleware(RequirePermission::for('notifications.send'))->action([N::class, 'broadcast'])->name('admin.notifications.broadcast.send'),
     ),

@@ -36,8 +36,13 @@ final class SecurityPosture
         };
 
         $add('env', 'Production environment', $prod ? 'pass' : 'info', 'APP_ENV=' . Environment::appEnv() . ($prod ? '' : ' — development/test settings are expected here.'), 'src/Environment.php');
-        $add('debug', 'Debug mode disabled', Environment::appDebug() ? ($prod ? 'fail' : 'warn') : 'pass',
-            Environment::appDebug() ? 'APP_DEBUG is on: stack traces may be shown to users.' : 'APP_DEBUG is off.', 'Environment::prepare() forces debug off in prod');
+        $add(
+            'debug',
+            'Debug mode disabled',
+            Environment::appDebug() ? ($prod ? 'fail' : 'warn') : 'pass',
+            Environment::appDebug() ? 'APP_DEBUG is on: stack traces may be shown to users.' : 'APP_DEBUG is off.',
+            'Environment::prepare() forces debug off in prod',
+        );
 
         $https = str_starts_with(strtolower($this->platform['url']), 'https://');
         $add('https', 'HTTPS application URL', $https ? 'pass' : ($prod ? 'fail' : 'warn'), 'APP_URL=' . $this->platform['url'], 'config/common/params.php platform.url');
@@ -51,9 +56,13 @@ final class SecurityPosture
         $total = count($priv);
         $withMfa = count(array_filter($priv, static fn($u) => $u['mfa_enabled'] === true || $u['mfa_enabled'] === 't' || $u['mfa_enabled'] === 1));
         $missing = $total - $withMfa;
-        $add('mfa_privileged', 'MFA for privileged roles', $total === 0 ? 'info' : ($missing === 0 ? 'pass' : 'fail'),
+        $add(
+            'mfa_privileged',
+            'MFA for privileged roles',
+            $total === 0 ? 'info' : ($missing === 0 ? 'pass' : 'fail'),
             $total === 0 ? 'No active users hold privileged roles.' : sprintf('%d of %d privileged users have MFA enrolled (%s%%).', $withMfa, $total, (string) round($withMfa / $total * 100)),
-            'roles: ' . implode(', ', $roles) . ' · AuthenticationService enforces MFA enrolment at login');
+            'roles: ' . implode(', ', $roles) . ' · AuthenticationService enforces MFA enrolment at login',
+        );
         $flag = $this->safeFlag('security.mfa_enforcement');
         $add('mfa_enforcement', 'MFA enforcement control', $flag === false ? 'fail' : 'pass', $flag === false ? 'Feature flag security.mfa_enforcement is disabled.' : 'security.mfa_enforcement is enabled (critical flag).', 'PlatformSeeder::FLAGS');
 
@@ -73,8 +82,13 @@ final class SecurityPosture
         $add('login_failures', 'Failed sign-ins (1 h)', $fails > 100 ? 'warn' : 'pass', sprintf('%d failed sign-in attempts in the last hour.', $fails), 'login_attempts');
 
         $token = (string) ($this->platform['metricsToken'] ?? '');
-        $add('metrics_token', 'Metrics endpoint protected', $token !== '' ? (strlen($token) >= 24 ? 'pass' : 'warn') : ($prod ? 'fail' : 'warn'),
-            $token === '' ? 'METRICS_TOKEN is not set: /metrics relies on network policy only.' : 'METRICS_TOKEN is set (' . strlen($token) . ' characters).', 'src/Web/System/MetricsAuth.php');
+        $add(
+            'metrics_token',
+            'Metrics endpoint protected',
+            $token !== '' ? (strlen($token) >= 24 ? 'pass' : 'warn') : ($prod ? 'fail' : 'warn'),
+            $token === '' ? 'METRICS_TOKEN is not set: /metrics relies on network policy only.' : 'METRICS_TOKEN is set (' . strlen($token) . ' characters).',
+            'src/Web/System/MetricsAuth.php',
+        );
 
         $secret = (string) $this->platform['secret'];
         $strong = strlen($secret) >= 64 && ctype_xdigit($secret) || strlen($secret) >= 44;
@@ -83,23 +97,43 @@ final class SecurityPosture
         $csp = $this->platform['csp'];
         $script = (string) ($csp['script-src'] ?? $csp['default-src'] ?? '');
         $unsafe = str_contains($script, "'unsafe-inline'") || str_contains($script, "'unsafe-eval'");
-        $add('csp', 'Content-Security-Policy', $csp === [] ? 'fail' : ($unsafe ? 'warn' : 'pass'),
-            $csp === [] ? 'No CSP configured.' : 'script-src ' . $script . '; frame-ancestors ' . ($csp['frame-ancestors'] ?? '—'), 'SecurityHeadersMiddleware · params security.csp');
+        $add(
+            'csp',
+            'Content-Security-Policy',
+            $csp === [] ? 'fail' : ($unsafe ? 'warn' : 'pass'),
+            $csp === [] ? 'No CSP configured.' : 'script-src ' . $script . '; frame-ancestors ' . ($csp['frame-ancestors'] ?? '—'),
+            'SecurityHeadersMiddleware · params security.csp',
+        );
 
         $gii = $this->safeFlag('devtools.gii');
-        $add('gii', 'Code generators disabled in production', $prod && $gii === true ? 'fail' : ($prod ? 'pass' : 'info'),
-            $prod ? ($gii === true ? 'devtools.gii is enabled in production.' : 'Gii is unavailable in production.') : 'Non-production: Gii may be used by developers (devtools.use).', 'feature flag devtools.gii (env:non-prod dependency)');
+        $add(
+            'gii',
+            'Code generators disabled in production',
+            $prod && $gii === true ? 'fail' : ($prod ? 'pass' : 'info'),
+            $prod ? ($gii === true ? 'devtools.gii is enabled in production.' : 'Gii is unavailable in production.') : 'Non-production: Gii may be used by developers (devtools.use).',
+            'feature flag devtools.gii (env:non-prod dependency)',
+        );
 
         $local = $this->safeFlag('auth.local_login');
-        $add('local_login', 'Local password login', $local === true ? 'info' : 'pass',
-            $local === true ? 'Password sign-in is enabled. In production prefer SSO; break-glass accounts (local_only) always work.' : 'Password sign-in disabled — SSO only (break-glass accounts excepted).', 'feature flag auth.local_login');
+        $add(
+            'local_login',
+            'Local password login',
+            $local === true ? 'info' : 'pass',
+            $local === true ? 'Password sign-in is enabled. In production prefer SSO; break-glass accounts (local_only) always work.' : 'Password sign-in disabled — SSO only (break-glass accounts excepted).',
+            'feature flag auth.local_login',
+        );
 
         $idle = (int) $this->settings->get('security.session_idle_minutes');
         $add('session_idle', 'Session idle timeout', $idle <= 30 ? 'pass' : 'warn', sprintf('%d minutes (ASVS L2: ≤ 30 recommended for privileged use).', $idle), 'setting security.session_idle_minutes');
 
         $allow = (array) ($this->settings->get('security.allowed_admin_networks') ?? []);
-        $add('admin_networks', 'Admin panel network allowlist', $allow === [] ? ($prod ? 'warn' : 'info') : 'pass',
-            $allow === [] ? 'Admin panel is reachable from any network.' : 'Allowed: ' . implode(', ', array_map('strval', $allow)), 'AdminNetworkMiddleware · setting security.allowed_admin_networks');
+        $add(
+            'admin_networks',
+            'Admin panel network allowlist',
+            $allow === [] ? ($prod ? 'warn' : 'info') : 'pass',
+            $allow === [] ? 'Admin panel is reachable from any network.' : 'Allowed: ' . implode(', ', array_map('strval', $allow)),
+            'AdminNetworkMiddleware · setting security.allowed_admin_networks',
+        );
 
         $audit = $this->safeFlag('security.audit');
         $add('audit', 'Audit logging', $audit === false ? 'fail' : 'pass', 'HMAC-signed, append-only (trigger) audit log.', 'migrations/M261104000003Audit.php · AuditVerifier');
@@ -122,8 +156,10 @@ final class SecurityPosture
     /** Active users holding privileged roles without MFA. @return list<array<string,mixed>> */
     public function privilegedWithoutMfa(): array
     {
-        return array_values(array_filter($this->privilegedUsers($this->platform['privilegedRoles']),
-            static fn($u) => !($u['mfa_enabled'] === true || $u['mfa_enabled'] === 't' || $u['mfa_enabled'] === 1)));
+        return array_values(array_filter(
+            $this->privilegedUsers($this->platform['privilegedRoles']),
+            static fn($u) => !($u['mfa_enabled'] === true || $u['mfa_enabled'] === 't' || $u['mfa_enabled'] === 1),
+        ));
     }
 
     /** @param list<string> $roles @return list<array<string,mixed>> */

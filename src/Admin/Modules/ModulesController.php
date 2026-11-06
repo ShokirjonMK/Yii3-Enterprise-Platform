@@ -43,7 +43,7 @@ final class ModulesController
         try {
             $this->modules->setEnabled((string) $this->user->getId(), $code, $enable);
             $this->responder->success($enable ? 'Module enabled.' : 'Module disabled.');
-        } catch (ValidationException | ConflictException | AccessDeniedException | NotFoundException $e) {
+        } catch (ValidationException|ConflictException|AccessDeniedException|NotFoundException $e) {
             $this->responder->error($e->getMessage());
         }
         return $this->responder->redirect('admin.modules.show', ['code' => $code]);

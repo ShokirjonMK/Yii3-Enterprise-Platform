@@ -95,8 +95,16 @@ final class NotificationAdminService
         }
         $this->db->transaction(function () use ($code, $enabled, $actorId, $row, $status): void {
             $this->db->createCommand()->update('notification_channels', ['enabled' => $enabled, 'status' => $status, 'updated_at' => new Expression('now()')], ['code' => $code])->execute();
-            $this->audit->record($enabled ? 'notification_channel.enabled' : 'notification_channel.disabled', 'notification_channel', $code,
-                ['enabled' => (bool) $row['enabled']], ['enabled' => $enabled], category: 'config', severity: 'notice', actorId: $actorId);
+            $this->audit->record(
+                $enabled ? 'notification_channel.enabled' : 'notification_channel.disabled',
+                'notification_channel',
+                $code,
+                ['enabled' => (bool) $row['enabled']],
+                ['enabled' => $enabled],
+                category: 'config',
+                severity: 'notice',
+                actorId: $actorId,
+            );
         });
     }
 
@@ -148,8 +156,15 @@ final class NotificationAdminService
             } else {
                 $this->db->createCommand()->update('notification_templates', $data + ['version' => new Expression('version + 1'), 'updated_by' => $actorId, 'updated_at' => new Expression('now()')], ['id' => $id])->execute();
             }
-            $this->audit->record($before === null ? 'notification_template.created' : 'notification_template.updated', 'notification_template', $id,
-                $before === null ? null : array_intersect_key($before, $data), $data, category: 'config', actorId: $actorId);
+            $this->audit->record(
+                $before === null ? 'notification_template.created' : 'notification_template.updated',
+                'notification_template',
+                $id,
+                $before === null ? null : array_intersect_key($before, $data),
+                $data,
+                category: 'config',
+                actorId: $actorId,
+            );
         });
         return $id;
     }
@@ -285,8 +300,17 @@ final class NotificationAdminService
         foreach ($userIds as $uid) {
             $count += count($this->notifier->notify((string) $uid, $code, $params, $channels, $category));
         }
-        $this->audit->record('notifications.broadcast', 'role', $role, null, null,
-            ['template' => $code, 'channels' => $channels, 'users' => count($userIds), 'notifications' => $count], category: 'data', severity: 'notice', actorId: $actorId);
+        $this->audit->record(
+            'notifications.broadcast',
+            'role',
+            $role,
+            null,
+            null,
+            ['template' => $code, 'channels' => $channels, 'users' => count($userIds), 'notifications' => $count],
+            category: 'data',
+            severity: 'notice',
+            actorId: $actorId,
+        );
         return ['users' => count($userIds), 'notifications' => $count];
     }
 

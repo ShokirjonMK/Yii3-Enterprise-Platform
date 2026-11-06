@@ -60,8 +60,16 @@ final class VoiceCallClient
         }
         $say = htmlspecialchars($text, ENT_XML1 | ENT_QUOTES, 'UTF-8');
         $twiml = '<Response><Say language="' . $language . '">' . $say . '</Say><Pause length="1"/><Say language="' . $language . '">' . $say . '</Say></Response>';
-        $cfg = new IntegrationConfig(code: 'voice', baseUrl: 'https://api.twilio.com', authType: 'basic', secret: $token,
-            authConfig: ['username' => $sid], timeoutMs: 10000, maxRetries: 0, status: 'healthy');
+        $cfg = new IntegrationConfig(
+            code: 'voice',
+            baseUrl: 'https://api.twilio.com',
+            authType: 'basic',
+            secret: $token,
+            authConfig: ['username' => $sid],
+            timeoutMs: 10000,
+            maxRetries: 0,
+            status: 'healthy',
+        );
         $data = $this->http->sendJson($cfg, 'POST', "/2010-04-01/Accounts/$sid/Calls.json", [
             'form_params' => ['To' => $to, 'From' => $from, 'Twiml' => $twiml, 'Timeout' => 30],
             'secrets' => $mask,

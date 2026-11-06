@@ -26,6 +26,14 @@ validate ─► build-deps ─► quality ─► test-unit ─► test-integrati
 | validate | `validate:yaml`, `validate:composer`, `validate:kubernetes`, `validate:observability`, `validate:alertmanager`, `validate:shell` | YAML parse of CI/compose/infra/observability files (GitLab `!reference` tolerated), `composer validate --strict`, `scripts/ci/k8s-validate.sh staging production` (kustomize build + kubeconform), `promtool check config/rules`, `amtool check-config`, shellcheck. |
 | build-deps | `ci-image`, `composer-install` | Builds the `dev` target of `infra/docker/php/Dockerfile` (same extensions as prod + composer/pcov) and pushes it as `$CI_REGISTRY_IMAGE/ci:<ref-slug>` with a registry build cache; `composer install` with a cache keyed on `composer.lock`; `vendor/` passed on as an artifact. |
 | quality | `lint:php`, `cs`, `psalm`, `dependency-analyser`, `composer-audit` | `php -l` on all sources, php-cs-fixer dry-run, Psalm (Code Quality report), composer-dependency-analyser, `composer audit --locked`. |
+
+**Psalm.** Level 3, single thread (`--threads=1`: Psalm 6 crashes with "event loop is already running" in
+parallel mode here). View templates and Gii code templates are excluded (their variables are injected by the
+renderer). `ext-rdkafka` has no official stubs: `stubs/rdkafka.phpstub` is generated from the loaded extension by
+`php scripts/ci/rdkafka-stub.php > stubs/rdkafka.phpstub`. Issues that existed when static analysis was switched on
+are frozen in `psalm-baseline.xml` (730 entries, mostly array-shape docblocks); new code must not add any. Reduce the
+baseline when touching a file: fix the issue, then `vendor/bin/psalm --threads=1 --update-baseline`.
+
 | test-unit | `test:unit` | `phpunit --testsuite unit` (JUnit report). |
 | test-integration | `test:integration` | Services `postgres:17-alpine`, `redis:7.4-alpine`, `apache/kafka:3.9.1` (single-node KRaft). `APP_ENV=test`: `tests/bootstrap.php` runs `migrate:up`, `rbac:sync`, `platform:seed` against `DB_TEST_NAME=platform_test`. Coverage via pcov (Cobertura). |
 | test-api | `test:api`, `test:e2e`, `test:security` | Same services; `scripts/ci/start-test-app.sh` migrates/seeds the job database and starts the app with `php -S` (`public/index.php`, the same `HttpApplicationRunner` as php-fpm) on `127.0.0.1:8080`; suites run with `E2E_BASE_URL=http://127.0.0.1:8080`. `APP_ENV=dev` because the built-in server is plain HTTP and `prod` enforces Secure `__Host-` cookies. Suites whose directory does not exist yet are skipped with a message. |

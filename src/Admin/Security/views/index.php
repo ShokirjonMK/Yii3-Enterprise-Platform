@@ -18,7 +18,9 @@ declare(strict_types=1);
 
 $this->setTitle($h->tr('Security Center'));
 $this->setParameter('breadcrumbs', [$h->tr('Security Center')]);
-$tone = static fn(string $s) => match ($s) { 'pass' => 'ok', 'warn' => 'warn', 'fail' => 'bad', default => 'info' };
+$tone = static fn(string $s) => match ($s) {
+    'pass' => 'ok', 'warn' => 'warn', 'fail' => 'bad', default => 'info'
+};
 $unlockForm = static function (string $userId) use ($h, $csrf): string {
     return '<form class="ops-inline" method="post" action="' . $h->e($h->url('admin.security.unlock', ['id' => $userId])) . '" data-confirm="' . $h->t('Unlock this account?') . '">'
         . '<input type="hidden" name="_csrf" value="' . $h->e($csrf) . '"><button class="btn btn--sm" type="submit">' . $h->t('Unlock') . '</button></form>';

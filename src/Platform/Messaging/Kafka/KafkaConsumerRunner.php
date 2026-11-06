@@ -75,7 +75,24 @@ final class KafkaConsumerRunner
         $isRetry = $group === 'platform-retry';
         $topics = array_map(fn($t) => $this->config->topic($t), $isRetry ? array_keys(self::RETRY_TOPICS) : $def['topics']);
 
-        $consumer = new KafkaConsumer($this->config->consumerConf($group));
+        $conf = $this->config->consumerConf($group);
+        // Partitions assigned while the group is paused (start-up, rebalance) are paused right away, otherwise the
+        // first consume() after an assignment would deliver messages of a paused group. The assignment strategy is
+        // cooperative-sticky, so the callback must use the incremental assign/unassign calls.
+        $conf->setRebalanceCb(function (KafkaConsumer $kafka, int $err, ?array $partitions = null): void {
+            $partitions ??= [];
+            if ($err === RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS) {
+                $kafka->incrementalAssign($partitions);
+                if ($this->paused && $partitions !== []) {
+                    $kafka->pausePartitions($partitions);
+                }
+            } elseif ($err === RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS) {
+                $kafka->incrementalUnassign($partitions);
+            }
+        });
+        $consumer = new KafkaConsumer($conf);
+        $this->lastStateCheck = 0.0;
+        $this->syncPauseState($consumer, $group);
         $consumer->subscribe($topics);
         $this->installSignals();
         $this->logger->info('Kafka consumer {g} subscribed to {t}', ['g' => $group, 't' => implode(',', $topics)]);
@@ -200,8 +217,16 @@ final class KafkaConsumerRunner
                         $this->metrics->inc('kafka_messages_total', 'Consumed Kafka messages', ['group' => $group, 'result' => 'duplicate']);
                         return;
                     }
-                    $meta = new KafkaMessage($id, (string) $message->topic_name, (int) $message->partition, (int) $message->offset,
-                        $message->key, array_map('strval', $headers), $group, (int) ($headers['attempts'] ?? 0) + $attempt);
+                    $meta = new KafkaMessage(
+                        $id,
+                        (string) $message->topic_name,
+                        (int) $message->partition,
+                        (int) $message->offset,
+                        $message->key,
+                        array_map('strval', $headers),
+                        $group,
+                        (int) ($headers['attempts'] ?? 0) + $attempt,
+                    );
                     foreach ($classes as $class) {
                         $handler = $this->container->get($class);
                         if (!$handler instanceof KafkaMessageHandlerInterface) {
@@ -335,7 +360,8 @@ final class KafkaConsumerRunner
             || !(bool) $this->db->createCommand("SELECT enabled FROM feature_flags WHERE code = 'messaging.kafka'")->queryScalar();
         if ($paused !== $this->paused) {
             $assignment = $consumer->getAssignment();
-            $paused ? $consumer->pause($assignment) : $consumer->resume($assignment);
+            // php-rdkafka has pausePartitions()/resumePartitions() (there is no pause()/resume())
+            $paused ? $consumer->pausePartitions($assignment) : $consumer->resumePartitions($assignment);
             $this->paused = $paused;
             $this->logger->notice('Consumer group {g} {s}', ['g' => $group, 's' => $paused ? 'paused' : 'resumed']);
         }

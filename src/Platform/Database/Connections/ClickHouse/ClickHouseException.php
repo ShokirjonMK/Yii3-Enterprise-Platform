@@ -6,6 +6,4 @@ namespace App\Platform\Database\Connections\ClickHouse;
 
 use RuntimeException;
 
-final class ClickHouseException extends RuntimeException
-{
-}
+final class ClickHouseException extends RuntimeException {}

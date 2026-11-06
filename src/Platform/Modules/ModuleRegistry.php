@@ -170,8 +170,16 @@ final class ModuleRegistry
             } else {
                 $this->db->createCommand()->update('business_modules', ['enabled' => $enabled, 'updated_at' => new \Yiisoft\Db\Expression\Expression('now()')], ['code' => $code])->execute();
             }
-            $this->audit->record($enabled ? 'module.enabled' : 'module.disabled', 'business_module', $code,
-                ['enabled' => $row !== null && Sql::bool($row['enabled'])], ['enabled' => $enabled], category: 'config', severity: 'notice', actorId: $actorId);
+            $this->audit->record(
+                $enabled ? 'module.enabled' : 'module.disabled',
+                'business_module',
+                $code,
+                ['enabled' => $row !== null && Sql::bool($row['enabled'])],
+                ['enabled' => $enabled],
+                category: 'config',
+                severity: 'notice',
+                actorId: $actorId,
+            );
         });
     }
 

@@ -16,8 +16,6 @@ use App\Shared\Domain\Exception\TooManyRequestsException;
 use App\Shared\Domain\Exception\ValidationException;
 use App\Shared\Infrastructure\Context\RequestContext;
 use App\Shared\Infrastructure\Http\Responder;
-use App\Web\Auth\SecondFactor;
-use App\Web\Auth\WebAuthSession;
 use App\Web\Middleware\RequireLogin;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -79,8 +77,11 @@ final class LoginController
             return $this->page(['error' => $e->getMessage(), 'login' => $login], 429)->withHeader('Retry-After', (string) $e->retryAfter());
         }
 
-        $trusted = $result->mfaRequired && $this->devices->isTrusted($result->user->id,
-            $request->getCookieParams()[TrustedDevices::COOKIE] ?? null, $this->mfa->policy($result->user)->rememberDays);
+        $trusted = $result->mfaRequired && $this->devices->isTrusted(
+            $result->user->id,
+            $request->getCookieParams()[TrustedDevices::COOKIE] ?? null,
+            $this->mfa->policy($result->user)->rememberDays,
+        );
         return $this->continue($this->webAuth->begin($result, $trusted));
     }
 
@@ -159,8 +160,13 @@ final class LoginController
         $response = $this->continue($this->webAuth->completePending($factor));
         if ($remember > 0) {
             $token = $this->devices->issue($user->id, $remember, (string) $this->context->userAgent(), $this->context->ip());
-            $response = $response->withAddedHeader('Set-Cookie', sprintf('%s=%s; Path=/; Max-Age=%d; HttpOnly; SameSite=Lax%s',
-                TrustedDevices::COOKIE, $token, $remember * 86400, $request->getUri()->getScheme() === 'https' ? '; Secure' : ''));
+            $response = $response->withAddedHeader('Set-Cookie', sprintf(
+                '%s=%s; Path=/; Max-Age=%d; HttpOnly; SameSite=Lax%s',
+                TrustedDevices::COOKIE,
+                $token,
+                $remember * 86400,
+                $request->getUri()->getScheme() === 'https' ? '; Secure' : '',
+            ));
         }
         return $response;
     }

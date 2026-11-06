@@ -11,7 +11,6 @@ use App\Shared\Domain\Uuid;
 use App\Shared\Infrastructure\Database\Page;
 use App\Shared\Infrastructure\Database\Paginator;
 use App\Platform\Database\SqlSearch;
-use App\Shared\Infrastructure\Database\Sql;
 use Psr\Http\Message\UploadedFileInterface;
 use Throwable;
 use Yiisoft\Db\Connection\ConnectionInterface;

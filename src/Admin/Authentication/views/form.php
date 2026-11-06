@@ -67,7 +67,9 @@ $fieldDefs = [
 
         <h2 class="span-2"><?= $h->t('Connection') ?></h2>
         <?php foreach ($fields as $key):
-            if ($key === 'allow_insecure_http' && $prod) { continue; }
+            if ($key === 'allow_insecure_http' && $prod) {
+                continue;
+            }
             [$label, $ftype, $hint] = $fieldDefs[$key] ?? [$key, 'text', null];
             $p = ['name' => "config[$key]", 'errorKey' => "config.$key", 'label' => $label, 'value' => $cfg[$key] ?? '', 'hint' => $hint, 'required' => in_array($key, $required, true)];
             if ($ftype === 'select') {

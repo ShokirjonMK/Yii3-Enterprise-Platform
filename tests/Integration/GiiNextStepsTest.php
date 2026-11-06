@@ -129,8 +129,14 @@ final class GiiNextStepsTest extends IntegrationTestCase
         mkdir($this->tmp . '/migrations', 0777, true);
         file_put_contents($this->tmp . '/yii', $yii);
         return new NextStepsRunner(
-            $this->db, $this->get(JobQueue::class), $this->get(KafkaAdmin::class), $this->get(KafkaConfig::class),
-            $this->get(KafkaTopicCreator::class), $this->get(AuditLogger::class), $this->tmp, [$this->tmp . '/migrations'],
+            $this->db,
+            $this->get(JobQueue::class),
+            $this->get(KafkaAdmin::class),
+            $this->get(KafkaConfig::class),
+            $this->get(KafkaTopicCreator::class),
+            $this->get(AuditLogger::class),
+            $this->tmp,
+            [$this->tmp . '/migrations'],
         );
     }
 }

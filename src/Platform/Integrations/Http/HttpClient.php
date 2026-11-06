@@ -139,7 +139,7 @@ final class HttpClient
 
         try {
             $response = (new Client(['handler' => $stack]))->request($method, $url, $guzzleOptions);
-        } catch (Exception\CircuitOpenException | Exception\RateLimitedException $e) {
+        } catch (Exception\CircuitOpenException|Exception\RateLimitedException $e) {
             // rejected locally before the network: log once (the log middleware did not see it)
             $this->logAttempt($cfg, $method, $url, [], null, null, null, $e, $t0, 1, $secrets);
             throw $e;
@@ -304,7 +304,11 @@ final class HttpClient
                 $r = $this->limiter->hit('integration:' . $cfg->code, $cfg->rateLimitPerMinute, 60);
                 if (!$r->allowed) {
                     return Create::rejectionFor(new Exception\RateLimitedException(
-                        "Local rate limit for \"{$cfg->code}\" exceeded ({$cfg->rateLimitPerMinute}/min).", max(1, $r->resetInSeconds), 'rate_limited_local', null, $cfg->code,
+                        "Local rate limit for \"{$cfg->code}\" exceeded ({$cfg->rateLimitPerMinute}/min).",
+                        max(1, $r->resetInSeconds),
+                        'rate_limited_local',
+                        null,
+                        $cfg->code,
                     ));
                 }
             }

@@ -31,7 +31,9 @@ $status = $project->status();
         <?php if ($canManage && $can('projects.update') && !$status->isTerminal()): ?>
             <a class="btn" href="<?= $h->url('web.projects.edit', ['id' => $project->id]) ?>"><?= $h->icon('edit') ?> <?= $h->t('Edit') ?></a>
             <?php foreach ($transitions as $t): ?>
-                <?php if ($status === ProjectStatus::Draft && $t === ProjectStatus::Active && !$can('projects.approve')) { continue; } ?>
+                <?php if ($status === ProjectStatus::Draft && $t === ProjectStatus::Active && !$can('projects.approve')) {
+                    continue;
+                } ?>
                 <form method="post" action="<?= $h->url('web.projects.status', ['id' => $project->id]) ?>">
                     <input type="hidden" name="_csrf" value="<?= $h->e($csrf) ?>">
                     <input type="hidden" name="version" value="<?= $project->version() ?>">

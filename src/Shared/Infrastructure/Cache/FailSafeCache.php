@@ -45,7 +45,7 @@ final class FailSafeCache implements CacheInterface
         return $this->guard(fn() => $this->inner->get($key, $default), $default);
     }
 
-    public function set(string $key, mixed $value, null|int|DateInterval $ttl = null): bool
+    public function set(string $key, mixed $value, int|DateInterval|null $ttl = null): bool
     {
         return $this->guard(fn() => $this->inner->set($key, $value, $this->ttl($ttl)), false);
     }
@@ -69,7 +69,7 @@ final class FailSafeCache implements CacheInterface
         );
     }
 
-    public function setMultiple(iterable $values, null|int|DateInterval $ttl = null): bool
+    public function setMultiple(iterable $values, int|DateInterval|null $ttl = null): bool
     {
         return $this->guard(fn() => $this->inner->setMultiple($values, $this->ttl($ttl)), false);
     }
@@ -109,7 +109,7 @@ final class FailSafeCache implements CacheInterface
         }
     }
 
-    private function ttl(null|int|DateInterval $ttl): null|int|DateInterval
+    private function ttl(int|DateInterval|null $ttl): int|DateInterval|null
     {
         return $ttl === null && $this->defaultTtl > 0 ? $this->defaultTtl : $ttl;
     }

@@ -1,0 +1,1786 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<files psalm-version="6.20.8@75d7ca00182ca690b273dcd8d172e8efa17d1f90">
+  <file src="src/Admin/Audit/ActivityController.php">
+    <PossiblyFalseArgument>
+      <code><![CDATA[strtotime($f['to'] . ' +1 day')]]></code>
+    </PossiblyFalseArgument>
+  </file>
+  <file src="src/Admin/Audit/AuditController.php">
+    <PossiblyFalseArgument>
+      <code><![CDATA[$resource]]></code>
+      <code><![CDATA[$resource]]></code>
+      <code><![CDATA[$resource]]></code>
+      <code><![CDATA[$resource]]></code>
+      <code><![CDATA[$resource]]></code>
+    </PossiblyFalseArgument>
+    <PossiblyInvalidArgument>
+      <code><![CDATA[$r]]></code>
+    </PossiblyInvalidArgument>
+    <TooManyArguments>
+      <code><![CDATA[each]]></code>
+    </TooManyArguments>
+  </file>
+  <file src="src/Admin/Audit/AuditSearch.php">
+    <InvalidLiteralArgument>
+      <code><![CDATA["=+-@\t\r"]]></code>
+    </InvalidLiteralArgument>
+    <InvalidReturnStatement>
+      <code><![CDATA[$q->one()]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[?array]]></code>
+    </InvalidReturnType>
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$f[$k]]]></code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+  <file src="src/Admin/Authentication/AuthenticationController.php">
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$values['config']]]></code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+  <file src="src/Admin/Authentication/MfaAdminController.php">
+    <PossiblyFalseOperand>
+      <code><![CDATA[json_encode($health['details'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]]></code>
+    </PossiblyFalseOperand>
+  </file>
+  <file src="src/Admin/Backups/BackupsController.php">
+    <PossiblyNullArgument>
+      <code><![CDATA[$target['filename']]]></code>
+      <code><![CDATA[$target['stream']]]></code>
+      <code><![CDATA[$target['url']]]></code>
+    </PossiblyNullArgument>
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$target['filename']]]></code>
+      <code><![CDATA[$target['size']]]></code>
+      <code><![CDATA[$target['stream']]]></code>
+      <code><![CDATA[$target['url']]]></code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+  <file src="src/Admin/Dashboard/SearchController.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$a['action']]]></code>
+      <code><![CDATA[$a['occurred_at']]]></code>
+      <code><![CDATA[$i['id']]]></code>
+      <code><![CDATA[$i['number']]]></code>
+      <code><![CDATA[$i['status']]]></code>
+      <code><![CDATA[$i['title']]]></code>
+      <code><![CDATA[$t['code']]]></code>
+      <code><![CDATA[$t['id']]]></code>
+      <code><![CDATA[$t['name']]]></code>
+      <code><![CDATA[$u['full_name']]]></code>
+      <code><![CDATA[$u['id']]]></code>
+      <code><![CDATA[$u['username']]]></code>
+      <code><![CDATA[$u['username']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Admin/Databases/DatabasesController.php">
+    <FalsableReturnStatement>
+      <code><![CDATA[json_encode(['collection' => $object, 'find' => new \stdClass(), 'sort' => ['_id' => -1]], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)]]></code>
+    </FalsableReturnStatement>
+  </file>
+  <file src="src/Admin/DevTools/DevToolsController.php">
+    <RedundantCast>
+      <code><![CDATA[(string) (phpversion($ext) ?: '')]]></code>
+    </RedundantCast>
+  </file>
+  <file src="src/Admin/Incidents/IncidentsController.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$ids === [] ? [] : (new Query($this->db))->select(['id', 'username', 'full_name'])->from('users')
+            ->where(['id' => $ids])->orderBy(['username' => SORT_ASC])->all()]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array{id:string, username:string, full_name:string}>]]></code>
+    </MoreSpecificReturnType>
+  </file>
+  <file src="src/Admin/Integrations/WebhooksController.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$event['payload']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyInvalidArrayAssignment>
+      <code><![CDATA[$event['payload']]]></code>
+    </PossiblyInvalidArrayAssignment>
+  </file>
+  <file src="src/Admin/Jobs/JobsReadModel.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$q->all()]]></code>
+      <code><![CDATA[$rows]]></code>
+      <code><![CDATA[(new Query($this->db))
+            ->select(['s.*', 'last_job_status' => 'j.status'])
+            ->from(['s' => 'schedules'])
+            ->leftJoin(['j' => 'jobs'], 'j.id = s.last_job_id')
+            ->orderBy(['s.code' => SORT_ASC])
+            ->all()]]></code>
+      <code><![CDATA[array_map('strval', $q->column())]]></code>
+      <code><![CDATA[array_map(static function (array $a): array {
+            $a['error'] = $a['error'] === null ? null : Redactor::redactString((string) $a['error']);
+            return $a;
+        }, (new Query($this->db))->from('job_attempts')->where(['job_id' => $jobId])->orderBy(['attempt' => SORT_DESC, 'id' => SORT_DESC])->limit(100)->all())]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+      <code><![CDATA[list<string>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArgument>
+      <code><![CDATA[static function (array $a): array {
+            $a['error'] = $a['error'] === null ? null : Redactor::redactString((string) $a['error']);
+            return $a;
+        }]]></code>
+    </PossiblyInvalidArgument>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$job['last_error']]]></code>
+      <code><![CDATA[$job['payload']]]></code>
+      <code><![CDATA[$r['liveness']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyInvalidArrayAssignment>
+      <code><![CDATA[$job['last_error']]]></code>
+      <code><![CDATA[$job['payload']]]></code>
+    </PossiblyInvalidArrayAssignment>
+  </file>
+  <file src="src/Admin/Kafka/KafkaReadModel.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[array_map('strval', $this->db->createCommand('SELECT DISTINCT consumer_group FROM kafka_dead_letters ORDER BY 1')->queryColumn())]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<string>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyFalseOperand>
+      <code><![CDATA[$retentionHours]]></code>
+    </PossiblyFalseOperand>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['consumer_group']]]></code>
+      <code><![CDATA[$r['paused']]]></code>
+      <code><![CDATA[$r['paused_at']]]></code>
+      <code><![CDATA[$r['paused_by']]]></code>
+      <code><![CDATA[$row['error']]]></code>
+      <code><![CDATA[$row['headers']]]></code>
+      <code><![CDATA[$row['payload']]]></code>
+      <code><![CDATA[$w['alive']]]></code>
+      <code><![CDATA[$w['queues']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyInvalidArrayAssignment>
+      <code><![CDATA[$row['error']]]></code>
+      <code><![CDATA[$row['headers_view']]]></code>
+      <code><![CDATA[$row['payload_view']]]></code>
+      <code><![CDATA[$w['alive']]]></code>
+    </PossiblyInvalidArrayAssignment>
+  </file>
+  <file src="src/Admin/Kafka/KafkaToolsController.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[KafkaPublisher::decodeList($v['payload'])]]></code>
+    </ArgumentTypeCoercion>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['consumer_group']]]></code>
+      <code><![CDATA[$r['paused']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Admin/Notifications/NotificationsController.php">
+    <PossiblyFalseArgument>
+      <code><![CDATA[strtotime((string) $q[$f] . ($f === 'to' ? ' +1 day' : ''))]]></code>
+    </PossiblyFalseArgument>
+  </file>
+  <file src="src/Admin/Rbac/RbacController.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$perms]]></code>
+      <code><![CDATA[array_map('strval', (array) ($b['children'] ?? []))]]></code>
+    </ArgumentTypeCoercion>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['item_name']]]></code>
+      <code><![CDATA[$r['n']]]></code>
+      <code><![CDATA[$r['name']]]></code>
+      <code><![CDATA[$r['name']]]></code>
+      <code><![CDATA[$r['type']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Admin/Settings/AppearanceController.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$t['id']]]></code>
+      <code><![CDATA[$t['name']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Admin/Settings/SettingsController.php">
+    <InvalidOperand>
+      <code><![CDATA[$msgs]]></code>
+    </InvalidOperand>
+  </file>
+  <file src="src/Admin/Storage/StorageController.php">
+    <InvalidArgument>
+      <code><![CDATA[$filters]]></code>
+    </InvalidArgument>
+  </file>
+  <file src="src/Admin/Workflow/WorkflowController.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[(string) ($in['decision'] ?? '')]]></code>
+    </ArgumentTypeCoercion>
+  </file>
+  <file src="src/Api/V1/Auth/AuthController.php">
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$secret]]></code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+  <file src="src/Api/V1/OpenApi/OpenApiGenerator.php">
+    <UnsupportedPropertyReferenceUsage>
+      <code><![CDATA[$warnings = &$this->warnings]]></code>
+    </UnsupportedPropertyReferenceUsage>
+  </file>
+  <file src="src/Console/Command/DemoCommand.php">
+    <PossiblyFalseArgument>
+      <code><![CDATA[$tmp]]></code>
+      <code><![CDATA[$tmp]]></code>
+      <code><![CDATA[strtotime('+90 days')]]></code>
+      <code><![CDATA[strtotime('-60 days')]]></code>
+    </PossiblyFalseArgument>
+    <PossiblyNullArgument>
+      <code><![CDATA[$super]]></code>
+      <code><![CDATA[$super]]></code>
+      <code><![CDATA[$super]]></code>
+      <code><![CDATA[$super]]></code>
+      <code><![CDATA[$super]]></code>
+      <code><![CDATA[$super]]></code>
+      <code><![CDATA[$super]]></code>
+      <code><![CDATA[$super]]></code>
+      <code><![CDATA[$super]]></code>
+      <code><![CDATA[$super]]></code>
+      <code><![CDATA[$super]]></code>
+      <code><![CDATA[$super]]></code>
+      <code><![CDATA[$super]]></code>
+    </PossiblyNullArgument>
+    <PossiblyNullPropertyFetch>
+      <code><![CDATA[$super->id]]></code>
+      <code><![CDATA[$super->tenantId]]></code>
+    </PossiblyNullPropertyFetch>
+  </file>
+  <file src="src/Console/Command/KafkaConsumeCommand.php">
+    <NoValue>
+      <code><![CDATA[$pid]]></code>
+      <code><![CDATA[$pid]]></code>
+    </NoValue>
+  </file>
+  <file src="src/Console/Command/KafkaPublishCommand.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[KafkaPublisher::decodeList($json)]]></code>
+    </ArgumentTypeCoercion>
+  </file>
+  <file src="src/Console/Command/SchedulerRunCommand.php">
+    <RedundantCondition>
+      <code><![CDATA[!$this->stop]]></code>
+      <code><![CDATA[$i < 150 && !$this->stop]]></code>
+    </RedundantCondition>
+  </file>
+  <file src="src/Environment.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$separator]]></code>
+    </ArgumentTypeCoercion>
+  </file>
+  <file src="src/Modules/Blog/Admin/BlogController.php">
+    <RedundantCondition>
+      <code><![CDATA[$e->title()]]></code>
+    </RedundantCondition>
+    <TypeDoesNotContainNull>
+      <code><![CDATA['']]></code>
+    </TypeDoesNotContainNull>
+  </file>
+  <file src="src/Modules/Blog/Application/BlogService.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$q->all()]]></code>
+      <code><![CDATA[['source' => 'audit', 'items' => $items]]]></code>
+      <code><![CDATA[['source' => 'read_model', 'items' => $items]]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[array{source:string, items:list<array<string,mixed>>}]]></code>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$row['tenant_id']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Modules/Blog/Application/BlogWorkflow.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$row['enabled']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Modules/Blog/Infrastructure/BlogRepository.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['n']]]></code>
+      <code><![CDATA[$r['status']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Modules/Blog/Infrastructure/GenerateBlogReportJob.php">
+    <PossiblyFalseArgument>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+    </PossiblyFalseArgument>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$report['filters']]]></code>
+      <code><![CDATA[$report['status']]]></code>
+      <code><![CDATA[$report['tenant_id']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <RedundantCondition>
+      <code><![CDATA[$v]]></code>
+    </RedundantCondition>
+    <TypeDoesNotContainType>
+      <code><![CDATA[is_bool($v)]]></code>
+    </TypeDoesNotContainType>
+  </file>
+  <file src="src/Modules/Blog/Web/BlogController.php">
+    <RedundantCondition>
+      <code><![CDATA[$e->title()]]></code>
+    </RedundantCondition>
+    <TypeDoesNotContainNull>
+      <code><![CDATA['']]></code>
+    </TypeDoesNotContainNull>
+  </file>
+  <file src="src/Modules/Contracts/Admin/ContractsController.php">
+    <RedundantCondition>
+      <code><![CDATA[$e->title()]]></code>
+    </RedundantCondition>
+    <TypeDoesNotContainNull>
+      <code><![CDATA['']]></code>
+    </TypeDoesNotContainNull>
+  </file>
+  <file src="src/Modules/Contracts/Application/ContractService.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$q->all()]]></code>
+      <code><![CDATA[['source' => 'audit', 'items' => $items]]]></code>
+      <code><![CDATA[['source' => 'read_model', 'items' => $items]]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[array{source:string, items:list<array<string,mixed>>}]]></code>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$row['tenant_id']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Modules/Contracts/Application/ContractWorkflow.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$row['enabled']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Modules/Contracts/Infrastructure/ContractRepository.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['n']]]></code>
+      <code><![CDATA[$r['status']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Modules/Contracts/Infrastructure/GenerateContractsReportJob.php">
+    <PossiblyFalseArgument>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+    </PossiblyFalseArgument>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$report['filters']]]></code>
+      <code><![CDATA[$report['status']]]></code>
+      <code><![CDATA[$report['tenant_id']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <RedundantCondition>
+      <code><![CDATA[$v]]></code>
+    </RedundantCondition>
+    <TypeDoesNotContainType>
+      <code><![CDATA[is_bool($v)]]></code>
+    </TypeDoesNotContainType>
+  </file>
+  <file src="src/Modules/Contracts/Web/ContractsController.php">
+    <RedundantCondition>
+      <code><![CDATA[$e->title()]]></code>
+    </RedundantCondition>
+    <TypeDoesNotContainNull>
+      <code><![CDATA['']]></code>
+    </TypeDoesNotContainNull>
+  </file>
+  <file src="src/Modules/Projects/Application/ProjectService.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$q->all()]]></code>
+      <code><![CDATA[['source' => 'audit', 'items' => $audit]]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[array{source:string, items:list<array<string,mixed>>}]]></code>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$row['tenant_id']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Modules/Projects/Application/ProjectWorkflow.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$row['enabled']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Modules/Projects/Domain/Project.php">
+    <RedundantFunctionCall>
+      <code><![CDATA[array_values]]></code>
+      <code><![CDATA[array_values]]></code>
+    </RedundantFunctionCall>
+  </file>
+  <file src="src/Modules/Projects/Infrastructure/GenerateProjectsReportJob.php">
+    <PossiblyFalseArgument>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+    </PossiblyFalseArgument>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$report['filters']]]></code>
+      <code><![CDATA[$report['status']]]></code>
+      <code><![CDATA[$report['tenant_id']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Modules/Projects/Infrastructure/ProjectRepository.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[(new Query($this->db))
+            ->select(['m.user_id', 'm.role', 'u.username', 'u.full_name', 'u.email', 'm.created_at'])
+            ->from(['m' => 'project_members'])
+            ->innerJoin(['u' => 'users'], 'u.id = m.user_id')
+            ->where(['m.project_id' => $projectId])
+            ->orderBy(['m.role' => SORT_ASC, 'u.username' => SORT_ASC])
+            ->all()]]></code>
+      <code><![CDATA[(new Query($this->db))->from('project_activity')->where(['project_id' => $projectId])
+            ->orderBy(['occurred_at' => SORT_DESC, 'id' => SORT_DESC])->limit($limit)->all()]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+      <code><![CDATA[list<array{user_id:string, role:string, username:string, full_name:string, email:?string, created_at:string}>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArgument>
+      <code><![CDATA[$row]]></code>
+    </PossiblyInvalidArgument>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['n']]]></code>
+      <code><![CDATA[$r['status']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$filters['member_id']]]></code>
+      <code><![CDATA[$filters['owner_id']]]></code>
+      <code><![CDATA[$filters['priority']]]></code>
+      <code><![CDATA[$filters['tag']]]></code>
+      <code><![CDATA[$filters['tenant_id']]]></code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+  <file src="src/Platform/Access/RbacCatalog.php">
+    <InvalidOperand>
+      <code><![CDATA[$def['children'] ?? []]]></code>
+      <code><![CDATA[$def['permissions'] ?? []]]></code>
+    </InvalidOperand>
+  </file>
+  <file src="src/Platform/Access/RbacSynchronizer.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['child']]]></code>
+      <code><![CDATA[$r['op']]]></code>
+      <code><![CDATA[$r['parent']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Access/RoleManager.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[array_map(
+            static fn(array $r) => ['child' => (string) $r['child'], 'op' => (string) $r['op']],
+            (new Query($this->db))->select(['child', 'op'])->from('rbac_link_overrides')->where(['parent' => $role])->orderBy('child')->all(),
+        )]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array{child:string, op:string}>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArgument>
+      <code><![CDATA[static fn(array $r) => ['child' => (string) $r['child'], 'op' => (string) $r['op']]]]></code>
+    </PossiblyInvalidArgument>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['child']]]></code>
+      <code><![CDATA[$r['is_admin']]]></code>
+      <code><![CDATA[$r['name']]]></code>
+      <code><![CDATA[$r['parent']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Api/ApiClientService.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$errors]]></code>
+    </ArgumentTypeCoercion>
+    <InvalidNullableReturnType>
+      <code><![CDATA[array]]></code>
+      <code><![CDATA[array]]></code>
+    </InvalidNullableReturnType>
+    <NullableReturnStatement>
+      <code><![CDATA[$after]]></code>
+      <code><![CDATA[$client]]></code>
+    </NullableReturnStatement>
+    <PossiblyFalseOperand>
+      <code><![CDATA[inet_ntop($bin)]]></code>
+    </PossiblyFalseOperand>
+    <PossiblyInvalidArgument>
+      <code><![CDATA[$row]]></code>
+    </PossiblyInvalidArgument>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$row['allowed_ips']]]></code>
+      <code><![CDATA[$row['client_id']]]></code>
+      <code><![CDATA[$row['enabled']]]></code>
+      <code><![CDATA[$row['expires_at']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['last_used_at']]]></code>
+      <code><![CDATA[$row['name']]]></code>
+      <code><![CDATA[$row['name']]]></code>
+      <code><![CDATA[$row['rate_limit_per_minute']]]></code>
+      <code><![CDATA[$row['revoked_at']]]></code>
+      <code><![CDATA[$row['scopes']]]></code>
+      <code><![CDATA[$row['secret_hash']]]></code>
+      <code><![CDATA[$row['secret_hash']]]></code>
+      <code><![CDATA[$row['service_user_id']]]></code>
+      <code><![CDATA[$row['tenant_id']]]></code>
+      <code><![CDATA[$row['tenant_id']]]></code>
+      <code><![CDATA[$row['tenant_id']]]></code>
+      <code><![CDATA[$row['tenant_status']]]></code>
+      <code><![CDATA[$row['user_id']]]></code>
+      <code><![CDATA[$u['id']]]></code>
+      <code><![CDATA[$u['tenant_id']]]></code>
+      <code><![CDATA[$u['tenant_id']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$filters['q']]]></code>
+      <code><![CDATA[$filters['q']]]></code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+  <file src="src/Platform/Api/ApiDocsAccess.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$rows]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array<string, mixed>>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['active']]]></code>
+      <code><![CDATA[$r['revoked_at']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['label']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyInvalidArrayAssignment>
+      <code><![CDATA[$r['status']]]></code>
+    </PossiblyInvalidArrayAssignment>
+  </file>
+  <file src="src/Platform/Appearance/ThemeRegistry.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['code']]]></code>
+      <code><![CDATA[$r['code']]]></code>
+      <code><![CDATA[$r['created_at']]]></code>
+      <code><![CDATA[$r['hash']]]></code>
+      <code><![CDATA[$r['manifest']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Appearance/ThemeService.php">
+    <PossiblyFalseOperand>
+      <code><![CDATA[json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]]></code>
+      <code><![CDATA[json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]]></code>
+    </PossiblyFalseOperand>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['allow_user_choice']]]></code>
+      <code><![CDATA[$r['scope']]]></code>
+      <code><![CDATA[$r['scope']]]></code>
+      <code><![CDATA[$r['scope_id']]]></code>
+      <code><![CDATA[$r['theme']]]></code>
+      <code><![CDATA[$r['theme']]]></code>
+      <code><![CDATA[$row['theme']]]></code>
+      <code><![CDATA[$row['theme']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyNullArrayOffset>
+      <code><![CDATA[$before['tenants']]]></code>
+    </PossiblyNullArrayOffset>
+  </file>
+  <file src="src/Platform/Audit/AuditVerifier.php">
+    <PossiblyFalseArgument>
+      <code><![CDATA[$row]]></code>
+    </PossiblyFalseArgument>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['row_hmac']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <TooManyArguments>
+      <code><![CDATA[each]]></code>
+    </TooManyArguments>
+  </file>
+  <file src="src/Platform/Backup/BackupService.php">
+    <ForbiddenCode>
+      <code><![CDATA[shell_exec(escapeshellcmd($tool) . ' --version 2>/dev/null')]]></code>
+    </ForbiddenCode>
+    <InvalidParamDefault>
+      <code><![CDATA[array{endpoint:?string, region:string, bucket:string, key:string, secret:string, pathStyle:bool}]]></code>
+    </InvalidParamDefault>
+    <InvalidReturnStatement>
+      <code><![CDATA[$row]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[array]]></code>
+    </InvalidReturnType>
+    <PossiblyFalseArgument>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$out]]></code>
+    </PossiblyFalseArgument>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$b['id']]]></code>
+      <code><![CDATA[$b['id']]]></code>
+      <code><![CDATA[$b['id']]]></code>
+      <code><![CDATA[$b['location']]]></code>
+      <code><![CDATA[$b['offsite_location']]]></code>
+      <code><![CDATA[$row['verify_details']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyInvalidArrayAssignment>
+      <code><![CDATA[$row['verify_details']]]></code>
+    </PossiblyInvalidArrayAssignment>
+    <RedundantCast>
+      <code><![CDATA[(int) $status['exitcode']]]></code>
+      <code><![CDATA[(string) ($this->dbConfig['sslmode'] ?: 'prefer')]]></code>
+    </RedundantCast>
+    <RedundantCondition>
+      <code><![CDATA[is_resource($in)]]></code>
+    </RedundantCondition>
+    <UndefinedInterfaceMethod>
+      <code><![CDATA[getActivePdo]]></code>
+    </UndefinedInterfaceMethod>
+  </file>
+  <file src="src/Platform/Database/Connections/ConnectionStore.php">
+    <PossiblyInvalidArgument>
+      <code><![CDATA[$r]]></code>
+    </PossiblyInvalidArgument>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['name']]]></code>
+      <code><![CDATA[$r['name']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Database/Connections/ConnectionUrl.php">
+    <PossiblyNullArgument>
+      <code><![CDATA[$parts['host']]]></code>
+    </PossiblyNullArgument>
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$parts['host']]]></code>
+    </PossiblyUndefinedArrayOffset>
+    <RedundantCast>
+      <code><![CDATA[(int) ($parts['port'] ?? 0)]]></code>
+    </RedundantCast>
+  </file>
+  <file src="src/Platform/Database/Connections/DatabaseInspector.php">
+    <RedundantCast>
+      <code><![CDATA[(string) ($info->getType() ?? 'collection')]]></code>
+    </RedundantCast>
+    <RedundantCondition>
+      <code><![CDATA[$info->getType()]]></code>
+    </RedundantCondition>
+    <TypeDoesNotContainNull>
+      <code><![CDATA['collection']]></code>
+    </TypeDoesNotContainNull>
+  </file>
+  <file src="src/Platform/Database/Connections/QueryConsole.php">
+    <FalsableReturnStatement>
+      <code><![CDATA[match (true) {
+            $v === null => null,
+            is_bool($v) => $v ? 'true' : 'false',
+            is_array($v) => json_encode($v, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            is_resource($v) => '[binary]',
+            default => mb_strimwidth((string) $v, 0, 2000, '…'),
+        }]]></code>
+    </FalsableReturnStatement>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[preg_split('/\s+/', ltrim($sql), 2)[0]]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$q[$op]]]></code>
+      <code><![CDATA[$q[$op]]]></code>
+      <code><![CDATA[$q[$op]]]></code>
+      <code><![CDATA[$q[$op]]]></code>
+      <code><![CDATA[$q[$op]]]></code>
+    </PossiblyUndefinedArrayOffset>
+    <RedundantCast>
+      <code><![CDATA[(int) $affected]]></code>
+    </RedundantCast>
+    <UndefinedInterfaceMethod>
+      <code><![CDATA[getActivePdo]]></code>
+    </UndefinedInterfaceMethod>
+  </file>
+  <file src="src/Platform/Database/Connections/SqlConnectionFactory.php">
+    <InvalidArgument>
+      <code><![CDATA[[
+                    'host' => $d->host, 'port' => (string) $d->port(), 'name' => $d->database, 'user' => $d->username,
+                    'password' => $d->password, 'sslmode' => (string) $d->option('sslmode', 'prefer'),
+                    'statementTimeoutMs' => (int) $d->option('statementTimeoutMs', 30000), 'readOnly' => $d->readOnly,
+                ]]]></code>
+    </InvalidArgument>
+    <PossiblyInvalidArgument>
+      <code><![CDATA[$d->option('charset', 'AL32UTF8')]]></code>
+      <code><![CDATA[$d->option('charset', 'utf8mb4')]]></code>
+    </PossiblyInvalidArgument>
+  </file>
+  <file src="src/Platform/Database/PostgresInspector.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[array_map('strval', $this->db->createCommand(
+            "SELECT schemaname || '.' || relname FROM pg_stat_user_tables ORDER BY 1",
+        )->queryColumn())]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<string>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$table]]></code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+  <file src="src/Platform/Database/SqlSearch.php">
+    <RedundantFunctionCall>
+      <code><![CDATA[array_values]]></code>
+    </RedundantFunctionCall>
+  </file>
+  <file src="src/Platform/Deployments/DeploymentService.php">
+    <InvalidReturnStatement>
+      <code><![CDATA[$this->baseQuery()->where(['d.id' => $id])->one() ?? throw new NotFoundException('Deployment not found.')]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[array]]></code>
+    </InvalidReturnType>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$previous['version']]]></code>
+      <code><![CDATA[$previous['version']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <TypeDoesNotContainType>
+      <code><![CDATA[$d === false]]></code>
+      <code><![CDATA[$d === null || $d === false]]></code>
+    </TypeDoesNotContainType>
+  </file>
+  <file src="src/Platform/FeatureFlags/FeatureFlagService.php">
+    <FalsableReturnStatement>
+      <code><![CDATA[$this->flags = $cached]]></code>
+    </FalsableReturnStatement>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$o['enabled']]]></code>
+      <code><![CDATA[$o['flag_id']]]></code>
+      <code><![CDATA[$o['flag_id']]]></code>
+      <code><![CDATA[$o['tenant_id']]]></code>
+      <code><![CDATA[$row['code']]]></code>
+      <code><![CDATA[$row['dependencies']]]></code>
+      <code><![CDATA[$row['description']]]></code>
+      <code><![CDATA[$row['enabled']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['is_critical']]]></code>
+      <code><![CDATA[$row['name']]]></code>
+      <code><![CDATA[$row['rollout_percentage']]]></code>
+      <code><![CDATA[$row['scheduled_disable_at']]]></code>
+      <code><![CDATA[$row['scheduled_enable_at']]]></code>
+      <code><![CDATA[$row['status']]]></code>
+      <code><![CDATA[$row['tenant_allowlist']]]></code>
+      <code><![CDATA[$row['updated_at']]]></code>
+      <code><![CDATA[$row['version']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyInvalidCast>
+      <code><![CDATA[$v]]></code>
+      <code><![CDATA[$v]]></code>
+    </PossiblyInvalidCast>
+  </file>
+  <file src="src/Platform/FeatureFlags/FeatureRegistry.php">
+    <InvalidOperand>
+      <code><![CDATA[$defined]]></code>
+    </InvalidOperand>
+  </file>
+  <file src="src/Platform/Gii/NextSteps/NextStepsRunner.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$steps]]></code>
+      <code><![CDATA[$steps]]></code>
+      <code><![CDATA[$steps]]></code>
+    </ArgumentTypeCoercion>
+    <InvalidReturnStatement>
+      <code><![CDATA[$row]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[array{id:string, subject:string, status:string, mode:string, steps:list<array<string,mixed>>, log:string, job_id:?string, created_by:?string, created_at:string, started_at:?string, finished_at:?string}|null]]></code>
+    </InvalidReturnType>
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$rows]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['steps']]]></code>
+      <code><![CDATA[$row['steps']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyInvalidArrayAssignment>
+      <code><![CDATA[$r['steps']]]></code>
+      <code><![CDATA[$row['steps']]]></code>
+    </PossiblyInvalidArrayAssignment>
+    <PossiblyNullArgument>
+      <code><![CDATA[$run['mode']]]></code>
+      <code><![CDATA[$steps]]></code>
+      <code><![CDATA[$steps]]></code>
+    </PossiblyNullArgument>
+    <PossiblyNullArrayAccess>
+      <code><![CDATA[$run['created_by']]]></code>
+      <code><![CDATA[$run['mode']]]></code>
+      <code><![CDATA[$run['steps']]]></code>
+      <code><![CDATA[$run['subject']]]></code>
+    </PossiblyNullArrayAccess>
+    <PossiblyNullIterator>
+      <code><![CDATA[$steps]]></code>
+    </PossiblyNullIterator>
+    <RedundantFunctionCall>
+      <code><![CDATA[array_values]]></code>
+    </RedundantFunctionCall>
+  </file>
+  <file src="src/Platform/Gii/Spec/FieldCode.php">
+    <PossiblyNullArgument>
+      <code><![CDATA[$f->maxLength()]]></code>
+    </PossiblyNullArgument>
+    <RedundantCast>
+      <code><![CDATA[(int) $hi]]></code>
+      <code><![CDATA[(int) $hi]]></code>
+    </RedundantCast>
+  </file>
+  <file src="src/Platform/Gii/Spec/FieldSpecParser.php">
+    <RedundantCast>
+      <code><![CDATA[(int) $num]]></code>
+    </RedundantCast>
+  </file>
+  <file src="src/Platform/Identity/Application/ApiTokenService.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$row['family_id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['id']]]></code>
+      <code><![CDATA[$row['last_used_at']]]></code>
+      <code><![CDATA[$row['scopes']]]></code>
+      <code><![CDATA[$row['user_id']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <RedundantFunctionCall>
+      <code><![CDATA[array_values]]></code>
+    </RedundantFunctionCall>
+  </file>
+  <file src="src/Platform/Identity/Application/AuthenticationService.php">
+    <PossiblyNullReference>
+      <code><![CDATA[getTimestamp]]></code>
+    </PossiblyNullReference>
+  </file>
+  <file src="src/Platform/Identity/Application/MfaService.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$account]]></code>
+      <code><![CDATA[$secret]]></code>
+      <code><![CDATA[$secret]]></code>
+      <code><![CDATA[$step * self::PERIOD]]></code>
+      <code><![CDATA[$this->issuer]]></code>
+    </ArgumentTypeCoercion>
+  </file>
+  <file src="src/Platform/Identity/Application/PasswordPolicy.php">
+    <PossiblyInvalidArrayOffset>
+      <code><![CDATA[$set[random_int(0, strlen($set) - 1)]]]></code>
+    </PossiblyInvalidArrayOffset>
+  </file>
+  <file src="src/Platform/Identity/Application/SessionRegistry.php">
+    <InvalidReturnStatement>
+      <code><![CDATA[['valid' => false, 'reason' => 'absolute_timeout', 'row' => $row]]]></code>
+      <code><![CDATA[['valid' => false, 'reason' => 'idle_timeout', 'row' => $row]]]></code>
+      <code><![CDATA[['valid' => false, 'reason' => 'revoked', 'row' => $row]]]></code>
+      <code><![CDATA[['valid' => true, 'reason' => null, 'row' => $row]]]></code>
+    </InvalidReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[array{valid:bool, reason:?string, row:?array}]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$row['expires_at']]]></code>
+      <code><![CDATA[$row['last_seen_at']]]></code>
+      <code><![CDATA[$row['revoked_at']]]></code>
+      <code><![CDATA[$row['user_id']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Identity/Application/UserService.php">
+    <InvalidNullableReturnType>
+      <code><![CDATA[User]]></code>
+    </InvalidNullableReturnType>
+    <LessSpecificReturnStatement>
+      <code><![CDATA[['user' => $this->users->find($id), 'temporaryPassword' => $temporary]]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[array{user:User, temporaryPassword:?string}]]></code>
+    </MoreSpecificReturnType>
+    <NullableReturnStatement>
+      <code><![CDATA[$this->users->find($id)]]></code>
+    </NullableReturnStatement>
+  </file>
+  <file src="src/Platform/Identity/Infrastructure/UserRepository.php">
+    <InvalidReturnStatement>
+      <code><![CDATA[(new Query($this->db))->from('user_identities')->where(['id' => $identityId, 'user_id' => $userId])->one() ?: null]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[?array]]></code>
+    </InvalidReturnType>
+    <PossiblyInvalidArgument>
+      <code><![CDATA[$row]]></code>
+      <code><![CDATA[$row]]></code>
+    </PossiblyInvalidArgument>
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$filters['organization_id']]]></code>
+      <code><![CDATA[$filters['q']]]></code>
+      <code><![CDATA[$filters['role']]]></code>
+      <code><![CDATA[$filters['status']]]></code>
+      <code><![CDATA[$filters['tenant_id']]]></code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+  <file src="src/Platform/Identity/Mfa/MfaManager.php">
+    <InvalidReturnStatement>
+      <code><![CDATA[$out]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[list<array{id:string,type:string,label:string,target_hint:string,meta:array,created_at:?string,last_used_at:?string}>]]></code>
+    </InvalidReturnType>
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$this->added($user, $type)]]></code>
+      <code><![CDATA[$this->added($user, MfaMethodType::EIMZO)]]></code>
+      <code><![CDATA[$this->added($user, MfaMethodType::WEBAUTHN)]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<string>|null]]></code>
+      <code><![CDATA[list<string>|null]]></code>
+      <code><![CDATA[list<string>|null]]></code>
+    </MoreSpecificReturnType>
+  </file>
+  <file src="src/Platform/Identity/Mfa/MfaMethodRepository.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[array_map(fn(array $r) => $this->hydrate($r), $rows)]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array{id:string,type:string,label:string,target_hint:string,meta:array,created_at:string,last_used_at:?string,sign_count:int,secret_enc:?string}>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArgument>
+      <code><![CDATA[$r]]></code>
+      <code><![CDATA[$r]]></code>
+      <code><![CDATA[fn(array $r) => $this->hydrate($r)]]></code>
+    </PossiblyInvalidArgument>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['n']]]></code>
+      <code><![CDATA[$r['type']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Identity/Mfa/MfaMethodType.php">
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$domain]]></code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+  <file src="src/Platform/Identity/Mfa/MfaPolicyService.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['allowed']]]></code>
+      <code><![CDATA[$r['remember_days']]]></code>
+      <code><![CDATA[$r['required']]]></code>
+      <code><![CDATA[$r['subject']]]></code>
+      <code><![CDATA[$r['updated_at']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyNullArrayAccess>
+      <code><![CDATA[$before['updated_at']]]></code>
+    </PossiblyNullArrayAccess>
+  </file>
+  <file src="src/Platform/Identity/Mfa/TrustedDevices.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[(new Query($this->db))->select(['id', 'user_agent', 'ip', 'created_at', 'expires_at', 'last_used_at'])->from('mfa_trusted_devices')
+            ->where(['user_id' => $userId])->andWhere(new Expression('expires_at > now()'))->orderBy(['created_at' => SORT_DESC])->all()]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+    </MoreSpecificReturnType>
+  </file>
+  <file src="src/Platform/Identity/Mfa/WebAuthn/Cbor.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[unpack('J', $b)[1]]]></code>
+      <code><![CDATA[unpack('N', $this->read(4))[1]]]></code>
+      <code><![CDATA[unpack('n', $this->read(2))[1]]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Identity/Mfa/WebAuthn/WebAuthnServer.php">
+    <PossiblyFalseOperand>
+      <code><![CDATA[$algId]]></code>
+      <code><![CDATA[hex2bin('3059301306072a8648ce3d020106082a8648ce3d030107034200')]]></code>
+    </PossiblyFalseOperand>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[unpack('N', substr($raw, 33, 4))[1]]]></code>
+      <code><![CDATA[unpack('n', substr($raw, 53, 2))[1]]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Identity/Sso/OidcProvider.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$bytes]]></code>
+    </ArgumentTypeCoercion>
+    <InvalidReturnStatement>
+      <code><![CDATA[$jwks]]></code>
+    </InvalidReturnStatement>
+    <PossiblyNullArgument>
+      <code><![CDATA[$meta['issuer']]]></code>
+    </PossiblyNullArgument>
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$meta['issuer']]]></code>
+    </PossiblyUndefinedArrayOffset>
+    <RedundantCast>
+      <code><![CDATA[(string) JWT::urlsafeB64Decode($parts[0])]]></code>
+    </RedundantCast>
+  </file>
+  <file src="src/Platform/Identity/Sso/OneIdProvider.php">
+    <PossiblyFalseOperand>
+      <code><![CDATA[parse_url($endpoint, PHP_URL_HOST)]]></code>
+    </PossiblyFalseOperand>
+  </file>
+  <file src="src/Platform/Identity/Sso/SsoProviderRepository.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[(new Query($this->db))->select(['code', 'name', 'type'])->from('sso_providers')
+                ->where(['enabled' => true])->andWhere(['not in', 'status', ['failed', 'maintenance', 'unconfigured']])
+                ->orderBy(['sort_order' => SORT_ASC, 'name' => SORT_ASC])->all()]]></code>
+      <code><![CDATA[array_map(fn($r) => $this->hydrate($r, false), (new Query($this->db))->from('sso_providers')->orderBy(['sort_order' => SORT_ASC, 'name' => SORT_ASC])->all())]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+      <code><![CDATA[list<array{code:string,name:string,type:string}>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArgument>
+      <code><![CDATA[$r]]></code>
+      <code><![CDATA[$row]]></code>
+    </PossiblyInvalidArgument>
+  </file>
+  <file src="src/Platform/Identity/Sso/SsoService.php">
+    <InvalidNullableReturnType>
+      <code><![CDATA[User]]></code>
+    </InvalidNullableReturnType>
+    <NullableReturnStatement>
+      <code><![CDATA[$this->users->find($id)]]></code>
+    </NullableReturnStatement>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$link['user_id']]]></code>
+      <code><![CDATA[$row['provider_code']]]></code>
+      <code><![CDATA[$row['user_id']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyNullArgument>
+      <code><![CDATA[$base]]></code>
+    </PossiblyNullArgument>
+    <RedundantCast>
+      <code><![CDATA[(string) ($ext->username ?? ($ext->email ? strstr($ext->email, '@', true) : '') ?: $provider['code'] . '-user')]]></code>
+    </RedundantCast>
+  </file>
+  <file src="src/Platform/Incidents/IncidentService.php">
+    <InvalidNullableReturnType>
+      <code><![CDATA[array]]></code>
+    </InvalidNullableReturnType>
+    <InvalidReturnStatement>
+      <code><![CDATA[$this->baseQuery()->where(['i.id' => $id])->one() ?? throw new NotFoundException('Incident not found.')]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[array]]></code>
+    </InvalidReturnType>
+    <LessSpecificReturnStatement>
+      <code><![CDATA[(new Query($this->db))->select(['e.*', 'actor' => 'u.username'])->from(['e' => 'incident_events'])
+            ->leftJoin(['u' => 'users'], 'u.id = e.actor_id')
+            ->where(['e.incident_id' => $id])->orderBy(['e.created_at' => SORT_ASC, 'e.id' => SORT_ASC])->all()]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+    </MoreSpecificReturnType>
+    <NullableReturnStatement>
+      <code><![CDATA[$inc]]></code>
+    </NullableReturnStatement>
+    <PossiblyNullArrayAccess>
+      <code><![CDATA[$inc['id']]]></code>
+      <code><![CDATA[$inc['id']]]></code>
+      <code><![CDATA[$inc['number']]]></code>
+    </PossiblyNullArrayAccess>
+    <RedundantCondition>
+      <code><![CDATA[$to !== 'open']]></code>
+    </RedundantCondition>
+    <TypeDoesNotContainType>
+      <code><![CDATA[$row === false]]></code>
+      <code><![CDATA[$row === null || $row === false]]></code>
+    </TypeDoesNotContainType>
+  </file>
+  <file src="src/Platform/Infrastructure/InfrastructureService.php">
+    <RedundantCast>
+      <code><![CDATA[(bool) (($opcache['jit']['enabled'] ?? false) && ($opcache['jit']['on'] ?? false))]]></code>
+    </RedundantCast>
+  </file>
+  <file src="src/Platform/Infrastructure/KubernetesClient.php">
+    <RedundantCast>
+      <code><![CDATA[(string) (($h['spec']['scaleTargetRef']['kind'] ?? '') . '/' . ($h['spec']['scaleTargetRef']['name'] ?? ''))]]></code>
+    </RedundantCast>
+  </file>
+  <file src="src/Platform/Integrations/AlertNotifier.php">
+    <PossiblyFalseOperand>
+      <code><![CDATA[is_scalar($v) ? (string) $v : json_encode($v)]]></code>
+    </PossiblyFalseOperand>
+  </file>
+  <file src="src/Platform/Integrations/Http/HttpClient.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$secrets]]></code>
+    </ArgumentTypeCoercion>
+  </file>
+  <file src="src/Platform/Integrations/IntegrationService.php">
+    <InvalidReturnStatement>
+      <code><![CDATA[$row ?? throw new NotFoundException('Integration not found.')]]></code>
+      <code><![CDATA[$this->query()->where(['code' => $code])->one() ?? throw new NotFoundException("Integration \"$code\" not found.")]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[array]]></code>
+      <code><![CDATA[array]]></code>
+    </InvalidReturnType>
+    <RedundantCondition>
+      <code><![CDATA[$headers]]></code>
+    </RedundantCondition>
+  </file>
+  <file src="src/Platform/Integrations/NotificationAdminService.php">
+    <InvalidReturnStatement>
+      <code><![CDATA[$row ?? throw new NotFoundException('Delivery not found.')]]></code>
+      <code><![CDATA[$row ?? throw new NotFoundException('Template not found.')]]></code>
+      <code><![CDATA[(new Query($this->db))->from('notification_channels')->where(['code' => $code])->one() ?? throw new NotFoundException('Channel not found.')]]></code>
+      <code><![CDATA[(new Query($this->db))->from('notifications')->where(['id' => $ids[0]])->one() ?? []]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[array]]></code>
+      <code><![CDATA[array]]></code>
+      <code><![CDATA[array]]></code>
+      <code><![CDATA[array]]></code>
+    </InvalidReturnType>
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$rows]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['code']]]></code>
+      <code><![CDATA[$s['channel']]]></code>
+      <code><![CDATA[$s['n']]]></code>
+      <code><![CDATA[$s['status']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyInvalidArrayAssignment>
+      <code><![CDATA[$r['adapter']]]></code>
+      <code><![CDATA[$r['stats']]]></code>
+    </PossiblyInvalidArrayAssignment>
+  </file>
+  <file src="src/Platform/Integrations/Push/PushSubscriptions.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[(new Query($this->db))->from('push_subscriptions')->where(['user_id' => $userId])->orderBy(['created_at' => SORT_DESC])->all()]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+    </MoreSpecificReturnType>
+  </file>
+  <file src="src/Platform/Integrations/Webhook/WebhookService.php">
+    <InvalidReturnStatement>
+      <code><![CDATA[$row ?? throw new NotFoundException('Webhook endpoint not found.')]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[array]]></code>
+    </InvalidReturnType>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$endpoint['code']]]></code>
+      <code><![CDATA[$endpoint['id']]]></code>
+      <code><![CDATA[$endpoint['job_type']]]></code>
+      <code><![CDATA[$endpoint['secret_enc']]]></code>
+      <code><![CDATA[$endpoint['signature_header']]]></code>
+      <code><![CDATA[$endpoint['timestamp_header']]]></code>
+      <code><![CDATA[$endpoint['tolerance_seconds']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Messaging/Kafka/KafkaAdmin.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$registry]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['name']]]></code>
+      <code><![CDATA[$r['partitions']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyInvalidArrayAssignment>
+      <code><![CDATA[$r['drift']]]></code>
+      <code><![CDATA[$r['exists']]]></code>
+      <code><![CDATA[$r['live_partitions']]]></code>
+    </PossiblyInvalidArrayAssignment>
+  </file>
+  <file src="src/Platform/Messaging/Kafka/KafkaConsumerRunner.php">
+    <InvalidArrayOffset>
+      <code><![CDATA[array_keys(self::RETRY_TOPICS)[min($attempts - 1, count(self::RETRY_TOPICS) - 1)]]]></code>
+    </InvalidArrayOffset>
+    <PossiblyFalseOperand>
+      <code><![CDATA[gethostname()]]></code>
+      <code><![CDATA[getmypid()]]></code>
+    </PossiblyFalseOperand>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$row['headers']]]></code>
+      <code><![CDATA[$row['message_key']]]></code>
+      <code><![CDATA[$row['payload']]]></code>
+      <code><![CDATA[$row['topic']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <RedundantCast>
+      <code><![CDATA[(int) $message->offset]]></code>
+      <code><![CDATA[(int) $message->offset]]></code>
+      <code><![CDATA[(int) $message->offset]]></code>
+      <code><![CDATA[(int) $message->offset]]></code>
+      <code><![CDATA[(int) $message->partition]]></code>
+      <code><![CDATA[(int) $message->partition]]></code>
+      <code><![CDATA[(int) $message->partition]]></code>
+      <code><![CDATA[(int) $message->partition]]></code>
+      <code><![CDATA[(string) $headers['correlation_id']]]></code>
+      <code><![CDATA[(string) $message->payload]]></code>
+      <code><![CDATA[(string) $message->payload]]></code>
+      <code><![CDATA[(string) $message->payload]]></code>
+      <code><![CDATA[(string) $message->payload]]></code>
+      <code><![CDATA[(string) $message->payload]]></code>
+      <code><![CDATA[(string) $message->payload]]></code>
+      <code><![CDATA[(string) $message->topic_name]]></code>
+      <code><![CDATA[(string) $message->topic_name]]></code>
+      <code><![CDATA[(string) $message->topic_name]]></code>
+      <code><![CDATA[(string) $message->topic_name]]></code>
+      <code><![CDATA[(string) $message->topic_name]]></code>
+      <code><![CDATA[(string) ($h['original_topic'] ?? self::DLQ_TOPIC)]]></code>
+      <code><![CDATA[(string) ($headers['original_topic'] ?? $message->topic_name)]]></code>
+      <code><![CDATA[(string) ($headers['original_topic'] ?? $message->topic_name)]]></code>
+    </RedundantCast>
+  </file>
+  <file src="src/Platform/Messaging/Kafka/KafkaHandlerDiscovery.php">
+    <InvalidReturnStatement>
+      <code><![CDATA[$groups]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[array<string, array{topics:list<string>, handlers:array<string,string>, raw:array<string,list<string>>}>]]></code>
+    </InvalidReturnType>
+    <RedundantFunctionCall>
+      <code><![CDATA[array_values]]></code>
+    </RedundantFunctionCall>
+  </file>
+  <file src="src/Platform/Messaging/Kafka/KafkaProducer.php">
+    <InvalidPropertyAssignmentValue>
+      <code><![CDATA[$this->reports]]></code>
+    </InvalidPropertyAssignmentValue>
+    <UndefinedMethod>
+      <code><![CDATA[producev]]></code>
+    </UndefinedMethod>
+  </file>
+  <file src="src/Platform/Messaging/Kafka/KafkaPublisher.php">
+    <RedundantFunctionCall>
+      <code><![CDATA[array_values]]></code>
+    </RedundantFunctionCall>
+  </file>
+  <file src="src/Platform/Messaging/Kafka/KafkaTopicCreator.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[unpack('N', $this->read($socket, 4))[1]]]></code>
+      <code><![CDATA[unpack('N', substr($response, 0, 4))[1]]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Messaging/Kafka/KafkaWireReader.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[unpack('N', $this->take(4))[1]]]></code>
+      <code><![CDATA[unpack('n', $this->take(2))[1]]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Modules/ModuleRegistry.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$row['enabled']]]></code>
+      <code><![CDATA[$row['enabled']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyNullArrayAccess>
+      <code><![CDATA[$m['name']]]></code>
+      <code><![CDATA[$m['version']]]></code>
+    </PossiblyNullArrayAccess>
+  </file>
+  <file src="src/Platform/Monitoring/AsvsChecklist.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[['chapters' => $chapters, 'totals' => $totals, 'available' => true]]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[array{chapters:list<array{code:string, title:string, items:list<array{id:string, requirement:string, status:string, evidence:string}>}>, totals:array<string,int>, available:bool}]]></code>
+    </MoreSpecificReturnType>
+  </file>
+  <file src="src/Platform/Monitoring/HealthChecker.php">
+    <PossiblyNullArrayAccess>
+      <code><![CDATA[$row['connections']]]></code>
+      <code><![CDATA[$row['max_conn']]]></code>
+      <code><![CDATA[$row['replica']]]></code>
+      <code><![CDATA[$row['size']]]></code>
+      <code><![CDATA[$row['v']]]></code>
+    </PossiblyNullArrayAccess>
+    <RedundantCast>
+      <code><![CDATA[(int) $port]]></code>
+    </RedundantCast>
+  </file>
+  <file src="src/Platform/Monitoring/SecurityCenter.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$q->all()]]></code>
+      <code><![CDATA[$q->all()]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$row['tenant_id']]]></code>
+      <code><![CDATA[$row['user_id']]]></code>
+      <code><![CDATA[$row['username']]]></code>
+      <code><![CDATA[$u['tenant_id']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Monitoring/SecurityPosture.php">
+    <InvalidReturnStatement>
+      <code><![CDATA[$s]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[array{pass:int, warn:int, fail:int, info:int, score:int}]]></code>
+    </InvalidReturnType>
+    <RedundantFunctionCall>
+      <code><![CDATA[array_values]]></code>
+    </RedundantFunctionCall>
+  </file>
+  <file src="src/Platform/Notifications/Channel/EmailChannel.php">
+    <RedundantCast>
+      <code><![CDATA[(int) ($parts['port'] ?? 25)]]></code>
+      <code><![CDATA[(string) ($parts['host'] ?? '')]]></code>
+    </RedundantCast>
+  </file>
+  <file src="src/Platform/Notifications/DeliverNotificationJob.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$n['channel']]]></code>
+      <code><![CDATA[$n['id']]]></code>
+      <code><![CDATA[$n['id']]]></code>
+      <code><![CDATA[$n['id']]]></code>
+      <code><![CDATA[$n['status']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Notifications/Notifier.php">
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$tpl['body']]]></code>
+      <code><![CDATA[$tpl['subject']]]></code>
+      <code><![CDATA[$user['email']]]></code>
+      <code><![CDATA[$user['full_name']]]></code>
+      <code><![CDATA[$user['locale']]]></code>
+      <code><![CDATA[$user['phone']]]></code>
+      <code><![CDATA[$user['status']]]></code>
+      <code><![CDATA[$user['tenant_id']]]></code>
+      <code><![CDATA[$user['username']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Organizations/OrganizationService.php">
+    <InvalidNullableReturnType>
+      <code><![CDATA[array]]></code>
+      <code><![CDATA[array]]></code>
+    </InvalidNullableReturnType>
+    <InvalidReturnStatement>
+      <code><![CDATA[$row ?: null]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[?array]]></code>
+    </InvalidReturnType>
+    <LessSpecificReturnStatement>
+      <code><![CDATA[array_map('strval', $this->db->createCommand(
+            'WITH RECURSIVE sub AS (SELECT id FROM organizations WHERE id = :id
+                 UNION SELECT o.id FROM organizations o JOIN sub ON o.parent_id = sub.id)
+             SELECT id FROM sub',
+            [':id' => $id],
+        )->queryColumn())]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<string>]]></code>
+    </MoreSpecificReturnType>
+    <NullableReturnStatement>
+      <code><![CDATA[$after]]></code>
+      <code><![CDATA[$row]]></code>
+    </NullableReturnStatement>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['code']]]></code>
+      <code><![CDATA[$r['id']]]></code>
+      <code><![CDATA[$r['id']]]></code>
+      <code><![CDATA[$r['id']]]></code>
+      <code><![CDATA[$r['name']]]></code>
+      <code><![CDATA[$r['parent_id']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyInvalidOperand>
+      <code><![CDATA[$r]]></code>
+      <code><![CDATA[$r]]></code>
+    </PossiblyInvalidOperand>
+  </file>
+  <file src="src/Platform/Queue/JobQueue.php">
+    <InvalidReturnStatement>
+      <code><![CDATA[(new Query($this->db))->from('jobs')->where(['id' => $id])->one() ?? throw new NotFoundException('Job not found.')]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[array]]></code>
+    </InvalidReturnType>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$s['paused']]]></code>
+      <code><![CDATA[$s['queue']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <RedundantFunctionCall>
+      <code><![CDATA[array_values]]></code>
+    </RedundantFunctionCall>
+  </file>
+  <file src="src/Platform/Queue/Worker.php">
+    <PossiblyFalseOperand>
+      <code><![CDATA[gethostname()]]></code>
+      <code><![CDATA[getmypid()]]></code>
+    </PossiblyFalseOperand>
+    <PossiblyNullReference>
+      <code><![CDATA[rollBack]]></code>
+    </PossiblyNullReference>
+  </file>
+  <file src="src/Platform/Redis/RedisInspector.php">
+    <InvalidArrayOffset>
+      <code><![CDATA[$this->config['persistent']]]></code>
+      <code><![CDATA[$this->config['role']]]></code>
+      <code><![CDATA[$this->config['tls']]]></code>
+      <code><![CDATA[$this->config['username']]]></code>
+    </InvalidArrayOffset>
+    <InvalidReturnStatement>
+      <code><![CDATA[[
+            'mode' => $mode,
+            'endpoints' => $mode === 'standalone' ? [$this->config['host'] . ':' . $this->config['port']] : array_values($this->config['sentinels'] ?: [$this->config['host'] . ':' . $this->config['port']]),
+            'database' => (int) $this->config['database'],
+            'prefix' => $this->prefix(),
+            'service' => $mode === 'sentinel' ? (string) $this->config['sentinelService'] : null,
+            'auth' => ($this->config['password'] ?? null) !== null && $this->config['password'] !== '',
+            'acl_user' => ($this->config['username'] ?? null) ?: null,
+            'tls' => (bool) ($this->config['tls'] ?? false),
+            'persistent' => (bool) ($this->config['persistent'] ?? false),
+            'role' => $this->role(),
+        ]]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[array{mode:string, endpoints:list<string>, database:int, prefix:string, service:?string}]]></code>
+    </InvalidReturnType>
+    <LessSpecificReturnStatement>
+      <code><![CDATA[array_map(static fn($r) => [
+            'event' => (string) ($r[0] ?? '?'), 'at' => (int) ($r[1] ?? 0), 'latest_ms' => (int) ($r[2] ?? 0), 'max_ms' => (int) ($r[3] ?? 0),
+        ], $rows)]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array{event:string, at:int, latest_ms:int, max_ms:int}>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyNullArgument>
+      <code><![CDATA[$this->cacheConfig]]></code>
+    </PossiblyNullArgument>
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$args[0]]]></code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+  <file src="src/Platform/Scheduler/Scheduler.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$timezone]]></code>
+      <code><![CDATA[$timezone]]></code>
+    </ArgumentTypeCoercion>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$s['code']]]></code>
+      <code><![CDATA[$s['code']]]></code>
+      <code><![CDATA[$s['code']]]></code>
+      <code><![CDATA[$s['cron_expression']]]></code>
+      <code><![CDATA[$s['cron_expression']]]></code>
+      <code><![CDATA[$s['id']]]></code>
+      <code><![CDATA[$s['id']]]></code>
+      <code><![CDATA[$s['job_type']]]></code>
+      <code><![CDATA[$s['job_type']]]></code>
+      <code><![CDATA[$s['last_job_id']]]></code>
+      <code><![CDATA[$s['next_run_at']]]></code>
+      <code><![CDATA[$s['overlap']]]></code>
+      <code><![CDATA[$s['payload']]]></code>
+      <code><![CDATA[$s['payload']]]></code>
+      <code><![CDATA[$s['queue']]]></code>
+      <code><![CDATA[$s['queue']]]></code>
+      <code><![CDATA[$s['timezone']]]></code>
+      <code><![CDATA[$s['timezone']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Security/UrlGuard.php">
+    <RedundantCast>
+      <code><![CDATA[(int) ($parts['port'] ?? ($scheme === 'https' ? 443 : 80))]]></code>
+    </RedundantCast>
+  </file>
+  <file src="src/Platform/Settings/SettingsForm.php">
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$out]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array{key:string, name:string, label:string, type:string, options:list<string>, min:?int, max:?int, value:mixed, is_set:bool, source:string, critical:bool}>]]></code>
+    </MoreSpecificReturnType>
+  </file>
+  <file src="src/Platform/Settings/SettingsService.php">
+    <FalsableReturnStatement>
+      <code><![CDATA[$this->cache = $cached]]></code>
+    </FalsableReturnStatement>
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$rows]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['value']]]></code>
+      <code><![CDATA[$row['key']]]></code>
+      <code><![CDATA[$row['scope']]]></code>
+      <code><![CDATA[$row['value']]]></code>
+      <code><![CDATA[$row['value']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyInvalidArrayAssignment>
+      <code><![CDATA[$r['value']]]></code>
+    </PossiblyInvalidArrayAssignment>
+    <PossiblyNullArrayAccess>
+      <code><![CDATA[$row['version']]]></code>
+      <code><![CDATA[$row['version']]]></code>
+    </PossiblyNullArrayAccess>
+    <TooManyArguments>
+      <code><![CDATA[each]]></code>
+    </TooManyArguments>
+  </file>
+  <file src="src/Platform/Storage/FileStorageService.php">
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$filters['entity_type']]]></code>
+      <code><![CDATA[$filters['mime']]]></code>
+      <code><![CDATA[$filters['q']]]></code>
+    </PossiblyUndefinedArrayOffset>
+    <RedundantCondition>
+      <code><![CDATA[is_resource($stream)]]></code>
+    </RedundantCondition>
+  </file>
+  <file src="src/Platform/Storage/UploadValidator.php">
+    <PossiblyNullArgument>
+      <code><![CDATA[preg_replace('/[^a-z0-9]/', '', strtolower($extension))]]></code>
+    </PossiblyNullArgument>
+  </file>
+  <file src="src/Platform/Tenancy/TenantService.php">
+    <InvalidNullableReturnType>
+      <code><![CDATA[array]]></code>
+      <code><![CDATA[array]]></code>
+    </InvalidNullableReturnType>
+    <InvalidReturnStatement>
+      <code><![CDATA[$out]]></code>
+      <code><![CDATA[$this->baseQuery()->where(['t.id' => $id])->one() ?: null]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[?array]]></code>
+      <code><![CDATA[array{active:int, suspended:int, archived:int, total:int}]]></code>
+    </InvalidReturnType>
+    <LessSpecificReturnStatement>
+      <code><![CDATA[$this->db->transaction(function () use ($id, $before, $status): array {
+            $this->db->createCommand()->update('tenants', ['status' => $status], ['id' => $id])->execute();
+            $sessions = 0;
+            $tokens = 0;
+            if ($status !== 'active') {
+                $sessions = $this->db->createCommand(
+                    'UPDATE user_sessions SET revoked_at = now(), revoked_reason = :r
+                     WHERE revoked_at IS NULL AND user_id IN (SELECT id FROM users WHERE tenant_id = :t)',
+                    [':r' => 'tenant_' . $status, ':t' => $id],
+                )->execute();
+                $tokens = $this->db->createCommand(
+                    'UPDATE api_tokens SET revoked_at = now()
+                     WHERE revoked_at IS NULL AND user_id IN (SELECT id FROM users WHERE tenant_id = :t)',
+                    [':t' => $id],
+                )->execute();
+            }
+            $this->audit->record(
+                'tenant.status.changed',
+                'tenant',
+                $id,
+                ['status' => $before['status']],
+                ['status' => $status],
+                ['sessions_revoked' => $sessions, 'tokens_revoked' => $tokens],
+                category: 'security',
+                severity: $status === 'active' ? 'notice' : 'warning',
+            );
+            return ['tenant' => $this->find($id), 'sessions_revoked' => $sessions, 'tokens_revoked' => $tokens];
+        })]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[array{tenant:array, sessions_revoked:int, tokens_revoked:int}]]></code>
+    </MoreSpecificReturnType>
+    <NullableReturnStatement>
+      <code><![CDATA[$after]]></code>
+      <code><![CDATA[$row]]></code>
+    </NullableReturnStatement>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$r['code']]]></code>
+      <code><![CDATA[$r['id']]]></code>
+      <code><![CDATA[$r['n']]]></code>
+      <code><![CDATA[$r['name']]]></code>
+      <code><![CDATA[$r['status']]]></code>
+    </PossiblyInvalidArrayAccess>
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$filters['q']]]></code>
+      <code><![CDATA[$filters['status']]]></code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+  <file src="src/Platform/Workflow/ApprovalService.php">
+    <InvalidReturnStatement>
+      <code><![CDATA[$row]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[array]]></code>
+    </InvalidReturnType>
+    <LessSpecificReturnStatement>
+      <code><![CDATA[(new Query($this->db))->select(['d.*', 'u.username AS approver_name'])->from(['d' => 'approval_decisions'])
+            ->leftJoin(['u' => 'users'], 'u.id = d.approver_id')->where(['d.request_id' => $requestId])->orderBy(['d.id' => SORT_ASC])->all()]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArgument>
+      <code><![CDATA[$row]]></code>
+      <code><![CDATA[function (array $r) use ($userId, &$can): bool {
+            return $can[$r['approver_permission']] ??= $this->access->can($userId, (string) $r['approver_permission']);
+        }]]></code>
+    </PossiblyInvalidArgument>
+    <TypeDoesNotContainType>
+      <code><![CDATA[$expired]]></code>
+      <code><![CDATA[$expired]]></code>
+    </TypeDoesNotContainType>
+  </file>
+  <file src="src/Platform/Workflow/NotifyApproversJob.php">
+    <PossiblyInvalidArgument>
+      <code><![CDATA[$request]]></code>
+    </PossiblyInvalidArgument>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$c['id']]]></code>
+      <code><![CDATA[$c['id']]]></code>
+      <code><![CDATA[$c['tenant_id']]]></code>
+      <code><![CDATA[$request['full_name']]]></code>
+      <code><![CDATA[$request['status']]]></code>
+      <code><![CDATA[$request['title']]]></code>
+      <code><![CDATA[$request['username']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Platform/Workflow/WorkflowDefinition.php">
+    <PossiblyInvalidArgument>
+      <code><![CDATA[str_replace('_', ' ', $name)]]></code>
+    </PossiblyInvalidArgument>
+    <RedundantCondition>
+      <code><![CDATA[is_scalar($code)]]></code>
+    </RedundantCondition>
+    <TypeDoesNotContainType>
+      <code><![CDATA['?']]></code>
+    </TypeDoesNotContainType>
+  </file>
+  <file src="src/Platform/Workflow/WorkflowEngine.php">
+    <InvalidReturnStatement>
+      <code><![CDATA[$row]]></code>
+      <code><![CDATA[$row ?? throw new NotFoundException('Workflow not found.')]]></code>
+      <code><![CDATA[$this->instancesQuery()->where(['w.code' => $workflowCode, 'i.entity_type' => $entityType, 'i.entity_id' => $entityId])->one()]]></code>
+      <code><![CDATA[$this->workflowsQuery()->where(['code' => $code])->one() ?? throw new NotFoundException("Workflow \"$code\" not found.")]]></code>
+    </InvalidReturnStatement>
+    <InvalidReturnType>
+      <code><![CDATA[?array]]></code>
+      <code><![CDATA[array]]></code>
+      <code><![CDATA[array]]></code>
+      <code><![CDATA[array]]></code>
+    </InvalidReturnType>
+    <LessSpecificReturnStatement>
+      <code><![CDATA[(new Query($this->db))->select(['t.*', 'u.username AS actor_name'])->from(['t' => 'workflow_transitions'])
+            ->leftJoin(['u' => 'users'], 'u.id = t.actor_id')
+            ->where(['t.instance_id' => $instanceId])->orderBy(['t.id' => SORT_ASC])->all()]]></code>
+    </LessSpecificReturnStatement>
+    <MoreSpecificReturnType>
+      <code><![CDATA[list<array<string,mixed>>]]></code>
+    </MoreSpecificReturnType>
+    <PossiblyInvalidArgument>
+      <code><![CDATA[$instance]]></code>
+      <code><![CDATA[$row]]></code>
+    </PossiblyInvalidArgument>
+    <PossiblyInvalidArrayAccess>
+      <code><![CDATA[$instance['state']]]></code>
+      <code><![CDATA[$instance['version']]]></code>
+      <code><![CDATA[$instance['workflow_id']]]></code>
+    </PossiblyInvalidArrayAccess>
+  </file>
+  <file src="src/Shared/Infrastructure/Database/ConnectionFactory.php">
+    <InvalidArrayOffset>
+      <code><![CDATA[$config['readOnly']]]></code>
+    </InvalidArrayOffset>
+  </file>
+  <file src="src/Shared/Infrastructure/Database/DatabaseRouter.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$callback]]></code>
+    </ArgumentTypeCoercion>
+  </file>
+  <file src="src/Shared/Infrastructure/Database/Paginator.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$items]]></code>
+    </ArgumentTypeCoercion>
+  </file>
+  <file src="src/Shared/Infrastructure/Http/ClientIp.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$bytes]]></code>
+    </ArgumentTypeCoercion>
+  </file>
+  <file src="src/Shared/Infrastructure/Http/DomainErrorMiddleware.php">
+    <InvalidThrow>
+      <code><![CDATA[throw $e]]></code>
+    </InvalidThrow>
+    <UndefinedClass>
+      <code><![CDATA[\Yiisoft\Http\Exception\MethodNotAllowedException]]></code>
+    </UndefinedClass>
+  </file>
+  <file src="src/Shared/Infrastructure/Http/Htmx.php">
+    <PossiblyNullReference>
+      <code><![CDATA[getHeaderLine]]></code>
+    </PossiblyNullReference>
+  </file>
+  <file src="src/Shared/Infrastructure/Redis/RedisClientFactory.php">
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$p['scheme']]]></code>
+    </PossiblyUndefinedArrayOffset>
+    <RedundantCast>
+      <code><![CDATA[(int) $p['port']]]></code>
+    </RedundantCast>
+  </file>
+  <file src="src/Shared/Infrastructure/View/ViewHelpers.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$tz]]></code>
+    </ArgumentTypeCoercion>
+    <InvalidArrayOffset>
+      <code><![CDATA[$units[$i]]]></code>
+    </InvalidArrayOffset>
+  </file>
+  <file src="src/Web/Auth/MfaSetupController.php">
+    <PossiblyUndefinedArrayOffset>
+      <code><![CDATA[$pending['type']]]></code>
+    </PossiblyUndefinedArrayOffset>
+  </file>
+  <file src="src/Web/Auth/WebAuthSession.php">
+    <PossiblyNullArgument>
+      <code><![CDATA[$user]]></code>
+    </PossiblyNullArgument>
+  </file>
+  <file src="src/Web/Middleware/AuthContextMiddleware.php">
+    <NoInterfaceProperties>
+      <code><![CDATA[$identity->user]]></code>
+    </NoInterfaceProperties>
+    <PossiblyNullArgument>
+      <code><![CDATA[$check['row']]]></code>
+    </PossiblyNullArgument>
+  </file>
+  <file src="src/Web/Middleware/RequireLogin.php">
+    <PossiblyNullArgument>
+      <code><![CDATA[$return]]></code>
+      <code><![CDATA[$return]]></code>
+      <code><![CDATA[$return]]></code>
+    </PossiblyNullArgument>
+  </file>
+  <file src="src/Web/Middleware/RequireRecentAuth.php">
+    <RedundantCast>
+      <code><![CDATA[(string) ($request->getHeaderLine('HX-Current-URL') ?: $request->getHeaderLine('Referer'))]]></code>
+    </RedundantCast>
+  </file>
+  <file src="src/Web/Notifications/PushSubscriptionController.php">
+    <ArgumentTypeCoercion>
+      <code><![CDATA[$data]]></code>
+    </ArgumentTypeCoercion>
+  </file>
+  <file src="src/Web/System/ThemeCssAction.php">
+    <PossiblyNullArrayAccess>
+      <code><![CDATA[$theme['hash']]]></code>
+    </PossiblyNullArrayAccess>
+  </file>
+</files>

@@ -29,7 +29,9 @@ $head = '<thead><tr><th>' . $h->t('Request') . '</th><th>' . $h->t('Type') . '</
     <?php if ($inbox === []): ?>
         <div class="empty"><?= $h->t('Nothing to decide right now.') ?></div>
     <?php else: ?>
-        <div class="table-wrap"><table class="table table--compact"><?= $head ?><tbody><?php foreach ($inbox as $a) { echo $row($a); } ?></tbody></table></div>
+        <div class="table-wrap"><table class="table table--compact"><?= $head ?><tbody><?php foreach ($inbox as $a) {
+            echo $row($a);
+        } ?></tbody></table></div>
     <?php endif ?>
 </div>
 <div class="card">
@@ -43,7 +45,9 @@ $head = '<thead><tr><th>' . $h->t('Request') . '</th><th>' . $h->t('Type') . '</
     <?php if ($page->items === []): ?>
         <div class="empty"><?= $h->t('No approval requests.') ?></div>
     <?php else: ?>
-        <div class="table-wrap"><table class="table table--compact"><?= $head ?><tbody><?php foreach ($page->items as $a) { echo $row($a); } ?></tbody></table></div>
+        <div class="table-wrap"><table class="table table--compact"><?= $head ?><tbody><?php foreach ($page->items as $a) {
+            echo $row($a);
+        } ?></tbody></table></div>
     <?php endif ?>
     <?= $this->render('//components/pager', ['page' => $page, 'route' => $route, 'query' => $query]) ?>
 </div>

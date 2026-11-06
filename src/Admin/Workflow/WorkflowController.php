@@ -136,7 +136,7 @@ final class WorkflowController
         $entityId = trim((string) (((array) $request->getParsedBody())['entity_id'] ?? ''));
         try {
             $instance = $this->engine->start((string) $wf['code'], (string) $wf['entity_type'], $entityId, $this->actor(), $this->identityTenant());
-        } catch (ValidationException | ConflictException $e) {
+        } catch (ValidationException|ConflictException $e) {
             $this->responder->error($e instanceof ValidationException ? implode(' ', array_merge(...array_values($e->errors()))) : $e->getMessage());
             return $this->responder->redirect('admin.workflow.show', ['id' => $wf['id']]);
         }
@@ -246,7 +246,7 @@ final class WorkflowController
             });
         } catch (ValidationException $e) {
             $this->responder->error(implode(' ', array_merge(...array_values($e->errors()))));
-        } catch (ConflictException | \App\Shared\Domain\Exception\AccessDeniedException $e) {
+        } catch (ConflictException|\App\Shared\Domain\Exception\AccessDeniedException $e) {
             // four-eyes violations are audited by the service (access.denied) and shown on the request page
             $this->responder->error($e->getMessage());
         }

@@ -112,7 +112,7 @@ final class ProjectsController
         try {
             $p = $this->projects->changeStatus($this->actor(), $this->id(), (string) ($body['status'] ?? ''), isset($body['version']) ? (int) $body['version'] : null);
             $this->responder->success('Status changed to ' . $p->status()->label() . '.');
-        } catch (ConflictException | ValidationException $e) {
+        } catch (ConflictException|ValidationException $e) {
             $this->responder->error($e->getMessage());
         }
         return $this->responder->redirect('web.projects.view', ['id' => $this->id()]);

@@ -168,20 +168,59 @@ final class Project
         $this->version = $version;
     }
 
-    public function code(): string { return $this->code; }
-    public function name(): string { return $this->name; }
-    public function description(): string { return $this->description; }
-    public function status(): ProjectStatus { return $this->status; }
-    public function priority(): ProjectPriority { return $this->priority; }
-    public function ownerId(): string { return $this->ownerId; }
-    public function budget(): ?string { return $this->budget; }
-    public function startsOn(): ?string { return $this->startsOn; }
-    public function dueOn(): ?string { return $this->dueOn; }
+    public function code(): string
+    {
+        return $this->code;
+    }
+    public function name(): string
+    {
+        return $this->name;
+    }
+    public function description(): string
+    {
+        return $this->description;
+    }
+    public function status(): ProjectStatus
+    {
+        return $this->status;
+    }
+    public function priority(): ProjectPriority
+    {
+        return $this->priority;
+    }
+    public function ownerId(): string
+    {
+        return $this->ownerId;
+    }
+    public function budget(): ?string
+    {
+        return $this->budget;
+    }
+    public function startsOn(): ?string
+    {
+        return $this->startsOn;
+    }
+    public function dueOn(): ?string
+    {
+        return $this->dueOn;
+    }
     /** @return list<string> */
-    public function tags(): array { return $this->tags; }
-    public function version(): int { return $this->version; }
-    public function updatedAt(): ?DateTimeImmutable { return $this->updatedAt; }
-    public function archivedAt(): ?DateTimeImmutable { return $this->archivedAt; }
+    public function tags(): array
+    {
+        return $this->tags;
+    }
+    public function version(): int
+    {
+        return $this->version;
+    }
+    public function updatedAt(): ?DateTimeImmutable
+    {
+        return $this->updatedAt;
+    }
+    public function archivedAt(): ?DateTimeImmutable
+    {
+        return $this->archivedAt;
+    }
 
     /** Persistence row (without generated/managed columns). */
     public function toRow(): array

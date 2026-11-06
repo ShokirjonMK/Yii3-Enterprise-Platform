@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
-use App\Platform\Queue\JobContext;
-use App\Platform\Queue\JobHandlerInterface;
 use App\Platform\Queue\JobQueue;
 use App\Platform\Queue\Worker;
 use App\Platform\Scheduler\Scheduler;

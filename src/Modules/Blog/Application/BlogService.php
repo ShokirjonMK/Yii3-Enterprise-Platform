@@ -114,8 +114,15 @@ final class BlogService
             $from = $entity->changeStatus($to, $comment);
             $this->repository->update($entity, $version);
             $after = $this->repository->find($entity->id) ?? $entity;
-            $this->audit->record('blog.status_changed', 'blog', $entity->id, ['status' => $from->value], ['status' => $to->value],
-                ['from' => $from->value, 'to' => $to->value, 'comment' => $comment], severity: $to->isTerminal() ? 'notice' : 'info');
+            $this->audit->record(
+                'blog.status_changed',
+                'blog',
+                $entity->id,
+                ['status' => $from->value],
+                ['status' => $to->value],
+                ['from' => $from->value, 'to' => $to->value, 'comment' => $comment],
+                severity: $to->isTerminal() ? 'notice' : 'info',
+            );
             $this->publish($entity);
             $this->workflow->mirror($after, $from, $to, $actor->id, $comment);
             return $after;

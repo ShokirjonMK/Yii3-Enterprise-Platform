@@ -13,7 +13,8 @@ return [
     OpenApiGenerator::class => [
         '__construct()' => [
             'sourceDir' => [$root . '/src/Api/V1', ...(glob($root . '/src/Modules/*/Api', GLOB_ONLYDIR) ?: [])],
-            'outputFile' => $root . '/public/api/openapi.json',
+            // outside public/: nginx would serve a file there to anybody, bypassing ApiDocsAccess
+            'outputFile' => $root . '/runtime/api/openapi.json',
         ],
     ],
 

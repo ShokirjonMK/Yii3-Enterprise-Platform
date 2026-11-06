@@ -12,7 +12,9 @@ $labels = ['postgres' => 'PostgreSQL', 'redis' => 'Redis', 'kafka' => 'Kafka', '
 <table class="table table--compact">
     <tbody>
     <?php foreach ($checks as $name => $c):
-        $tone = match ($c['status']) { 'up' => 'ok', 'degraded' => 'warn', 'not_configured' => 'muted', default => 'bad' }; ?>
+        $tone = match ($c['status']) {
+            'up' => 'ok', 'degraded' => 'warn', 'not_configured' => 'muted', default => 'bad'
+        }; ?>
         <tr>
             <td><span class="dot dot--<?= $tone ?>"></span> <?= $h->e($labels[$name] ?? $name) ?></td>
             <td><?= $h->badge($c['status'] === 'up' ? 'healthy' : $c['status'], $h->tr($c['status'] === 'not_configured' ? 'Not configured' : ucfirst($c['status']))) ?></td>

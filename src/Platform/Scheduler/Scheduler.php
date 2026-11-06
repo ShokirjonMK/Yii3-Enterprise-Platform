@@ -168,9 +168,11 @@ final class Scheduler
         return $this->db->transaction(function () use ($id, $code, $row, $actorId): string {
             if ($id === null) {
                 $row['code'] = $code;
-                $newId = (string) $this->db->createCommand('INSERT INTO schedules (code, name, cron_expression, timezone, job_type, payload, queue, enabled, overlap, next_run_at)
+                $newId = (string) $this->db->createCommand(
+                    'INSERT INTO schedules (code, name, cron_expression, timezone, job_type, payload, queue, enabled, overlap, next_run_at)
                     VALUES (:code, :name, :cron_expression, :timezone, :job_type, CAST(:payload AS jsonb), :queue, :enabled, :overlap, :next_run_at) RETURNING id',
-                    array_combine(array_map(static fn($k) => ':' . $k, array_keys($row)), array_values($row)))->queryScalar();
+                    array_combine(array_map(static fn($k) => ':' . $k, array_keys($row)), array_values($row)),
+                )->queryScalar();
                 $this->audit->record('schedule.created', 'schedule', $newId, null, $row, category: 'operations', actorId: $actorId);
                 return $newId;
             }

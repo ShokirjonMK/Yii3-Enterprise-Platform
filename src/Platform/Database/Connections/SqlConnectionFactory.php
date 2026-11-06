@@ -75,8 +75,12 @@ final class SqlConnectionFactory
             case DatabaseDriver::SQLSRV:
                 $dsn = sprintf(
                     'sqlsrv:Server=%s,%d;Database=%s;Encrypt=%s;TrustServerCertificate=%s;LoginTimeout=%d',
-                    $d->host, $d->port(), $d->database,
-                    $d->option('encrypt', true) ? 'yes' : 'no', $d->option('trustServerCertificate', false) ? 'yes' : 'no', $timeout,
+                    $d->host,
+                    $d->port(),
+                    $d->database,
+                    $d->option('encrypt', true) ? 'yes' : 'no',
+                    $d->option('trustServerCertificate', false) ? 'yes' : 'no',
+                    $timeout,
                 );
                 if ($d->readOnly) {
                     $dsn .= ';ApplicationIntent=ReadOnly';

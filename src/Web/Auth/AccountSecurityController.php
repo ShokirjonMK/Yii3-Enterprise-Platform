@@ -12,7 +12,6 @@ use App\Platform\Identity\Domain\Identity;
 use App\Platform\Identity\Infrastructure\UserRepository;
 use App\Shared\Domain\Exception\ValidationException;
 use App\Shared\Infrastructure\Http\Responder;
-use App\Web\Auth\WebAuthSession;
 use App\Web\Middleware\RequireLogin;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;

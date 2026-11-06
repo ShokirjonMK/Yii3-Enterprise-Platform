@@ -11,7 +11,7 @@ use Stringable;
 
 /**
  * Builds the OpenAPI 3.1 document from swagger-php attributes in src/Api/V1 and writes it to
- * public/api/openapi.json (`./yii api:openapi`). Generator warnings are collected, not printed.
+ * runtime/api/openapi.json (`./yii api:openapi`). Generator warnings are collected, not printed.
  */
 final class OpenApiGenerator
 {

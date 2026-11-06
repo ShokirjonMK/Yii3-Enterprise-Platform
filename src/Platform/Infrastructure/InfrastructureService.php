@@ -141,12 +141,33 @@ final class InfrastructureService
             $previous = $k8s->replicas($deployment);
             $result = $k8s->scale($deployment, $replicas);
         } catch (Throwable $e) {
-            $this->audit->record('infra.k8s.scale', 'k8s.deployment', $deployment, null, ['replicas' => $replicas], $meta + ['error' => $e->getMessage()],
-                result: 'failure', category: 'ops', severity: 'warning', actorId: $actor->id, actorName: $actor->username);
+            $this->audit->record(
+                'infra.k8s.scale',
+                'k8s.deployment',
+                $deployment,
+                null,
+                ['replicas' => $replicas],
+                $meta + ['error' => $e->getMessage()],
+                result: 'failure',
+                category: 'ops',
+                severity: 'warning',
+                actorId: $actor->id,
+                actorName: $actor->username,
+            );
             throw $e;
         }
-        $this->audit->record('infra.k8s.scale', 'k8s.deployment', $deployment, ['replicas' => $previous], ['replicas' => $result['replicas']], $meta,
-            category: 'ops', severity: 'warning', actorId: $actor->id, actorName: $actor->username);
+        $this->audit->record(
+            'infra.k8s.scale',
+            'k8s.deployment',
+            $deployment,
+            ['replicas' => $previous],
+            ['replicas' => $result['replicas']],
+            $meta,
+            category: 'ops',
+            severity: 'warning',
+            actorId: $actor->id,
+            actorName: $actor->username,
+        );
         return $result + ['previous' => $previous];
     }
 }

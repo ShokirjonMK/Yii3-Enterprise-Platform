@@ -86,8 +86,18 @@ final class AuditController
             fputcsv($resource, AuditSearch::csvRow($r), ',', '"', '');
             $rows++;
         }
-        $this->audit->record('audit.exported', 'audit_log', null, null, null, ['filters' => array_filter($filters), 'rows' => $rows, 'truncated' => $rows >= AuditSearch::EXPORT_LIMIT],
-            category: 'security', severity: 'notice', actorId: $actor->id, actorName: $actor->username);
+        $this->audit->record(
+            'audit.exported',
+            'audit_log',
+            null,
+            null,
+            null,
+            ['filters' => array_filter($filters), 'rows' => $rows, 'truncated' => $rows >= AuditSearch::EXPORT_LIMIT],
+            category: 'security',
+            severity: 'notice',
+            actorId: $actor->id,
+            actorName: $actor->username,
+        );
         rewind($resource);
         return $this->responses->createResponse(200)
             ->withHeader('Content-Type', 'text/csv; charset=utf-8')
@@ -109,10 +119,19 @@ final class AuditController
         $result['duration_ms'] = (int) ((microtime(true) - $t) * 1000);
         $result['from'] = $from;
         $result['to'] = $filters['to'] ?: null;
-        $this->audit->record('audit.verified', 'audit_log', null, null, null,
+        $this->audit->record(
+            'audit.verified',
+            'audit_log',
+            null,
+            null,
+            null,
             ['from' => $from, 'to' => $to, 'checked' => $result['checked'], 'invalid' => count($result['invalid']), 'invalid_ids' => array_slice($result['invalid'], 0, 50)],
-            result: $result['invalid'] === [] ? 'success' : 'failure', category: 'security', severity: $result['invalid'] === [] ? 'info' : 'critical',
-            actorId: $actor->id, actorName: $actor->username);
+            result: $result['invalid'] === [] ? 'success' : 'failure',
+            category: 'security',
+            severity: $result['invalid'] === [] ? 'info' : 'critical',
+            actorId: $actor->id,
+            actorName: $actor->username,
+        );
         return $this->responder->render('@admin/Audit/views/partitions', $this->partitionParams() + ['verification' => $result]);
     }
 

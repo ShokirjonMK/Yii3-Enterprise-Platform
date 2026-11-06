@@ -135,7 +135,7 @@ final class SettingsController
         try {
             $this->settings->rollback($this->actor(), $key, (int) ($in['version'] ?? 0), $scope, $tenant);
             $this->responder->success(sprintf('Rolled back to version %d.', (int) ($in['version'] ?? 0)));
-        } catch (ValidationException | AccessDeniedException | NotFoundException $e) {
+        } catch (ValidationException|AccessDeniedException|NotFoundException $e) {
             $this->responder->error($e->getMessage());
         }
         return $this->responder->redirect('admin.settings.history', ['key' => $key], array_filter(['scope' => $scope === 'tenant' ? 'tenant' : null, 'tenant' => $tenant]));

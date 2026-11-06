@@ -116,8 +116,18 @@ final class DeploymentService
         ];
         return $this->db->transaction(function () use ($row, $actor): string {
             $id = (string) $this->db->createCommand()->insertReturningPks('deployments', $row)['id'];
-            $this->audit->record($row['rollback_of'] ? 'deploy.rollback_requested' : 'deploy.requested', 'deployment', $id, null, $row, [],
-                category: 'ops', severity: $row['environment'] === 'production' ? 'warning' : 'notice', actorId: $actor->id, actorName: $actor->username);
+            $this->audit->record(
+                $row['rollback_of'] ? 'deploy.rollback_requested' : 'deploy.requested',
+                'deployment',
+                $id,
+                null,
+                $row,
+                [],
+                category: 'ops',
+                severity: $row['environment'] === 'production' ? 'warning' : 'notice',
+                actorId: $actor->id,
+                actorName: $actor->username,
+            );
             return $id;
         });
     }
@@ -135,9 +145,18 @@ final class DeploymentService
         $this->db->transaction(function () use ($actor, $id, $comment): void {
             $d = $this->lockRequested($id);
             $this->db->createCommand()->update('deployments', ['status' => 'approved', 'approved_by' => $actor->id, 'updated_at' => new Expression('now()')], ['id' => $id])->execute();
-            $this->audit->record('deploy.approved', 'deployment', $id, ['status' => 'requested'], ['status' => 'approved'],
+            $this->audit->record(
+                'deploy.approved',
+                'deployment',
+                $id,
+                ['status' => 'requested'],
+                ['status' => 'approved'],
                 ['environment' => $d['environment'], 'version' => $d['version'], 'comment' => mb_substr($comment, 0, 500)],
-                category: 'ops', severity: 'warning', actorId: $actor->id, actorName: $actor->username);
+                category: 'ops',
+                severity: 'warning',
+                actorId: $actor->id,
+                actorName: $actor->username,
+            );
         });
         return $this->trigger($id, $actor);
     }
@@ -156,9 +175,18 @@ final class DeploymentService
                 'status' => 'rejected', 'rejected_by' => $actor->id, 'error' => mb_substr($reason, 0, 1000),
                 'updated_at' => new Expression('now()'), 'finished_at' => new Expression('now()'),
             ], ['id' => $id])->execute();
-            $this->audit->record('deploy.rejected', 'deployment', $id, ['status' => 'requested'], ['status' => 'rejected'],
+            $this->audit->record(
+                'deploy.rejected',
+                'deployment',
+                $id,
+                ['status' => 'requested'],
+                ['status' => 'rejected'],
                 ['environment' => $d['environment'], 'version' => $d['version'], 'reason' => mb_substr($reason, 0, 500)],
-                category: 'ops', severity: 'notice', actorId: $actor->id, actorName: $actor->username);
+                category: 'ops',
+                severity: 'notice',
+                actorId: $actor->id,
+                actorName: $actor->username,
+            );
         });
     }
 
@@ -182,17 +210,37 @@ final class DeploymentService
             ]);
         } catch (ExternalServiceException $e) {
             $this->db->createCommand()->update('deployments', ['error' => mb_substr($e->getMessage(), 0, 1000), 'updated_at' => new Expression('now()')], ['id' => $id])->execute();
-            $this->audit->record('deploy.pipeline_trigger', 'deployment', $id, null, null, ['error' => $e->getMessage()], result: 'failure',
-                category: 'ops', severity: 'warning', actorId: $actor?->id, actorName: $actor?->username);
+            $this->audit->record(
+                'deploy.pipeline_trigger',
+                'deployment',
+                $id,
+                null,
+                null,
+                ['error' => $e->getMessage()],
+                result: 'failure',
+                category: 'ops',
+                severity: 'warning',
+                actorId: $actor?->id,
+                actorName: $actor?->username,
+            );
             return ['triggered' => false, 'message' => $e->getMessage()];
         }
         $this->db->createCommand()->update('deployments', [
             'status' => 'running', 'pipeline_id' => $p['id'], 'pipeline_url' => mb_substr($p['web_url'], 0, 1024),
             'commit_sha' => $d['commit_sha'] ?: ($p['sha'] !== '' ? $p['sha'] : null), 'error' => null, 'updated_at' => new Expression('now()'),
         ], ['id' => $id])->execute();
-        $this->audit->record('deploy.pipeline_triggered', 'deployment', $id, ['status' => 'approved'], ['status' => 'running'],
+        $this->audit->record(
+            'deploy.pipeline_triggered',
+            'deployment',
+            $id,
+            ['status' => 'approved'],
+            ['status' => 'running'],
             ['pipeline_id' => $p['id'], 'pipeline_url' => $p['web_url'], 'ref' => $p['ref']],
-            category: 'ops', severity: 'notice', actorId: $actor?->id, actorName: $actor?->username);
+            category: 'ops',
+            severity: 'notice',
+            actorId: $actor?->id,
+            actorName: $actor?->username,
+        );
         $this->schedulePoll($id, 0);
         return ['triggered' => true, 'message' => 'Pipeline #' . $p['id'] . ' started.'];
     }
@@ -214,16 +262,38 @@ final class DeploymentService
                 'status' => $status, 'finished_at' => new Expression('now()'), 'updated_at' => new Expression('now()'),
                 'error' => $status === 'failed' ? 'Pipeline ' . $p['status'] : null,
             ], ['id' => $d['id'], 'status' => 'running'])->execute();
-            $this->audit->record('deploy.' . $status, 'deployment', (string) $d['id'], ['status' => 'running'], ['status' => $status],
+            $this->audit->record(
+                'deploy.' . $status,
+                'deployment',
+                (string) $d['id'],
+                ['status' => 'running'],
+                ['status' => $status],
                 ['pipeline_id' => $p['id'], 'pipeline_status' => $p['status'], 'environment' => $d['environment'], 'version' => $d['version']],
-                result: $status === 'succeeded' ? 'success' : 'failure', category: 'ops', severity: $status === 'succeeded' ? 'notice' : 'warning',
-                actorId: $actor?->id, actorName: $actor?->username);
+                result: $status === 'succeeded' ? 'success' : 'failure',
+                category: 'ops',
+                severity: $status === 'succeeded' ? 'notice' : 'warning',
+                actorId: $actor?->id,
+                actorName: $actor?->username,
+            );
             if ($status === 'succeeded' && $d['rollback_of'] !== null) {
-                $n = $this->db->createCommand()->update('deployments', ['status' => 'rolled_back', 'updated_at' => new Expression('now()')],
-                    ['id' => $d['rollback_of'], 'status' => 'succeeded'])->execute();
+                $n = $this->db->createCommand()->update(
+                    'deployments',
+                    ['status' => 'rolled_back', 'updated_at' => new Expression('now()')],
+                    ['id' => $d['rollback_of'], 'status' => 'succeeded'],
+                )->execute();
                 if ($n > 0) {
-                    $this->audit->record('deploy.rolled_back', 'deployment', (string) $d['rollback_of'], ['status' => 'succeeded'], ['status' => 'rolled_back'],
-                        ['by_deployment' => $d['id'], 'version' => $d['version']], category: 'ops', severity: 'warning', actorId: $actor?->id, actorName: $actor?->username);
+                    $this->audit->record(
+                        'deploy.rolled_back',
+                        'deployment',
+                        (string) $d['rollback_of'],
+                        ['status' => 'succeeded'],
+                        ['status' => 'rolled_back'],
+                        ['by_deployment' => $d['id'], 'version' => $d['version']],
+                        category: 'ops',
+                        severity: 'warning',
+                        actorId: $actor?->id,
+                        actorName: $actor?->username,
+                    );
                 }
             }
         });
@@ -303,8 +373,19 @@ final class DeploymentService
     private function assertFourEyes(User $actor, array $d, string $action): void
     {
         if ((string) $d['requested_by'] === $actor->id) {
-            $this->audit->record($action, 'deployment', (string) $d['id'], null, null, ['rule' => 'four-eyes'], result: 'denied',
-                category: 'security', severity: 'warning', actorId: $actor->id, actorName: $actor->username);
+            $this->audit->record(
+                $action,
+                'deployment',
+                (string) $d['id'],
+                null,
+                null,
+                ['rule' => 'four-eyes'],
+                result: 'denied',
+                category: 'security',
+                severity: 'warning',
+                actorId: $actor->id,
+                actorName: $actor->username,
+            );
             throw new AccessDeniedException('Four-eyes rule: a deployment must be decided by someone other than the requester.');
         }
     }

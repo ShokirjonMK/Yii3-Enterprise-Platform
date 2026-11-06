@@ -15,7 +15,6 @@ use App\Shared\Domain\Exception\ValidationException;
 use App\Shared\Domain\Uuid;
 use App\Shared\Infrastructure\Database\Page;
 use App\Shared\Infrastructure\Database\Paginator;
-use App\Shared\Infrastructure\Database\Sql;
 use Yiisoft\Db\Connection\ConnectionInterface;
 use Yiisoft\Db\Exception\IntegrityException;
 use Yiisoft\Db\Expression\Expression;
@@ -170,8 +169,16 @@ final class TenantService
                     [':t' => $id],
                 )->execute();
             }
-            $this->audit->record('tenant.status.changed', 'tenant', $id, ['status' => $before['status']], ['status' => $status],
-                ['sessions_revoked' => $sessions, 'tokens_revoked' => $tokens], category: 'security', severity: $status === 'active' ? 'notice' : 'warning');
+            $this->audit->record(
+                'tenant.status.changed',
+                'tenant',
+                $id,
+                ['status' => $before['status']],
+                ['status' => $status],
+                ['sessions_revoked' => $sessions, 'tokens_revoked' => $tokens],
+                category: 'security',
+                severity: $status === 'active' ? 'notice' : 'warning',
+            );
             return ['tenant' => $this->find($id), 'sessions_revoked' => $sessions, 'tokens_revoked' => $tokens];
         });
     }
